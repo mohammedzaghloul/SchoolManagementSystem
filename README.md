@@ -33,4 +33,4 @@
 - **ولي أمر:** `parent1@school.com` / `Password123!`
 
 ---
-تم التطوير بواسطة **Antigravity AI Team** 🚀✨
+تم التطوير بواسطة **mohammedzaghloul** 🚀✨
