@@ -10,9 +10,12 @@
         "ASPNETCORE_ENVIRONMENT": "Development",
         "ConnectionStrings__DefaultConnection": "Server=.;Database=SchoolDb1;Trusted_Connection=True;TrustServerCertificate=True",
         "ConnectionStrings__Redis": "localhost:6379",
-        "Jwt__Secret": "super_secret_secure_key_for_school_api_with_enough_length_to_be_valid",
-        "Cloudinary__ApiKey": "962322363371885",
-        "Cloudinary__ApiSecret": "D9MFpnRKGtYS2Hk5kIynio7FeGA"
+        "Jwt__Secret": "change_this_local_dev_secret_to_a_long_random_value",
+        "FaceRecognition__BaseUrl": "http://localhost:8000",
+        "Cloudinary__Enabled": "false",
+        "Cloudinary__CloudName": "",
+        "Cloudinary__ApiKey": "",
+        "Cloudinary__ApiSecret": ""
       }
     }
   }

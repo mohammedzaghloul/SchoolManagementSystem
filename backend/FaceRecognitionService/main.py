@@ -18,9 +18,13 @@ app.add_middleware(
 )
 
 # Database Setup
-DB_PATH = "face_data.db"
+DB_PATH = os.getenv("FACE_DB_PATH", os.path.join(os.getcwd(), "data", "face_data.db"))
+
+def ensure_data_directory():
+    os.makedirs(os.path.dirname(os.path.abspath(DB_PATH)), exist_ok=True)
 
 def init_db():
+    ensure_data_directory()
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS face_embeddings
@@ -105,6 +109,7 @@ async def recognize(file: UploadFile = File(...)):
     }
 
 if __name__ == "__main__":
+    port = int(os.getenv("PORT", "8000"))
     print("--- STARTING FACE RECOGNITION SERVICE (LITE MODE) ---")
-    print("Wait for 'Uvicorn running on http://0.0.0.0:8000'...")
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    print(f"Wait for 'Uvicorn running on http://0.0.0.0:{port}'...")
+    uvicorn.run(app, host="0.0.0.0", port=port)

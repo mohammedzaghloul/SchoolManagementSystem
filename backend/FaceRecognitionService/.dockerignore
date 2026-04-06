@@ -1,0 +1,4 @@
+__pycache__
+*.pyc
+face_data.db
+data

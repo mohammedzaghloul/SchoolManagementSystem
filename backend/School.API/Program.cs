@@ -13,6 +13,13 @@ using School.API.Hubs;
 using School.Infrastructure.BackgroundJobs;
 
 var builder = WebApplication.CreateBuilder(args);
+var allowedOrigins = builder.Configuration["Cors:AllowedOrigins"]?
+    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+if (allowedOrigins is not { Length: > 0 })
+{
+    allowedOrigins = new[] { "http://localhost:4200", "https://localhost:4200" };
+}
 
 // Add DbContext
 builder.Services.AddDbContext<SchoolDbContext>(options =>
@@ -97,7 +104,7 @@ builder.Services.AddAuthentication(options =>
             // If the request is for our hub...
             var path = context.HttpContext.Request.Path;
             if (!string.IsNullOrEmpty(accessToken) &&
-                (path.StartsWithSegments("/chatHub")))
+                (path.StartsWithSegments("/chatHub") || path.StartsWithSegments("/chathub")))
             {
                 // Read the token out of the query string
                 context.Token = accessToken;
@@ -115,7 +122,7 @@ builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
-        policy.WithOrigins("http://localhost:4200", "https://localhost:4200")
+        policy.WithOrigins(allowedOrigins)
               .AllowAnyMethod()
               .AllowAnyHeader()
               .AllowCredentials();

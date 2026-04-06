@@ -1,0 +1,6 @@
+**/bin
+**/obj
+**/.vs
+**/.vscode
+School.API/wwwroot/uploads
+FaceRecognitionService/face_data.db

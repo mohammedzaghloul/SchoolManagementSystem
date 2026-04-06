@@ -3,10 +3,15 @@
   "version": "1.0.0",
   "scripts": {
     "ng": "ng",
-    "start": "ng serve --port 4200",
+    "start": "node start.js",
+    "start:dev": "node start.js --dev",
+    "start:prod": "node server.js",
     "build": "ng build",
     "test": "ng test",
     "lint": "ng lint"
+  },
+  "engines": {
+    "node": ">=20 <23"
   },
   "dependencies": {
     "@angular/animations": "^17.3.0",

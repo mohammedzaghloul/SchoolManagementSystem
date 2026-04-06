@@ -1,6 +1,7 @@
 using School.Application.Interfaces;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using Microsoft.Extensions.Configuration;
 
 namespace School.Infrastructure.Services;
 
@@ -8,11 +9,11 @@ public class FaceRecognitionService : IFaceRecognitionService
 {
     private readonly HttpClient _httpClient;
 
-    public FaceRecognitionService(HttpClient httpClient)
+    public FaceRecognitionService(HttpClient httpClient, IConfiguration config)
     {
         _httpClient = httpClient;
-        // In a real app, inject IConfiguration and get this from appsettings.json
-        _httpClient.BaseAddress = new Uri("http://localhost:8000"); 
+        var baseUrl = (config["FaceRecognition:BaseUrl"] ?? "http://localhost:8000").Trim().TrimEnd('/');
+        _httpClient.BaseAddress = new Uri($"{baseUrl}/");
     }
 
     public async Task<bool> TrainFaceAsync(int studentId, byte[] imageBytes, string fileName)

@@ -13,7 +13,9 @@ public class QrCodeService : IQrCodeService
     public QrCodeService(IConfiguration config)
     {
         _config = config;
-        _secretKey = _config["Jwt:Key"] ?? "super_secret_secure_key_for_school_api_with_enough_length_to_be_valid";
+        _secretKey = _config["Jwt:Secret"]
+            ?? _config["Jwt:Key"]
+            ?? "super_secret_secure_key_for_school_api_with_enough_length_to_be_valid";
     }
 
     public string GenerateQrToken(int sessionId)
