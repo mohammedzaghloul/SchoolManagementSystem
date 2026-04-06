@@ -1,0 +1,127 @@
+/* Dark Theme Overrides specifically for this module wrapper if global dark mode isn't purely active 
+   Note: Realistically this wrapper takes full height to emulate the screenshot's dark UI.
+*/
+.dark-theme {
+    background-color: #121421 !important;
+    /* Deep space dark */
+    font-family: 'Tajawal', sans-serif;
+    padding: 20px;
+    direction: rtl;
+}
+
+.bg-darker {
+    background-color: #181c2f !important;
+}
+
+.border-dark {
+    border-color: #2a2e45 !important;
+}
+
+.border-darker {
+    border-color: #23273e !important;
+}
+
+.text-white {
+    color: #ffffff !important;
+}
+
+.text-secondary {
+    color: #8f95b2 !important;
+}
+
+/* Avatar & Top Nav */
+.avatar {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.btn-icon {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #1a1d2d;
+    border: 1px solid #2a2e45;
+}
+
+.btn-icon:hover {
+    background-color: #23273e;
+}
+
+/* Search Box Focus */
+.search-box input:focus {
+    box-shadow: none;
+    border-color: #3b82f6 !important;
+}
+
+/* Timetable Grid */
+.timetable-grid th {
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.timetable-grid td {
+    vertical-align: middle;
+    color: #434865;
+    /* Fading dash colors for empty slots */
+}
+
+.subject-card {
+    min-width: 100px;
+    max-width: 130px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    transition: transform 0.2s;
+    cursor: pointer;
+}
+
+.subject-card:hover {
+    transform: scale(1.05);
+}
+
+.subject-card small {
+    opacity: 0.8;
+    font-size: 0.75rem;
+}
+
+/* Specific Subject Colors Matching Mockup */
+.bg-blue {
+    background-color: #1d4ed8 !important;
+}
+
+/* رياضيات */
+.bg-green {
+    background-color: #0f766e !important;
+}
+
+/* علوم */
+.bg-purple {
+    background-color: #4c1d95 !important;
+}
+
+/* لغة عربية */
+.bg-teal {
+    background-color: #0f4a50 !important;
+}
+
+/* لغة إنجليزية */
+.bg-dark-gray {
+    background-color: #1e293b !important;
+}
+
+/* دراسات/دين */
+.bg-gray-blue {
+    background-color: #334155 !important;
+}
+
+/* نشاط */
+.bg-oxford {
+    background-color: #1f2937 !important;
+    border: 1px solid #374151;
+}
+
+/* حاسب آلي */

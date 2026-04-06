@@ -1,0 +1,140 @@
+<div class="dashboard-header" dir="rtl">
+    <div class="title-area">
+        <h1 class="text-gradient fw-bold">لوحة التحكم</h1>
+        <p class="text-muted">نظرة عامة على المدرسة وإدارة الحسابات والمصروفات.</p>
+    </div>
+    <div class="date-area shadow-sm rounded-pill px-4 py-2 bg-gradient glass-card">
+        <p class="mb-0 fw-bold">{{ today | date:'EEEE, d MMMM yyyy' }}</p>
+    </div>
+</div>
+
+<div class="stats-grid" dir="rtl">
+    <div class="stat-card glass-card glass-card-hover">
+        <div class="stat-icon blue">
+            <i class="fas fa-user-graduate text-gradient"></i>
+        </div>
+        <div class="stat-details">
+            <h3 class="text-secondary">إجمالي الطلاب</h3>
+            <h2 class="text-gradient">{{ stats.totalStudents }}</h2>
+            <p class="trend positive"><i class="fas fa-arrow-up text-success"></i> محدث الآن</p>
+        </div>
+    </div>
+
+    <div class="stat-card glass-card glass-card-hover">
+        <div class="stat-icon green">
+            <i class="fas fa-user-check text-success"></i>
+        </div>
+        <div class="stat-details">
+            <h3 class="text-secondary">معدل الحضور</h3>
+            <h2 class="text-gradient">{{ stats.attendanceRate }}</h2>
+            <p class="trend positive"><i class="fas fa-arrow-up text-success"></i> تقديري</p>
+        </div>
+    </div>
+
+    <div class="stat-card glass-card glass-card-hover highlight-success">
+        <div class="stat-icon green">
+            <i class="fas fa-wallet text-success"></i>
+        </div>
+        <div class="stat-details">
+            <h3 class="text-secondary">إيرادات الشهر</h3>
+            <h2 class="text-gradient">{{ stats.monthlyRevenue | currency:'EGP':'symbol':'1.0-0':'ar-EG' }}</h2>
+            <p class="trend positive"><i class="fas fa-arrow-up text-success"></i> تم تحصيله</p>
+        </div>
+    </div>
+
+    <div class="stat-card glass-card glass-card-hover highlight-danger">
+        <div class="stat-icon red">
+            <i class="fas fa-exclamation-circle text-danger"></i>
+        </div>
+        <div class="stat-details">
+            <h3 class="text-secondary">مستحقات متأخرة</h3>
+            <h2 class="text-gradient text-danger">{{ stats.pendingFees | currency:'EGP':'symbol':'1.0-0':'ar-EG' }}</h2>
+            <p class="trend negative">تحتاج متابعة</p>
+        </div>
+    </div>
+
+    <div class="stat-card glass-card glass-card-hover">
+        <div class="stat-icon purple">
+            <i class="fas fa-chalkboard text-info"></i>
+        </div>
+        <div class="stat-details">
+            <h3 class="text-secondary">إجمالي الفصول</h3>
+            <h2 class="text-gradient">{{ stats.totalClasses }}</h2>
+            <p class="trend neutral">فصول نشطة</p>
+        </div>
+    </div>
+
+    <div class="stat-card glass-card glass-card-hover">
+        <div class="stat-icon orange">
+            <i class="fas fa-chalkboard-teacher text-warning"></i>
+        </div>
+        <div class="stat-details">
+            <h3 class="text-secondary">المدرسين</h3>
+            <h2 class="text-gradient">{{ stats.totalTeachers }}</h2>
+            <p class="trend positive">هيئة التدريس</p>
+        </div>
+    </div>
+</div>
+
+<div class="dashboard-content-grid" dir="rtl">
+    <div class="main-panel">
+        <div class="card glass-card">
+            <div class="card-header border-bottom mb-3 pb-2">
+                <h3 class="text-dark mb-0 fw-bold">طلاب تمت إضافتهم مؤخراً</h3>
+            </div>
+            <div class="card-body p-0">
+                <div *ngIf="loading" class="p-4 text-center">
+                    <p>جاري تحميل البيانات...</p>
+                </div>
+                <div *ngIf="error" class="p-4 text-center text-danger">
+                    <p>{{ error }}</p>
+                </div>
+                <ul class="activity-list" *ngIf="!loading && !error && recentStudents.length > 0">
+                    <li *ngFor="let student of recentStudents" class="glass-card-hover rounded p-2 mb-2 d-flex align-items-center">
+                        <div class="activity-icon blue-bg rounded-circle p-2 me-3">
+                            <i class="fas fa-user text-white"></i>
+                        </div>
+                        <div class="activity-text flex-grow-1">
+                            <h4 class="text-dark mb-1 fw-bold">{{ student.fullName }}</h4>
+                            <p class="text-muted small mb-0">{{ student.email }}</p>
+                        </div>
+                        <span class="time text-primary small ms-auto fw-bold">{{ student.gradeName || 'طالب جديد' }}</span>
+                    </li>
+                </ul>
+                <div *ngIf="!loading && !error && recentStudents.length === 0" class="p-4 text-center text-muted">
+                    <p>لا يوجد طلاب مضافون حديثاً.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="side-panel">
+        <div class="card glass-card border-0">
+            <div class="card-header border-bottom mb-3 pb-2">
+                <h3 class="text-dark mb-0 fw-bold">إجراءات سريعة</h3>
+            </div>
+            <div class="card-body d-flex flex-column gap-3">
+                <button class="action-btn green-line glass-card glass-card-hover p-3 text-start border-0 outline-none w-100" [routerLink]="['/admin/payments']">
+                    <i class="fas fa-file-invoice-dollar text-success me-2 fs-5"></i>
+                    <span class="text-dark fw-bold">رفع المصروفات وإدارة الفواتير</span>
+                </button>
+                <button class="action-btn blue-line glass-card glass-card-hover p-3 text-start border-0 outline-none w-100" [routerLink]="['/admin/parents']">
+                    <i class="fas fa-user-friends text-info me-2 fs-5"></i>
+                    <span class="text-dark fw-bold">إدارة أولياء الأمور</span>
+                </button>
+                <button class="action-btn purple-line glass-card glass-card-hover p-3 text-start border-0 outline-none w-100" [routerLink]="['/admin/reports']">
+                    <i class="fas fa-bullhorn text-gradient me-2 fs-5"></i>
+                    <span class="text-dark fw-bold">التقارير المدرسية</span>
+                </button>
+                <button class="action-btn orange-line glass-card glass-card-hover p-3 text-start border-0 outline-none w-100" [routerLink]="['/admin/classes']">
+                    <i class="fas fa-chalkboard text-warning me-2 fs-5"></i>
+                    <span class="text-dark fw-bold">إدارة الفصول</span>
+                </button>
+                <button class="action-btn red-line glass-card glass-card-hover p-3 text-start border-0 outline-none w-100" [routerLink]="['/admin/teachers']">
+                    <i class="fas fa-chalkboard-teacher text-danger me-2 fs-5"></i>
+                    <span class="text-dark fw-bold">إدارة المدرسين</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,97 @@
+<div class="page-container" dir="rtl">
+    <!-- Header -->
+    <div class="header-section text-center mb-5 mt-4">
+        <h2 class="fw-bold head-title mb-2">نظام رصد غياب الحصص اليومية</h2>
+        <div class="text-muted fs-6">
+            <a routerLink="/" class="text-decoration-none text-muted"><i class="fas fa-home me-1"></i>الرئيسية</a> 
+            - كشف حصص المعلم لرصد الحضور والغياب
+        </div>
+    </div>
+
+    <!-- Info Banner -->
+    <div class="info-banner mb-4 p-3 rounded-not-bottom d-flex align-items-center gap-2">
+        <i class="fas fa-info-circle"></i>
+        <span>الحالة: الحصص المجدولة لليوم من قاعدة البيانات</span>
+    </div>
+    
+    <!-- Error Alert -->
+    <div class="alert alert-danger d-flex align-items-center gap-2 mb-4" *ngIf="errorMessage">
+        <i class="fas fa-exclamation-circle"></i>
+        {{ errorMessage }}
+    </div>
+
+    <div class="alert alert-success d-flex align-items-center gap-2 rounded-not-top mb-4" *ngIf="showSuccess">
+        تم تسجيل الحضور بنجاح
+    </div>
+
+    <!-- Loading -->
+    <div *ngIf="loading" class="text-center py-5">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p class="mt-3 text-muted">جاري تحميل الحصص من قاعدة البيانات...</p>
+    </div>
+
+    <!-- Table Container -->
+    <div *ngIf="!loading" class="table-responsive rounded-3 shadow-sm bg-white overflow-hidden">
+        <table class="table table-bordered table-hover align-middle text-center mb-0 custom-table">
+            <thead class="table-light text-secondary fs-6 fw-semibold">
+                <tr>
+                    <th class="py-3">اسم المادة</th>
+                    <th class="py-3">الصف</th>
+                    <th class="py-3">الفصل</th>
+                    <th class="py-3">موعد الحصة</th>
+                    <th class="py-3">عدد الطلاب</th>
+                    <th class="py-3">حالة الرصد</th>
+                    <th class="py-3">مؤشر الحضور</th>
+                    <th class="py-3">إجراءات</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr *ngFor="let session of sessions">
+                    <td class="fw-bold text-dark">{{ session.subjectName }}</td>
+                    <td class="text-muted">{{ session.gradeName || '—' }}</td>
+                    <td class="text-muted">{{ session.classRoomName }}</td>
+                    <td class="text-muted">{{ formatTime(session.startTime) }}</td>
+                    <td class="text-muted">{{ session.studentCount || 0 }}</td>
+                    
+                    <!-- Status Badge -->
+                    <td>
+                        <span class="badge" [ngClass]="session.isRecorded ? 'badge-success' : 'bg-warning text-dark'">
+                            {{ session.isRecorded ? 'تم الرصد' : 'مطلوب الرصد' }}
+                        </span>
+                    </td>
+                    
+                    <!-- Indicator Badge -->
+                    <td>
+                        <span class="badge indicator-green px-3 py-2 rounded-1" *ngIf="session.attendanceCount > 0">
+                            <i class="fas fa-arrow-up me-1"></i> {{ session.attendanceCount }} حاضر
+                        </span>
+                        <span class="badge indicator-blue px-3 py-2 rounded-1" *ngIf="!session.attendanceCount || session.attendanceCount === 0">
+                            لم يبدأ بعد
+                        </span>
+                    </td>
+                    
+                    <!-- Actions -->
+                    <td>
+                        <div class="action-buttons d-flex flex-wrap gap-2 justify-content-center">
+                            <button class="btn btn-sm btn-manual rounded-1 py-1 px-3 d-flex align-items-center gap-1" [routerLink]="['/teacher/attendance/manual']" [queryParams]="{sessionId: session.id}">
+                                <i class="fas fa-edit"></i> رصد يدوي
+                            </button>
+                            <button class="btn btn-sm btn-scan rounded-1 py-1 px-3 d-flex align-items-center gap-1" [routerLink]="['/teacher/attendance/face']" [queryParams]="{sessionId: session.id}">
+                                <i class="fas fa-camera"></i> بصمة الوجه
+                            </button>
+                            <button class="btn btn-sm btn-qr rounded-1 py-1 px-3 fw-bold d-flex align-items-center gap-1" [routerLink]="['/teacher/attendance/qr']" [queryParams]="{sessionId: session.id}">
+                                <i class="fas fa-qrcode"></i> رصد بـ QR
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                <tr *ngIf="sessions.length === 0 && !errorMessage">
+                    <td colspan="8" class="text-center py-5 text-muted">
+                        <i class="fas fa-calendar-times fs-1 mb-3 d-block opacity-50"></i>
+                        لا توجد حصص مجدولة لليوم في قاعدة البيانات
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>

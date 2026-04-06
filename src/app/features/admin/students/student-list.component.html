@@ -1,0 +1,142 @@
+<!-- features/admin/students/student-list/student-list.component.html -->
+<div class="student-management" dir="rtl">
+  <!-- Header -->
+  <div class="page-header d-flex justify-content-between align-items-center mb-4">
+    <h1 class="text-gradient fw-bold">إدارة الطلاب</h1>
+    <button class="btn btn-primary gradient-primary shadow-sm px-4 rounded-pill" (click)="onAddStudent()">
+      <i class="fas fa-plus me-2"></i>
+      إضافة طالب جديد
+    </button>
+  </div>
+
+  <!-- Stats Cards -->
+  <div class="stats-grid row g-3 mb-4">
+    <div class="col-md-3">
+      <div class="stat-card glass-card glass-card-hover p-4 h-100">
+        <div class="stat-icon blue mb-3">
+          <i class="fas fa-users fs-3 text-info"></i>
+        </div>
+        <div class="stat-content">
+          <h3 class="fs-6 text-muted-dark">إجمالي الطلاب</h3>
+          <p class="stat-value fs-2 fw-bold text-gradient mb-1">156</p>
+          <p class="stat-label small text-success">+12 هذا الشهر</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-3">
+      <div class="stat-card glass-card glass-card-hover p-4 h-100">
+        <div class="stat-icon green mb-3">
+          <i class="fas fa-check-circle fs-3 text-success"></i>
+        </div>
+        <div class="stat-content">
+          <h3 class="fs-6 text-muted-dark">نشط</h3>
+          <p class="stat-value fs-2 fw-bold text-gradient mb-1">142</p>
+          <p class="stat-label small text-muted">91% من الإجمالي</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-3">
+      <div class="stat-card glass-card glass-card-hover p-4 h-100">
+        <div class="stat-icon yellow mb-3">
+          <i class="fas fa-clock fs-3 text-warning"></i>
+        </div>
+        <div class="stat-content">
+          <h3 class="fs-6 text-muted-dark">متوسط الحضور</h3>
+          <p class="stat-value fs-2 fw-bold text-gradient mb-1">95%</p>
+          <p class="stat-label small text-muted">هذا الأسبوع</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-3">
+      <div class="stat-card glass-card glass-card-hover p-4 h-100">
+        <div class="stat-icon purple mb-3">
+          <i class="fas fa-credit-card fs-3 text-primary"></i>
+        </div>
+        <div class="stat-content">
+          <h3 class="fs-6 text-muted-dark">باقي سداد</h3>
+          <p class="stat-value fs-2 fw-bold text-gradient mb-1">14</p>
+          <p class="stat-label small text-muted">طالب</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filters-section glass-card p-4 mb-4">
+    <div class="row g-3 align-items-end">
+      <div class="col-md-3">
+        <div class="filter-group">
+          <label class="form-label text-white">الفصل:</label>
+          <select class="form-select bg-dark border-secondary text-white">
+            <option value="">كل الفصول</option>
+            <option *ngFor="let class of classes" [value]="class.id">
+              {{ class.name }}
+            </option>
+          </select>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <div class="filter-group">
+          <label class="form-label text-white">الحالة:</label>
+          <select class="form-select bg-dark border-secondary text-white">
+            <option value="">الكل</option>
+            <option value="active">نشط</option>
+            <option value="inactive">غير نشط</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <div class="filter-group">
+          <label class="form-label text-white">تدريب الوجه:</label>
+          <select class="form-select bg-dark border-secondary text-white">
+            <option value="">الكل</option>
+            <option value="trained">مدرب</option>
+            <option value="untrained">غير مدرب</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <button class="btn btn-secondary w-100 gradient-primary" (click)="applyFilters()">
+          <i class="fas fa-filter me-2"></i>
+          تطبيق الفلترة
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Students Table -->
+  <div class="glass-card p-0 overflow-hidden">
+    <app-smart-table
+      [data]="students"
+      [columns]="columns"
+      [totalItems]="totalItems"
+      [pageSize]="pageSize"
+      [currentPage]="currentPage"
+      [loading]="loading"
+      (pageChange)="onPageChange($event)"
+      (search)="onSearch($event)"
+      (sort)="onSort($event)"
+      (edit)="onEditStudent($event)"
+      (delete)="onDeleteStudent($event)"
+      (view)="onViewStudent($event)">
+      
+      <!-- Custom Template for Attendance Rate -->
+      <ng-template #attendanceRateTemplate let-student>
+        <span class="badge rounded-pill px-3 py-2" [ngClass]="{
+          'bg-success': student.attendanceRate >= 90,
+          'bg-warning text-dark': student.attendanceRate >= 75 && student.attendanceRate < 90,
+          'bg-danger': student.attendanceRate < 75
+        }">
+          {{ student.attendanceRate }}%
+        </span>
+      </ng-template>
+      
+    </app-smart-table>
+  </div>
+</div>

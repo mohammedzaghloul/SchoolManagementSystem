@@ -1,0 +1,259 @@
+.student-dashboard {
+    padding: 20px;
+    font-family: 'Tajawal', sans-serif;
+    background: transparent;
+    min-height: 100vh;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Welcome Section */
+.welcome-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+}
+
+.welcome-section h1 {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #1f2937;
+    margin: 0 0 4px;
+}
+
+.welcome-section p {
+    color: #6b7280;
+    margin: 0;
+}
+
+/* Attendance Donut */
+.status-circle {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    text-align: center;
+}
+
+.status-circle svg {
+    transform: rotate(-90deg);
+    width: 80px;
+    height: 80px;
+}
+
+.percentage {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-weight: 800;
+    font-size: 1rem;
+    color: #10b981;
+}
+
+/* Quick Actions */
+.quick-actions {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.action-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 16px;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    cursor: pointer;
+    font-family: 'Tajawal', sans-serif;
+    font-size: 0.85rem;
+    color: #374151;
+    transition: all 0.2s;
+    min-width: 90px;
+}
+
+.action-btn i {
+    font-size: 1.4rem;
+    color: #9ca3af;
+}
+
+.action-btn.primary {
+    background: #3b82f6;
+    color: white;
+    border-color: #3b82f6;
+}
+
+.action-btn.primary i {
+    color: white;
+}
+
+.action-btn:hover {
+    border-color: #3b82f6;
+    color: #3b82f6;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.12);
+}
+
+.action-btn.primary:hover {
+    background: #2563eb;
+}
+
+/* Cards */
+.schedule-card,
+.grades-card,
+.exams-card {
+    background: transparent;
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.schedule-card h3,
+.grades-card h3,
+.exams-card h3 {
+    font-weight: 700;
+    font-size: 1rem;
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Schedule Items */
+.schedule-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid #f9fafb;
+}
+
+.schedule-item .time {
+    color: #6b7280;
+    font-size: 0.8rem;
+    min-width: 100px;
+}
+
+.schedule-item .subject {
+    font-weight: 700;
+    flex: 1;
+}
+
+.schedule-item .teacher {
+    color: #9ca3af;
+    font-size: 0.8rem;
+}
+
+.status-badge {
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 20px;
+    background: #f3f4f6;
+    color: #6b7280;
+}
+
+.status-badge.completed {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+/* Grade Items */
+.grade-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid #f9fafb;
+}
+
+.grade-item .subject {
+    font-weight: 600;
+}
+
+.score {
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: #3b82f6;
+}
+
+.max {
+    color: #9ca3af;
+}
+
+.view-all {
+    display: block;
+    text-align: center;
+    margin-top: 12px;
+    font-size: 0.85rem;
+    color: #3b82f6;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.view-all:hover {
+    text-decoration: underline;
+}
+
+/* Exam Items */
+.exam-item {
+    padding: 14px;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    margin-bottom: 12px;
+}
+
+.exam-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.exam-header h4 {
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.exam-header .date {
+    font-size: 0.75rem;
+    color: #6b7280;
+}
+
+.exam-item p {
+    color: #9ca3af;
+    font-size: 0.82rem;
+    margin-bottom: 10px;
+}
+
+.exam-footer {
+    display: flex;
+    justify-content: space-between;
+    color: #6b7280;
+    font-size: 0.78rem;
+}
+
+.exam-footer i {
+    margin-left: 4px;
+}

@@ -1,0 +1,212 @@
+<div class="page-container" [class.blur-background]="showModal || showPlayer">
+    <!-- Premium Header Area -->
+    <div class="page-header d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3 mb-5 mt-2">
+        <div class="animate-in-left">
+            <div class="d-flex align-items-center gap-3 mb-1">
+                <div class="header-icon-box bg-primary-soft rounded-4 p-2">
+                    <i class="fas fa-video text-primary fs-4"></i>
+                </div>
+                <h2 class="page-title mb-0 fw-800">إدارة المحتوى المرئي</h2>
+            </div>
+            <p class="text-muted mb-0 small ps-5">تنظيم ورفع الشروحات التعليمية لصفوفك الدراسية</p>
+        </div>
+        <button *ngIf="currentUserRole === 'Teacher' || currentUserRole === 'Admin'" 
+            class="btn btn-primary px-4 py-2-5 rounded-4 fw-800 d-flex align-items-center gap-2 shadow-premium hover-glow"
+            (click)="openModal()">
+            <i class="fas fa-plus-circle"></i>
+            رفع فيديو جديد
+        </button>
+    </div>
+
+    <!-- Loading State with Lottie-like feel -->
+    <div *ngIf="loading" class="text-center py-5">
+        <div class="spinner-grow text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
+        <p class="mt-4 text-secondary fw-bold">جاري المزامنة مع السحابة...</p>
+    </div>
+
+    <!-- Elegant Empty State -->
+    <div *ngIf="!loading && filteredVideos.length === 0" class="text-center py-10 bg-white shadow-sm rounded-25 border border-dashed-2 animate-fade-in">
+        <div class="empty-icon-circle mx-auto mb-4 bg-light p-5 rounded-circle d-inline-flex">
+            <i class="fas fa-clapperboard fs-1 text-primary opacity-25"></i>
+        </div>
+        <h4 class="fw-800 text-dark-blue">لا يوجد محتوى حالياً</h4>
+        <p class="text-muted small mb-0">ابدأ ببناء مكتبتك التعليمية ورفع أول فيديو لطلابك</p>
+    </div>
+
+    <!-- Advanced Video Grid -->
+    <div class="row g-4" *ngIf="!loading && filteredVideos.length > 0">
+        <div class="col-md-6 col-lg-4 animate-stagger" *ngFor="let video of filteredVideos">
+            <div class="card video-card border-0 shadow-sm rounded-25 h-100 overflow-hidden" [class.video-hidden]="video.isHidden">
+                <!-- Premium Thumbnail Area -->
+                <div class="thumbnail-container" (click)="playVideo(video)">
+                    <img [src]="video.thumbnailUrl || video.thumbnail" alt="Video Thumbnail"
+                        class="thumbnail-img"
+                        onerror="this.src='https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&q=80&w=600&h=400'; this.onerror=null;">
+                    
+                    <div class="play-btn-overlay">
+                        <i class="fas fa-play-circle"></i>
+                    </div>
+                    
+                    <!-- Sophisticated Badges -->
+                    <div class="grade-badge-overlay shadow-sm" *ngIf="video.gradeName">
+                        {{ video.gradeName }}
+                    </div>
+                    
+                    <div class="lock-indicator" *ngIf="video.isHidden">
+                        <i class="fas fa-shield-halved"></i>
+                        <span>مخفي</span>
+                    </div>
+
+                    <div class="duration-badge">
+                        {{ video.duration }}
+                    </div>
+                </div>
+
+                <!-- Video Card Content -->
+                <div class="card-body p-4 d-flex flex-column">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <span class="badge bg-primary-soft text-primary rounded-pill px-3 py-1-5 border-0 fw-700" style="font-size: 0.65rem;">
+                             <i class="fas fa-book-open me-1"></i> {{ video.subject }}
+                        </span>
+                        
+                        <div *ngIf="currentUserRole === 'Teacher' || currentUserRole === 'Admin'" 
+                             class="btn-icon-toggle" [class.is-hidden]="video.isHidden" 
+                             [title]="video.isHidden ? 'إظهار للطلاب' : 'إخفاء عن الطلاب'"
+                             (click)="toggleLock(video); $event.stopPropagation()">
+                            <i class="fas" [class.fa-eye-slash]="video.isHidden" [class.fa-eye]="!video.isHidden"></i>
+                        </div>
+                    </div>
+
+                    <h5 class="fw-800 mb-2 title-link" (click)="playVideo(video)">{{ video.title }}</h5>
+                    <p class="text-secondary small mb-4 line-clamp-2">{{ video.description }}</p>
+
+                    <div class="mt-auto pt-4 border-top">
+                        <!-- Stat row -->
+                        <div class="d-flex align-items-center justify-content-between mb-4 px-1">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="far fa-circle-play text-muted"></i>
+                                <span class="text-muted small fw-600">{{ video.views }} مشهادة</span>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="far fa-calendar-check text-muted"></i>
+                                <span class="text-muted small fw-600">2026/04</span>
+                            </div>
+                        </div>
+
+                        <!-- Action Toolbar -->
+                        <div class="row g-2" *ngIf="currentUserRole === 'Teacher' || currentUserRole === 'Admin'">
+                            <div class="col-6">
+                                <button class="btn btn-action-outline btn-action-edit w-100" (click)="editVideo(video)">
+                                    <i class="fas fa-pen-nib"></i> تعديل
+                                </button>
+                            </div>
+                            <div class="col-6">
+                                <button class="btn btn-action-outline btn-action-delete w-100" (click)="deleteVideo(video)">
+                                    <i class="fas fa-trash-can"></i> حذف
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modern Glassmorphism Upload Modal -->
+<div class="modal-backdrop" *ngIf="showModal" (click)="closeModal()">
+    <div class="custom-modal" (click)="$event.stopPropagation()">
+        <div class="modal-content shadow-2xl border-0 overflow-hidden">
+            <!-- Modal Header -->
+            <div class="modal-header bg-white p-4 border-0 d-flex flex-row-reverse justify-content-between align-items-center">
+                <button type="button" class="btn-close shadow-none m-0" (click)="closeModal()"></button>
+                <div class="d-flex align-items-center gap-3">
+                    <div class="modal-icon bg-primary text-white rounded-3 p-2">
+                        <i class="fas" [class.fa-wand-magic-sparkles]="!isEditing" [class.fa-pen-to-square]="isEditing"></i>
+                    </div>
+                    <h5 class="modal-title fw-800 text-dark mb-0">
+                        {{ isEditing ? 'تعديل محتوى الفيديو' : 'رفع فيديو احترافي جديد' }}
+                    </h5>
+                </div>
+            </div>
+
+            <!-- Modal Content -->
+            <div class="modal-body p-5 pt-2">
+                <div class="row g-4">
+                    <div class="col-12">
+                        <div class="form-floating mb-1">
+                            <input type="text" class="form-control" id="videoUrl" placeholder="URL" [(ngModel)]="newVideo.url">
+                            <label for="videoUrl" class="small fw-700 text-primary">رابط الفيديو (YouTube)</label>
+                        </div>
+                        <p class="text-muted x-small mt-2 ps-2"><i class="fas fa-circle-info me-1"></i> الصق رابط الفيديو الخاص بك وسنتولى جلب الغلاف تلقائياً</p>
+                    </div>
+
+                    <div class="col-12">
+                        <div class="form-floating">
+                            <input type="text" class="form-control" id="videoTitle" placeholder="Title" [(ngModel)]="newVideo.title">
+                            <label for="videoTitle" class="small fw-700 text-primary">عنوان الفيديو الجذاب</label>
+                        </div>
+                    </div>
+
+                    <div class="col-12">
+                        <div class="form-floating">
+                            <textarea class="form-control" id="videoDesc" style="height: 120px;" placeholder="Description" [(ngModel)]="newVideo.description"></textarea>
+                            <label for="videoDesc" class="small fw-700 text-primary">الوصف التفصيلي</label>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label class="form-label x-small fw-800 text-secondary ls-1 mb-2 px-1">تصنيف المادة</label>
+                            <select class="form-select shadow-sm" [(ngModel)]="newVideo.subjectId">
+                                <option [ngValue]="null" disabled selected>اختر مادة من قائمة المواد</option>
+                                <option *ngFor="let sub of subjects" [ngValue]="sub.id">{{ sub.name }}</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label class="form-label x-small fw-800 text-secondary ls-1 mb-2 px-1">المرحلة المستهدفة</label>
+                            <select class="form-select shadow-sm" [(ngModel)]="newVideo.gradeLevelId">
+                                <option [ngValue]="null">كل الطلاب بالمدرسة</option>
+                                <option *ngFor="let g of grades" [ngValue]="g.id">{{ g.name }}</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Bottom Actions -->
+            <div class="modal-footer p-4 bg-light border-0 justify-content-between">
+                <button type="button" class="btn btn-link text-muted fw-bold text-decoration-none px-2" (click)="closeModal()">تجاهل</button>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-secondary-soft rounded-3 px-4 fw-800 border-0" (click)="closeModal()">تراجع</button>
+                    <button type="button" class="btn btn-primary rounded-3 px-5 py-2-5 fw-800 shadow-premium" (click)="publishVideo()">
+                       {{ isEditing ? 'تحديث البيانات' : 'بدء النشر الآن' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- High-Fidelity Video Player Overlay -->
+<div class="modal-backdrop player-backdrop" *ngIf="showPlayer" (click)="showPlayer = false; selectedVideoUrl = null">
+    <div class="player-container animate-scale-in" (click)="$event.stopPropagation()">
+        <div class="p-3 d-flex justify-content-between align-items-center bg-dark text-white">
+            <div class="d-flex align-items-center gap-2">
+                <div class="bg-primary-soft-dark rounded-circle p-1 px-2 mb-1">
+                    <i class="fas fa-circle-play text-primary x-small"></i>
+                </div>
+                <h6 class="mb-0 text-truncate text-white-50" style="max-width: 300px;">مشاهدة الآن: {{ activeVideo?.title }}</h6>
+            </div>
+            <button class="btn btn-sm btn-icon-close text-white bg-white-10 rounded-circle" (click)="showPlayer = false; selectedVideoUrl = null">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="ratio ratio-16x9">
+            <iframe *ngIf="selectedVideoUrl" [src]="selectedVideoUrl" allowfullscreen allow="autoplay"></iframe>
+        </div>
+    </div>
+</div>

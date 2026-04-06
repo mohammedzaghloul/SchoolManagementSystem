@@ -1,0 +1,105 @@
+<!-- shared/components/table/smart-table.component.html -->
+<div class="smart-table-container" dir="rtl">
+  <!-- Search Bar -->
+  <div class="table-toolbar" *ngIf="showSearch">
+    <div class="search-box">
+      <i class="fas fa-search"></i>
+      <input 
+        type="text" 
+        [(ngModel)]="searchTerm"
+        (keyup.enter)="onSearch()"
+        placeholder="بحث..."
+        class="form-control">
+      <button *ngIf="searchTerm" class="clear-search" (click)="searchTerm=''; onSearch()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div class="table-loading" *ngIf="loading">
+    <div class="spinner"></div>
+    <p>جاري التحميل...</p>
+  </div>
+
+  <!-- Table -->
+  <div class="table-responsive" *ngIf="!loading">
+    <table class="smart-table">
+      <thead>
+        <tr>
+          <th *ngFor="let col of columns" 
+              [class.sortable]="col.sortable"
+              [class.sorted]="sortColumn === col.field"
+              (click)="onSort(col)">
+            <span>{{ col.title }}</span>
+            <i class="fas" [ngClass]="getSortIcon(col)"></i>
+          </th>
+          <th *ngIf="showActions">الإجراءات</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let item of data; let i = index">
+          <td *ngFor="let col of columns">
+            <!-- Custom Template -->
+            <ng-container *ngIf="col.template; else defaultTemplate"
+                         [ngTemplateOutlet]="col.template"
+                         [ngTemplateOutletContext]="{ $implicit: item, column: col }">
+            </ng-container>
+            
+            <!-- Default Display -->
+            <ng-template #defaultTemplate>
+              <span *ngIf="col.type === 'date'">
+                {{ getNestedValue(item, col.field) | date:'shortDate' }}
+              </span>
+              <span *ngIf="col.type === 'boolean'">
+                <span class="badge" [class.success]="getNestedValue(item, col.field)"
+                      [class.danger]="!getNestedValue(item, col.field)">
+                  {{ getNestedValue(item, col.field) ? 'نعم' : 'لا' }}
+                </span>
+              </span>
+              <span *ngIf="col.type === 'badge'">
+                <span class="badge" [ngClass]="getNestedValue(item, col.field)?.class">
+                  {{ getNestedValue(item, col.field)?.text }}
+                </span>
+              </span>
+              <span *ngIf="!col.type || col.type === 'text'">
+                {{ getNestedValue(item, col.field) }}
+              </span>
+            </ng-template>
+          </td>
+          
+          <!-- Actions -->
+          <td class="actions-cell" *ngIf="showActions">
+            <button class="btn-icon view" (click)="view.emit(item)" title="عرض">
+              <i class="fas fa-eye"></i>
+            </button>
+            <button class="btn-icon edit" (click)="edit.emit(item)" title="تعديل">
+              <i class="fas fa-edit"></i>
+            </button>
+            <button class="btn-icon delete" (click)="delete.emit(item)" title="حذف">
+              <i class="fas fa-trash"></i>
+            </button>
+          </td>
+        </tr>
+
+        <!-- Empty State -->
+        <tr *ngIf="data.length === 0">
+          <td [attr.colspan]="columns.length + (showActions ? 1 : 0)" class="empty-state">
+            <i class="fas fa-inbox"></i>
+            <p>لا توجد بيانات للعرض</p>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  <div class="table-footer" *ngIf="totalItems > pageSize">
+    <app-paginator
+      [totalItems]="totalItems"
+      [pageSize]="pageSize"
+      [currentPage]="currentPage"
+      (pageChange)="onPageChange($event)">
+    </app-paginator>
+  </div>
+</div>

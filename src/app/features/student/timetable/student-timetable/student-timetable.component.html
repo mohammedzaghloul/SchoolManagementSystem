@@ -1,0 +1,83 @@
+<div class="timetable-container min-vh-100 dark-theme">
+    <!-- Top Bar -->
+    <div class="top-nav d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom border-dark">
+        <div class="user-info d-flex align-items-center gap-3">
+            <div class="avatar bg-warning text-dark border border-warning">
+                <i class="fas fa-user-circle fs-3"></i>
+            </div>
+            <div>
+                <h5 class="mb-0 text-white fw-bold">{{ studentName }}</h5>
+                <small class="text-secondary">طالب</small>
+            </div>
+        </div>
+        <div class="actions d-flex gap-3">
+            <button class="btn btn-icon btn-dark text-white rounded-circle">
+                <i class="far fa-bell"></i>
+            </button>
+            <button class="btn btn-icon btn-dark text-white rounded-circle">
+                <i class="far fa-sun"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <div class="page-header d-flex justify-content-between align-items-center mb-4">
+        <h2 class="page-title text-white fw-bold">الجدول الدراسي</h2>
+
+        <div class="search-box position-relative">
+            <i class="fas fa-search search-icon text-secondary position-absolute top-50 translate-middle-y ms-3"></i>
+            <input type="text" class="form-control bg-dark border-dark text-white rounded-3 py-2 px-5"
+                placeholder="بحث...">
+        </div>
+    </div>
+
+    <!-- Error state -->
+    <div class="alert alert-danger mb-4" *ngIf="error">
+        {{ error }}
+    </div>
+
+    <!-- Loading state -->
+    <div class="text-center py-5" *ngIf="loading">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p class="text-muted mt-2">جاري تحميل الجدول...</p>
+    </div>
+
+    <!-- Timetable Grid Wrapper -->
+    <div class="card bg-darker border-0 shadow-lg rounded-4 timetable-wrapper p-1" *ngIf="!loading && !error">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-borderless timetable-grid w-100 text-center align-middle mb-0">
+                    <thead class="border-bottom border-darker">
+                        <tr>
+                            <th class="py-3 text-secondary border-end border-darker w-10">اليوم / الساعة</th>
+                            <th class="py-3 text-secondary" *ngFor="let time of timeSlots">{{ time }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr *ngFor="let day of daysOfWeek; let first = first" [class.border-top]="!first"
+                            [class.border-darker]="!first">
+                            <td class="fw-bold text-white border-end border-darker py-4">{{ day }}</td>
+                            <td *ngFor="let time of timeSlots">
+                                <ng-container *ngIf="timetableMatrix[day]?.[time]; else emptyCell">
+                                    <div class="subject-card text-white rounded-3 mx-auto p-2"
+                                        [ngClass]="getSubjectColor(timetableMatrix[day][time]!.subjectName)">
+                                        <div class="fw-bold">{{ timetableMatrix[day][time]!.subjectName }}</div>
+                                        <small>{{ timetableMatrix[day][time]!.className || 'قاعة A/3' }}</small>
+                                    </div>
+                                </ng-container>
+                                <ng-template #emptyCell>
+                                    -
+                                </ng-template>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Empty state when no sessions found -->
+            <div class="text-center py-5" *ngIf="sessions.length === 0">
+                <h5 class="text-secondary">لا توجد حصص مجدولة حالياً</h5>
+            </div>
+        </div>
+    </div>
+</div>

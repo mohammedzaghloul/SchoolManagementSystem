@@ -1,0 +1,82 @@
+.student-exams-container {
+    padding: 2rem;
+    background: #0f172a;
+}
+
+.dark-theme { color: #f8fafc; }
+.fw-800 { font-weight: 800; }
+.fw-900 { font-weight: 900; }
+.shadow-premium { box-shadow: 0 20px 50px -12px rgba(0,0,0,0.5) !important; }
+
+/* Tabs */
+.nav-link { color: #64748b; border: none !important; transition: all 0.3s; }
+.active-tab { color: #3b82f6 !important; background: rgba(59, 130, 246, 0.1); border-radius: 12px; }
+
+/* Exam Cards */
+.exam-card {
+    background: rgba(30, 41, 59, 0.7);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.exam-card:hover {
+    transform: translateY(-10px);
+    background: rgba(30, 41, 59, 0.9);
+    border-color: rgba(59, 130, 246, 0.3);
+}
+
+.subject-badge {
+    background: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+    padding: 5px 15px;
+    border-radius: 50px;
+    font-size: 0.75rem;
+    font-weight: 800;
+}
+
+.pro-btn { border-radius: 15px; padding: 12px; font-weight: 800; transition: all 0.3s; }
+.pro-btn-primary { background: #3b82f6; border: none; }
+.pro-btn-primary:hover { background: #2563eb; transform: scale(1.02); }
+
+/* Result Modal (Premium) */
+.result-modal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(15px);
+    z-index: 9999;
+    animation: fadeIn 0.4s ease;
+}
+
+.result-modal-content {
+    background: #1e293b;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    width: 420px;
+    max-width: 90%;
+    border-radius: 35px;
+    box-shadow: 0 40px 100px -20px rgba(0,0,0,0.8);
+    animation: scaleUp 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.modal-top .success-icon i { font-size: 3rem !important; }
+.modal-top h2 { font-size: 1.5rem !important; }
+.big-score-text span:first-child { font-size: 3.5rem !important; }
+.big-score-text span:last-child { font-size: 1rem !important; }
+
+.shadow-glow { box-shadow: 0 0 20px rgba(34, 197, 94, 0.4); }
+.hover-lift:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,0.3); }
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes scaleUp { from { opacity: 0; transform: scale(0.9) translateY(30px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+
+.x-small { font-size: 0.7rem; }
+.tiny { font-size: 0.65rem; }
+
+/* Dashboard Animations */
+.animate-fade-in { animation: fadeIn 0.8s ease-out; }
+.animate-scale-in { animation: scaleIn 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
+.animate-bounce-soft { animation: bounceSoft 2s infinite ease-in-out; }
+
+@keyframes scaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+@keyframes bounceSoft { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }

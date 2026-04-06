@@ -1,0 +1,218 @@
+/* Bottom Navigation Bar - Mobile only */
+.bottom-nav {
+    display: none;
+    /* Hidden on desktop by default */
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    background: #ffffff;
+    border-top: 1px solid #e5e7eb;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
+    direction: rtl;
+}
+
+/* Show on mobile */
+@media (max-width: 991px) {
+    .bottom-nav {
+        display: block;
+    }
+}
+
+.nav-items {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    padding: 6px 0 10px;
+}
+
+.nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    text-decoration: none;
+    color: #9ca3af;
+    font-size: 0.65rem;
+    font-family: 'Tajawal', sans-serif;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 14px;
+    transition: color 0.2s, transform 0.15s;
+    min-width: 48px;
+}
+
+.nav-item:hover {
+    color: #3b82f6;
+    transform: translateY(-2px);
+}
+
+.nav-item.active {
+    color: #3b82f6;
+}
+
+.nav-icon-wrapper {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-size: 1.1rem;
+    transition: background 0.2s, transform 0.15s;
+}
+
+.nav-item.active .nav-icon-wrapper {
+    background: #eff6ff;
+    transform: translateY(-4px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+}
+
+.nav-item span {
+    line-height: 1;
+}
+
+/* Bottom Sheet Overlay */
+.mobile-menu-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 999;
+}
+
+.mobile-bottom-sheet {
+    position: fixed;
+    bottom: -100%;
+    left: 0;
+    width: 100vw;
+    background: #ffffff;
+    z-index: 1001;
+    border-radius: 24px 24px 0 0;
+    transition: bottom 0.3s cubic-bezier(0.175, 0.885, 0.32, 1);
+    box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.mobile-bottom-sheet.open {
+    bottom: 0;
+}
+
+.sheet-header {
+    padding: 24px 20px 16px;
+    border-bottom: 1px solid #f3f4f6;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+}
+
+.drag-handle {
+    width: 40px;
+    height: 5px;
+    background: #e5e7eb;
+    border-radius: 5px;
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.sheet-header h5 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+.close-btn {
+    background: #f3f4f6;
+    border: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6b7280;
+}
+
+.sheet-content {
+    padding: 10px 0 30px;
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+.sheet-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 24px;
+    color: #4b5563;
+    text-decoration: none;
+    font-size: 1.05rem;
+    font-weight: 600;
+    border: none;
+    background: transparent;
+    width: 100%;
+    text-align: right;
+}
+
+.sheet-item:active {
+    background: #f9fafb;
+    color: #3b82f6;
+}
+
+.sheet-item i {
+    width: 24px;
+    font-size: 1.2rem;
+    text-align: center;
+    color: #9ca3af;
+}
+
+.sheet-item:active i {
+    color: #3b82f6;
+}
+
+.sheet-item.text-danger:active {
+    color: #ef4444;
+}
+
+.sheet-item.text-danger:active i {
+    color: #ef4444;
+}
+
+.sheet-divider {
+    height: 1px;
+    background: #f3f4f6;
+    margin: 8px 0;
+}
+
+/* Chat unread badge */
+.nav-icon-wrapper {
+    position: relative;
+}
+
+.nav-badge {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    background: #ef4444;
+    color: white;
+    font-size: 0.55rem;
+    font-weight: 700;
+    min-width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid white;
+    animation: badge-pop 0.3s ease;
+}
+
+@keyframes badge-pop {
+    from { transform: scale(0); }
+    to { transform: scale(1); }
+}

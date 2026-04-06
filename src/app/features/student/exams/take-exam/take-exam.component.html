@@ -1,0 +1,102 @@
+<!-- features/student/exams/take-exam/take-exam.component.html -->
+<div class="exam-container" dir="rtl" *ngIf="!loading && exam">
+  <!-- Header -->
+  <div class="exam-header">
+    <div class="exam-info">
+      <h1>{{ exam.title }}</h1>
+      <p>{{ exam.subjectName || exam.subjectId }} - {{ exam.classRoomName || exam.classRoomId }}</p>
+    </div>
+
+    <div class="exam-timer" [class.warning]="timeRemaining < 300">
+      <i class="far fa-clock"></i>
+      <span class="time">{{ formattedTime }}</span>
+      <div class="timer-progress">
+        <div class="progress-bar" [style.width.%]="timeProgress"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Progress Bar -->
+  <div class="exam-progress">
+    <div class="progress-info">
+      <span>تقدمك في الاختبار</span>
+      <span>{{ getProgress() | number:'1.0-0' }}%</span>
+    </div>
+    <div class="progress-bar">
+      <div class="progress" [style.width.%]="getProgress()"></div>
+    </div>
+  </div>
+
+  <!-- Questions Navigation -->
+  <div class="questions-nav">
+    <button *ngFor="let q of exam.questions; let i = index" class="question-btn"
+      [class.active]="i === currentQuestionIndex" [class.answered]="answers.get(q.id) !== null"
+      (click)="currentQuestionIndex = i">
+      {{ i + 1 }}
+    </button>
+  </div>
+
+  <!-- Current Question -->
+  <div class="question-card" *ngIf="exam.questions && exam.questions[currentQuestionIndex]">
+    <div class="question-header">
+      <h3>سؤال {{ currentQuestionIndex + 1 }} من {{ exam.questions.length }}</h3>
+      <span class="question-marks">{{ exam.questions[currentQuestionIndex].marks }} درجة</span>
+    </div>
+
+    <div class="question-text">
+      <p>{{ exam.questions[currentQuestionIndex].text }}</p>
+    </div>
+
+    <!-- Multiple Choice -->
+    <div class="question-options">
+      <div class="option" *ngFor="let choice of exam.questions[currentQuestionIndex].choices">
+        <label class="option-label">
+          <input type="radio" [name]="'q' + exam.questions[currentQuestionIndex].id"
+            [checked]="answers.get(exam.questions[currentQuestionIndex].id) === choice.id"
+            (change)="onAnswerChange(exam.questions[currentQuestionIndex].id, choice.id)">
+          <span class="option-text">{{ choice.text }}</span>
+        </label>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Navigation Buttons -->
+  <div class="question-navigation">
+    <button class="btn-secondary" (click)="currentQuestionIndex = currentQuestionIndex - 1"
+      [disabled]="currentQuestionIndex === 0">
+      <i class="fas fa-arrow-right"></i>
+      السابق
+    </button>
+
+    <button class="btn-primary" (click)="currentQuestionIndex = currentQuestionIndex + 1"
+      *ngIf="exam.questions && currentQuestionIndex < exam.questions.length - 1">
+      التالي
+      <i class="fas fa-arrow-left"></i>
+    </button>
+
+    <button class="btn-success" (click)="onSubmit()"
+      *ngIf="exam.questions && currentQuestionIndex === exam.questions.length - 1" [disabled]="submitting">
+      <i class="fas" [ngClass]="submitting ? 'fa-spinner fa-spin' : 'fa-check'"></i>
+      {{ submitting ? 'جاري التسليم...' : 'تسليم الاختبار' }}
+    </button>
+  </div>
+</div>
+
+<!-- Loading State -->
+<div class="loading-state" *ngIf="loading">
+  <div class="spinner"></div>
+  <p>جاري تحميل الاختبار...</p>
+</div>
+
+<!-- Fullscreen Warning -->
+<div class="fullscreen-warning" *ngIf="fullscreenWarning">
+  <div class="warning-content">
+    <i class="fas fa-exclamation-triangle"></i>
+    <h3>تنبيه</h3>
+    <p>تم تسجيل محاولة الخروج من الاختبار. الرجاء البقاء في صفحة الاختبار.</p>
+    <button class="btn-primary" (click)="fullscreenWarning = false; enableFullscreen()">
+      فهمت، متابعة الاختبار
+    </button>
+  </div>
+</div>

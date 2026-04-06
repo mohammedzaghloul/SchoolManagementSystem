@@ -1,0 +1,152 @@
+<div class="page-container" dir="rtl">
+    <div class="page-header d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="page-title text-gradient fw-bold">إدارة المواد الدراسية</h2>
+            <p class="text-muted mb-0">إضافة وتعديل المناهج والمواد التعليمية للمراحل المختلفة</p>
+        </div>
+        <button class="btn btn-premium d-flex align-items-center gap-2" (click)="openAddModal()">
+            <i class="fas fa-plus"></i>
+            <span>إضافة مادة جديدة</span>
+        </button>
+    </div>
+
+    <div class="premium-toolbar">
+        <div class="search-wrapper">
+            <i class="fas fa-search search-icon"></i>
+            <input type="text" class="form-control" placeholder="بحث عن مادة بالاسم أو الكود..."
+                [(ngModel)]="searchTerm" (input)="applyFilter()">
+        </div>
+        <div class="filter-wrapper">
+            <select class="form-select" [(ngModel)]="selectedTerm" (change)="applyFilter()">
+                <option value="all">كل التيرمات</option>
+                <option *ngFor="let term of terms" [value]="term">{{ term }}</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="row g-4 list-container">
+        <!-- Subject Card -->
+        <div class="col-md-6 col-xl-4" *ngFor="let sub of filteredSubjects">
+            <div class="card border-0 rounded-4 shadow-sm h-100 subject-card">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-start mb-4">
+                        <div class="subject-icon p-3 rounded-4 d-flex align-items-center justify-content-center shadow-sm">
+                            <i class="fas fa-book-open fs-4 text-primary"></i>
+                        </div>
+                        <div class="action-buttons d-flex gap-2">
+                            <button class="btn btn-light rounded-circle shadow-sm btn-icon edit-btn" (click)="openEditModal(sub)" title="تعديل">
+                                <i class="fas fa-pen text-primary"></i>
+                            </button>
+                            <button class="btn btn-light rounded-circle shadow-sm btn-icon delete-btn" (click)="deleteSubject(sub.id)" title="حذف">
+                                <i class="fas fa-trash-alt text-danger"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <h5 class="fw-bold text-dark mb-2">{{ sub.name }}</h5>
+                    
+                    <div class="d-flex flex-wrap gap-2 mb-3">
+                        <span class="badge bg-light text-secondary border px-2 py-1 rounded-pill">
+                            <i class="fas fa-hashtag me-1"></i> الكود: {{ sub.code || 'غير مجدول' }}
+                        </span>
+                        <span class="badge bg-light text-secondary border px-2 py-1 rounded-pill text-truncate" style="max-width: 200px;" [title]="sub.description || 'لا يوجد وصف'">
+                            <i class="fas fa-info-circle me-1"></i> {{ sub.description || 'لا يوجد وصف' }}
+                        </span>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="fas fa-layer-group text-muted"></i>
+                            <span class="text-muted small fw-medium">المرحلة: <span class="text-dark">{{ getClassRoomName(sub.classRoomId) }}</span></span>
+                        </div>
+                        <div class="d-flex flex-column align-items-end gap-2">
+                            <span class="badge bg-light text-secondary border px-3 py-2 rounded-pill fw-bold">{{ sub.term || 'الترم الأول' }}</span>
+                            <span [class]="sub.isActive ? 'badge bg-success-subtle text-success px-3 py-2 rounded-pill fw-bold' : 'badge bg-danger-subtle text-danger px-3 py-2 rounded-pill fw-bold'">
+                                {{ sub.isActive ? 'ظاهرة' : 'مخفية' }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 text-center py-5" *ngIf="loading">
+            <div class="spinner-border text-primary"></div>
+        </div>
+
+        <div class="col-12" *ngIf="!loading && subjects.length === 0">
+            <div class="text-center py-5 bg-white rounded-4 shadow-sm border border-dashed">
+                <div class="empty-state-icon mb-3">
+                    <i class="fas fa-books fs-1 text-muted"></i>
+                </div>
+                <h5 class="fw-bold text-dark">لا توجد مواد مدرجة</h5>
+                <p class="text-muted">قم بإضافة المناهج الدراسية لتبدأ في ترتيب الجدول.</p>
+                <button class="btn btn-outline-primary rounded-pill px-4" (click)="openAddModal()">اضافة اول مادة</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-backdrop fade show" *ngIf="showModal"></div>
+<div class="modal fade show d-block" *ngIf="showModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header border-0 p-4 align-items-center bg-light">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="modal-icon rounded-circle bg-white shadow-sm p-2 text-primary">
+                        <i class="fas" [ngClass]="isEditMode ? 'fa-pen' : 'fa-plus'"></i>
+                    </div>
+                    <h5 class="modal-title fw-bold mb-0 text-dark">{{ isEditMode ? 'تعديل مادة دراسية' : 'مادة دراسية جديدة' }}</h5>
+                </div>
+                <button type="button" class="btn-close shadow-none m-0 me-auto ms-0" (click)="showModal = false"></button>
+            </div>
+            
+            <form (ngSubmit)="saveSubject()">
+                <div class="modal-body p-4 pt-4">
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold text-secondary">اسم المادة</label>
+                        <input type="text" class="form-control form-control-lg rounded-3" placeholder="مثال: الرياضيات المتقدمة" name="name" [(ngModel)]="currentSubject.name" required>
+                    </div>
+                    
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold text-secondary">كود المادة</label>
+                            <input type="text" class="form-control form-control-lg rounded-3" placeholder="مثال: MATH-101" name="code" [(ngModel)]="currentSubject.code">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold text-secondary">الترم</label>
+                            <select class="form-select form-control-lg rounded-3" name="term" [(ngModel)]="currentSubject.term">
+                                <option *ngFor="let term of terms" [value]="term">{{ term }}</option>
+                            </select>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label fw-semibold text-secondary">الفصل / القاعة (اختياري)</label>
+                            <select class="form-select form-control-lg rounded-3" name="classRoomId" [(ngModel)]="currentSubject.classRoomId">
+                                <option [ngValue]="null">مادة عامة / أساسي</option>
+                                <option *ngFor="let cls of classRooms" [value]="cls.id">{{ cls.name }}</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mt-4">
+                        <label class="form-label fw-semibold text-secondary">وصف المادة</label>
+                        <textarea class="form-control form-control-lg rounded-3" rows="2" placeholder="أدخل وصفاً قصيراً لهذه المادة..." name="description" [(ngModel)]="currentSubject.description"></textarea>
+                    </div>
+
+                    <div class="form-check form-switch mt-4 bg-light p-3 rounded-3 d-flex justify-content-between align-items-center m-0">
+                        <label class="form-check-label fw-semibold text-dark m-0" for="flexSwitchCheckChecked">إظهار المادة في هذا الترم</label>
+                        <input class="form-check-input m-0 fs-5" type="checkbox" role="switch" id="flexSwitchCheckChecked" name="isActive" [(ngModel)]="currentSubject.isActive">
+                    </div>
+                </div>
+                
+                <div class="modal-footer border-0 p-4 pt-0 d-flex justify-content-start gap-2">
+                    <button type="submit" class="btn btn-primary btn-lg rounded-3 px-4 shadow-sm" [disabled]="submitting">
+                        {{ isEditMode ? 'حفظ التعديلات' : 'إعتماد المادة' }}
+                    </button>
+                    <button type="button" class="btn btn-light btn-lg rounded-3 px-4" (click)="showModal = false">إلغاء الأمر</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

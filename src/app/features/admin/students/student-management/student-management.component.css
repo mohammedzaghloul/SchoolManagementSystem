@@ -1,0 +1,151 @@
+/* Page Container */
+.page-container {
+    padding: 10px;
+    font-family: 'Tajawal', sans-serif;
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Header */
+.page-title {
+    font-weight: 800;
+    color: #1f2937;
+    margin-bottom: 4px;
+}
+
+.btn-primary {
+    background-color: #3b82f6;
+    border-color: #3b82f6;
+    font-weight: 700;
+    padding: 10px 20px;
+    border-radius: 10px;
+}
+
+.btn-primary:hover {
+    background-color: #2563eb;
+    border-color: #2563eb;
+}
+
+/* Toolbar Toolbar */
+.toolbar {
+    align-items: center;
+}
+
+.custom-select {
+    width: 200px;
+    border-color: #e5e7eb;
+    color: #4b5563;
+    font-weight: 600;
+}
+
+.custom-select:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 0.25rem rgba(59, 130, 246, .25);
+}
+
+.search-box input {
+    border-color: #e5e7eb;
+    background-color: #f9fafb;
+    font-weight: 500;
+}
+
+.search-icon {
+    right: 15px;
+    color: #9ca3af;
+}
+
+.search-box input:focus {
+    background-color: #fff;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 0.25rem rgba(59, 130, 246, .25);
+}
+
+.btn-outline-secondary {
+    border-color: #e5e7eb;
+    color: #4b5563;
+    font-weight: 600;
+}
+
+.btn-outline-secondary:hover {
+    background-color: #f9fafb;
+    border-color: #d1d5db;
+    color: #1f2937;
+}
+
+/* Table Styling */
+.custom-table {
+    margin-bottom: 0;
+}
+
+.custom-table thead th {
+    background-color: transparent;
+    color: #6b7280;
+    font-weight: 600;
+    font-size: 0.9rem;
+    border-bottom: 2px solid #f3f4f6;
+    padding: 15px;
+    white-space: nowrap;
+}
+
+.custom-table tbody td {
+    padding: 18px 15px;
+    border-bottom: 1px solid #f3f4f6;
+    vertical-align: middle;
+}
+
+.custom-table tbody tr:hover {
+    background-color: #f8fafc;
+}
+
+/* Status dots & Badges */
+.bg-success-subtle {
+    background-color: #dcfce7 !important;
+}
+
+.dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.btn-icon {
+    width: 35px;
+    height: 35px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+
+.btn-icon:hover {
+    background-color: #f3f4f6;
+}
+
+.progress {
+    background-color: #e5e7eb;
+    overflow: hidden;
+}
+
+/* Avatars */
+/* Using generic background colors for avatar placeholders */
+.avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}

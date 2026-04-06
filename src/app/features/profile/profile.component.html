@@ -1,0 +1,125 @@
+<div class="profile-container rtl-layout" dir="rtl">
+  <div class="profile-header shadow-sm">
+    <div class="header-overlay"></div>
+    <div class="header-content">
+      <div class="avatar-wrapper">
+        <img
+          [src]="imagePreview || user?.avatar || 'https://ui-avatars.com/api/?name=' + (user?.fullName || 'User') + '&background=4f46e5&color=fff&size=200'"
+          alt="Profile picture"
+          class="profile-img shadow">
+        <label for="avatarUpload" class="avatar-edit-btn">
+          <i class="fas fa-camera"></i>
+        </label>
+        <input type="file" id="avatarUpload" accept="image/*" (change)="onImageSelected($event)" hidden>
+      </div>
+      <div class="user-meta">
+        <h1>{{ user?.fullName }}</h1>
+        <div class="role-badge">
+          <i class="fas fa-user-shield"></i>
+          {{ user?.role === 'Parent' ? 'ولي أمر' : 'مستخدم' }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="profile-grid">
+    <div class="profile-card info-section">
+      <div class="card-header-premium">
+        <div class="header-title">
+          <i class="fas fa-id-card"></i>
+          <h3>المعلومات الشخصية</h3>
+        </div>
+        <button class="edit-toggle" (click)="isEditing = !isEditing">
+          {{ isEditing ? 'إلغاء' : 'تعديل البيانات' }}
+        </button>
+      </div>
+
+      <div class="card-body">
+        <div class="view-grid" *ngIf="!isEditing">
+          <div class="view-item">
+            <span class="label">الاسم الكامل</span>
+            <span class="value">{{ user?.fullName || 'محمد علي' }}</span>
+          </div>
+          <div class="view-item">
+            <span class="label">البريد الإلكتروني</span>
+            <span class="value">{{ user?.email || 'mohamed@school.com' }}</span>
+          </div>
+          <div class="view-item">
+            <span class="label">رقم الهاتف</span>
+            <span class="value">{{ user?.phone || '0100000000' }}</span>
+          </div>
+        </div>
+
+        <form [formGroup]="editForm" *ngIf="isEditing" (ngSubmit)="saveProfile()" class="edit-form">
+          <div class="input-group-premium">
+            <label>الاسم الكامل</label>
+            <input type="text" formControlName="fullName" placeholder="أدخل اسمك بالكامل">
+          </div>
+          <div class="input-group-premium">
+            <label>البريد الإلكتروني</label>
+            <input type="email" formControlName="email" readonly>
+            <small class="text-muted mt-1">البريد الحالي للعرض فقط. تعديل البريد غير متاح من هذه الشاشة.</small>
+          </div>
+          <div class="input-group-premium">
+            <label>رقم الهاتف</label>
+            <input type="tel" formControlName="phone" placeholder="أدخل رقم الهاتف">
+          </div>
+          <button type="submit" class="btn-save-premium">
+            <i class="fas fa-check"></i> حفظ التغييرات الآن
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <div class="profile-card security-section">
+      <div class="card-header-premium">
+        <div class="header-title">
+          <i class="fas fa-lock"></i>
+          <h3>الأمان وكلمة المرور</h3>
+        </div>
+      </div>
+
+      <div class="card-body">
+        <p class="security-note">
+          لا يمكن عرض كلمة المرور القديمة المحفوظة لأسباب أمان، لكن يمكنك إدخالها هنا وإظهارها أثناء الكتابة.
+        </p>
+
+        <form [formGroup]="passwordForm" (ngSubmit)="changePassword()" class="security-form">
+          <div class="input-group-premium">
+            <label>كلمة المرور الحالية</label>
+            <div class="pass-input-wrapper">
+              <input [type]="showPass1 ? 'text' : 'password'" formControlName="currentPassword" placeholder="أدخل كلمة المرور الحالية">
+              <button type="button" class="btn-toggle-pass" (click)="showPass1 = !showPass1">
+                <i class="fas" [ngClass]="showPass1 ? 'fa-eye-slash' : 'fa-eye'"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="input-group-premium">
+            <label>كلمة المرور الجديدة</label>
+            <div class="pass-input-wrapper">
+              <input [type]="showPass2 ? 'text' : 'password'" formControlName="newPassword" placeholder="أدخل كلمة المرور الجديدة">
+              <button type="button" class="btn-toggle-pass" (click)="showPass2 = !showPass2">
+                <i class="fas" [ngClass]="showPass2 ? 'fa-eye-slash' : 'fa-eye'"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="input-group-premium">
+            <label>تأكيد كلمة المرور الجديدة</label>
+            <div class="pass-input-wrapper">
+              <input [type]="showPass3 ? 'text' : 'password'" formControlName="confirmPassword" placeholder="أعد كتابة كلمة المرور">
+              <button type="button" class="btn-toggle-pass" (click)="showPass3 = !showPass3">
+                <i class="fas" [ngClass]="showPass3 ? 'fa-eye-slash' : 'fa-eye'"></i>
+              </button>
+            </div>
+          </div>
+
+          <button type="submit" class="btn-security-premium" [disabled]="passwordForm.invalid">
+            تحديث كلمة المرور
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>

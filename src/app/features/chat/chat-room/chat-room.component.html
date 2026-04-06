@@ -1,0 +1,345 @@
+<div class="chat-container rtl-layout" dir="rtl" (mousedown)="unlockAudio()">
+  <!-- Sidebar: Contacts -->
+  <div class="chat-sidebar" [class.hidden-mobile]="selectedContact">
+    <!-- Sidebar Header -->
+    <div class="sidebar-header">
+      <div class="d-flex align-items-center justify-content-between mb-3">
+        <h5 class="mb-0 fw-bold">
+          <i class="fas fa-comments text-primary me-2"></i>
+          المحادثات
+        </h5>
+        <span class="badge bg-primary rounded-pill" *ngIf="getTotalUnread() > 0">
+          {{ getTotalUnread() }}
+        </span>
+      </div>
+      <div class="search-box position-relative w-100">
+        <i class="fas fa-search search-icon"></i>
+        <input type="text" class="form-control search-input" [placeholder]="getSearchPlaceholder()"
+          [(ngModel)]="searchQuery" (input)="filterContacts()" id="contact-search-input">
+      </div>
+    </div>
+
+    <!-- Contact Cards -->
+    <div class="contacts-list">
+      <!-- Loading -->
+      <div *ngIf="loading" class="text-center py-5">
+        <div class="loading-dots">
+          <span></span><span></span><span></span>
+        </div>
+        <p class="text-muted small mt-3">جاري تحميل جهات الاتصال...</p>
+      </div>
+
+      <div *ngFor="let contact of filteredContacts" class="contact-item"
+        [class.active-contact]="selectedContact?.id === contact.id" (click)="selectContact(contact)"
+        id="contact-{{contact.id}}">
+        <div class="contact-avatar position-relative">
+          <img
+            [src]="'https://ui-avatars.com/api/?name=' + (contact.name || 'U') + '&background=random&color=fff&bold=true&size=128'"
+            alt="Avatar" class="avatar-img">
+          <span class="online-dot" *ngIf="contact.isOnline"></span>
+        </div>
+
+        <div class="contact-info">
+          <div class="contact-top-row">
+            <h6 class="contact-name">{{ contact.name }}</h6>
+            <span class="contact-time" *ngIf="contact.lastMessageTime">{{ formatTimeAgo(contact.lastMessageTime) }}</span>
+          </div>
+          <div class="contact-bottom-row">
+            <div class="contact-preview">
+              <span class="typing-indicator" *ngIf="contact.isTyping">
+                <span class="typing-text">يكتب</span>
+                <span class="typing-dots"><span></span><span></span><span></span></span>
+              </span>
+              <span *ngIf="!contact.isTyping" class="last-msg">
+                <i class="fas fa-check-double read-tick me-1" *ngIf="contact.lastMessage && !contact.unreadCount"></i>
+                {{ contact.lastMessage || getContactRoleLabel(contact) }}
+              </span>
+            </div>
+            <span class="unread-badge" *ngIf="contact.unreadCount > 0">{{ contact.unreadCount }}</span>
+          </div>
+          <div class="contact-role-tag">
+            <i [class]="getContactRoleIcon(contact)" class="me-1"></i>
+            {{ getContactRoleLabel(contact) }}
+            <span *ngIf="contact.className"> - {{ contact.className }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Empty -->
+      <div *ngIf="!loading && filteredContacts.length === 0" class="empty-contacts">
+        <div class="empty-icon-wrapper">
+          <i class="fas fa-users-slash"></i>
+        </div>
+        <p>لا توجد جهات اتصال بعد</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main: Chat Area -->
+  <div class="chat-main" *ngIf="selectedContact">
+    <!-- Chat Header -->
+    <div class="chat-header">
+      <div class="d-flex align-items-center">
+        <button class="btn back-button" (click)="goBack()" id="chat-back-btn">
+          <i class="fas fa-arrow-right"></i>
+        </button>
+        <div class="header-avatar position-relative">
+          <img
+            [src]="'https://ui-avatars.com/api/?name=' + (selectedContact.name || 'U') + '&background=128C7E&color=fff&size=128'"
+            alt="Avatar" class="avatar-img-sm">
+          <span class="online-dot-sm" *ngIf="selectedContact.isOnline"></span>
+        </div>
+        <div class="header-info">
+          <h6 class="mb-0 fw-bold">{{ selectedContact.name }}</h6>
+          <small class="header-status">
+            <span *ngIf="selectedContact.isTyping" class="typing-status">
+              يكتب<span class="dots">...</span>
+            </span>
+            <span *ngIf="!selectedContact.isTyping && selectedContact.isOnline" class="online-status">متصل الآن</span>
+            <span *ngIf="!selectedContact.isTyping && !selectedContact.isOnline">
+              {{ getContactRoleLabel(selectedContact) }}
+              <span *ngIf="selectedContact.studentName && selectedContact.role === 'Parent'"> - ولي أمر {{ selectedContact.studentName }}</span>
+            </span>
+          </small>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="action-btn" (click)="toggleMessageSearch()" title="بحث في المحادثة" id="search-messages-btn">
+          <i class="fas fa-search"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Message Search Bar -->
+    <div class="message-search-bar" *ngIf="showMessageSearch">
+      <div class="search-inner">
+        <i class="fas fa-search"></i>
+        <input type="text" [(ngModel)]="messageSearchQuery" (input)="searchInMessages()"
+          placeholder="بحث في الرسائل..." class="form-control" id="message-search-input">
+        <button class="btn btn-sm" (click)="toggleMessageSearch()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="search-results" *ngIf="searchResults.length > 0">
+        <div class="search-result-item" *ngFor="let result of searchResults">
+          <p class="mb-0 small">{{ result.content }}</p>
+          <small class="text-muted">{{ result.sentAt | date:'short' }}</small>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chat Messages -->
+    <div class="chat-messages" #chatMessagesContainer id="chat-messages-area">
+      <!-- Loading Messages -->
+      <div *ngIf="loadingMessages" class="text-center py-5">
+        <div class="loading-dots">
+          <span></span><span></span><span></span>
+        </div>
+        <p class="text-muted small mt-2">جاري تحميل الرسائل...</p>
+      </div>
+
+      <!-- Messages -->
+      <ng-container *ngFor="let msg of messages; let i = index">
+        <!-- Date separator -->
+        <div class="date-separator" *ngIf="isFirstMessageOfDay(i)">
+          <span class="date-badge">{{ formatDate(msg.timestamp) }}</span>
+        </div>
+
+        <!-- Message bubble -->
+        <div class="message-row" [class.outgoing-row]="!msg.isIncoming" [class.incoming-row]="msg.isIncoming">
+          <div class="message-envelope" [class.outgoing]="!msg.isIncoming" [class.incoming]="msg.isIncoming">
+            <!-- Delete button (only for own messages) -->
+            <button *ngIf="!msg.isIncoming" class="delete-msg-btn" (click)="deleteMessage(msg.id, $event)" title="حذف">
+              <i class="fas fa-trash-alt"></i>
+            </button>
+
+            <div class="message-bubble" [class.sending]="msg.isSending">
+              <!-- Image message -->
+              <div *ngIf="msg.messageType === 'image' || msg.imageUrl" class="image-message">
+                <img [src]="getFullFileUrl(msg.fileUrl) || msg.imageUrl" 
+                     class="chat-image" (click)="openImage(getFullFileUrl(msg.fileUrl) || msg.imageUrl)"
+                     loading="lazy">
+              </div>
+
+              <!-- WhatsApp-style Audio message -->
+              <div *ngIf="msg.messageType === 'audio'" class="audio-message-custom" (mouseenter)="initWaveSurfer(msg)">
+                <div class="audio-player-wrapper">
+                  <button class="audio-toggle-btn" (click)="toggleAudio(msg)">
+                    <i class="fas" [class.fa-play]="!msg.isPlaying" [class.fa-pause]="msg.isPlaying"></i>
+                  </button>
+                  
+                  <div class="wave-content">
+                    <div [id]="'waveform-' + msg.id" class="waveform-container"></div>
+                    <div class="audio-info-row">
+                      <span class="audio-duration">0:00</span>
+                    </div>
+                  </div>
+
+                  <div class="audio-right-controls">
+                    <div class="sender-avatar-audio">
+                      <img [src]="'https://ui-avatars.com/api/?name=' + (msg.isIncoming ? selectedContact.name : 'Me') + '&background=random&color=fff&size=64'" class="avatar-audio-img">
+                      <i class="fas fa-microphone mic-overlay"></i>
+                    </div>
+                    <button class="speed-badge" (click)="setPlaybackRate(msg, msg.playbackRate === 2 ? 1 : (msg.playbackRate || 1) + 0.5)">
+                      {{ msg.playbackRate || 1 }}x
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- File message -->
+              <div *ngIf="msg.messageType === 'file' && !msg.imageUrl" class="file-message">
+                <a [href]="getFullFileUrl(msg.fileUrl)" target="_blank" class="file-download">
+                  <div class="file-icon-wrapper">
+                    <i [class]="getFileIcon(msg.fileType)"></i>
+                  </div>
+                  <div class="file-info">
+                    <span class="file-name">{{ msg.fileName || 'ملف' }}</span>
+                    <span class="file-size">{{ formatFileSize(msg.fileSize) }}</span>
+                  </div>
+                  <i class="fas fa-download file-dl-icon"></i>
+                </a>
+              </div>
+
+              <!-- Text content -->
+              <p *ngIf="msg.content && msg.messageType === 'text'" class="message-text">{{ msg.content }}</p>
+
+              <!-- Message meta -->
+              <div class="message-meta">
+                <span class="message-time">{{ msg.timestamp | date:'shortTime' }}</span>
+                <span *ngIf="!msg.isIncoming" class="message-status">
+                  <i *ngIf="msg.isSending" class="fas fa-clock sending-icon"></i>
+                  <i *ngIf="!msg.isSending && !msg.isRead" class="fas fa-check delivered-icon"></i>
+                  <i *ngIf="!msg.isSending && msg.isRead" class="fas fa-check-double read-icon"></i>
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </ng-container>
+
+      <!-- Empty chat -->
+      <div *ngIf="!loadingMessages && messages.length === 0" class="empty-chat-indicator">
+        <div class="encrypted-badge">
+          <i class="fas fa-lock me-2"></i>
+          <span>الرسائل مشفرة ومحمية</span>
+        </div>
+        <p class="mt-3 text-muted">ابدأ المحادثة الآن مع {{ selectedContact.name }}</p>
+      </div>
+    </div>
+
+    <!-- Recording overlay -->
+    <div class="recording-overlay" *ngIf="isRecording">
+      <div class="recording-content">
+        <div class="recording-timer">
+          <span class="recording-dot"></span>
+          {{ formatRecordingTime(recordingDuration) }}
+        </div>
+        <div class="recording-wave">
+          <span></span><span></span><span></span><span></span><span></span>
+          <span></span><span></span><span></span><span></span><span></span>
+        </div>
+        <div class="recording-actions">
+          <button class="btn-cancel-record" (click)="cancelRecording()" title="إلغاء">
+            <i class="fas fa-trash-alt"></i>
+          </button>
+          <button class="btn-stop-record" (click)="stopRecording()" title="إرسال">
+            <i class="fas fa-paper-plane"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chat Footer -->
+    <div class="chat-footer" *ngIf="!isRecording">
+      <!-- Emoji Picker -->
+      <div class="emoji-picker" *ngIf="showEmojiPicker" id="emoji-picker">
+        <div class="emoji-grid">
+          <span *ngFor="let emoji of emojis" (click)="addEmoji(emoji)" class="emoji-item">{{ emoji }}</span>
+        </div>
+      </div>
+
+      <!-- Attachment Menu -->
+      <div class="attach-menu" *ngIf="showAttachMenu" id="attach-menu">
+        <div class="attach-option" (click)="imageInput.click()">
+          <div class="attach-icon" style="background: linear-gradient(135deg, #7c3aed, #a78bfa);">
+            <i class="fas fa-image"></i>
+          </div>
+          <span>صورة</span>
+        </div>
+        <div class="attach-option" (click)="fileInput.click()">
+          <div class="attach-icon" style="background: linear-gradient(135deg, #2563eb, #60a5fa);">
+            <i class="fas fa-file"></i>
+          </div>
+          <span>ملف</span>
+        </div>
+        <div class="attach-option" (click)="pdfInput.click()">
+          <div class="attach-icon" style="background: linear-gradient(135deg, #dc2626, #f87171);">
+            <i class="fas fa-file-pdf"></i>
+          </div>
+          <span>PDF</span>
+        </div>
+      </div>
+
+      <input type="file" #imageInput class="d-none" (change)="onFileSelected($event, 'image')" accept="image/*">
+      <input type="file" #fileInput class="d-none" (change)="onFileSelected($event, 'file')" accept=".doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt">
+      <input type="file" #pdfInput class="d-none" (change)="onFileSelected($event, 'file')" accept=".pdf">
+
+      <!-- Footer controls -->
+      <div class="footer-row">
+        <button class="footer-btn" (click)="toggleEmojiPicker()" title="إيموجي" id="emoji-btn">
+          <i class="far fa-smile"></i>
+        </button>
+        <button class="footer-btn" (click)="toggleAttachMenu()" title="إرفاق ملف" id="attach-btn">
+          <i class="fas fa-paperclip" [class.rotate-attach]="showAttachMenu"></i>
+        </button>
+
+        <div class="message-input-wrapper">
+          <input type="text" [(ngModel)]="newMessage" (keyup.enter)="sendMessage()" (input)="onTyping()"
+            placeholder="اكتب رسالتك هنا..." class="message-input" #messageInput id="message-input">
+        </div>
+
+        <button *ngIf="newMessage.trim()" class="send-btn" (click)="sendMessage()" id="send-btn">
+          <i class="fas fa-paper-plane"></i>
+        </button>
+
+        <button *ngIf="!newMessage.trim()" class="mic-btn" (click)="startRecording()" id="mic-btn"
+          [disabled]="!canUseVoiceRecording" [title]="canUseVoiceRecording ? 'رسالة صوتية' : 'الميكروفون غير مدعوم هنا'">
+          <i class="fas fa-microphone"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Empty State (no contact selected) -->
+  <div class="chat-main empty-main" *ngIf="!selectedContact">
+    <div class="empty-state">
+      <div class="empty-state-icon">
+        <div class="pulse-ring"></div>
+        <i class="fas fa-comments"></i>
+      </div>
+      <h3>محادثاتك في مكان واحد</h3>
+      <p>اختر شخصاً من القائمة الجانبية لبدء المحادثة</p>
+      <div class="feature-pills">
+        <span class="feature-pill"><i class="fas fa-bolt me-1"></i>محادثات فورية</span>
+        <span class="feature-pill"><i class="fas fa-microphone me-1"></i>رسائل صوتية</span>
+        <span class="feature-pill"><i class="fas fa-paperclip me-1"></i>مشاركة ملفات</span>
+        <span class="feature-pill"><i class="fas fa-shield-alt me-1"></i>محادثات آمنة</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Image Preview Modal -->
+  <div class="image-preview-overlay" *ngIf="imagePreview" (click)="closeImagePreview()">
+    <button class="close-preview" (click)="closeImagePreview()">
+      <i class="fas fa-times"></i>
+    </button>
+    <img [src]="imagePreview" class="preview-image" (click)="$event.stopPropagation()">
+  </div>
+
+
+  <!-- Audio Notification Assets -->
+  <audio #sentAudio preload="auto" src="https://cdn.jsdelivr.net/gh/shubhamsigdar/whatsapp-clone/public/sounds/sent_message.mp3"></audio>
+  <audio #receivedAudio preload="auto" src="https://cdn.jsdelivr.net/gh/shubhamsigdar/whatsapp-clone/public/sounds/received_message.mp3"></audio>
+  <audio #notifyAudio preload="auto" src="https://www.soundjay.com/buttons/button-10.mp3"></audio>
+</div>

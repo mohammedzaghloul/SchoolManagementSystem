@@ -1,0 +1,187 @@
+<div class="page-container" dir="rtl">
+    <div class="page-header d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="page-title text-gradient fw-bold">إدارة المصروفات والفواتير</h2>
+            <p class="text-muted mb-0">من هنا يرفع الأدمن المصروفات على الطلاب ويتابع التحصيل.</p>
+        </div>
+        <button class="btn btn-premium d-flex align-items-center gap-2" (click)="openAddModal()">
+            <i class="fas fa-plus"></i>
+            <span>إضافة فاتورة جديدة</span>
+        </button>
+    </div>
+
+    <div class="stats-grid mb-4">
+        <div class="stat-card">
+            <span class="stat-label">إيرادات الشهر</span>
+            <strong>{{ formatCurrency(monthlyRevenue) }}</strong>
+        </div>
+        <div class="stat-card danger">
+            <span class="stat-label">مستحقات متأخرة</span>
+            <strong>{{ formatCurrency(overdueAmount) }}</strong>
+        </div>
+        <div class="stat-card info">
+            <span class="stat-label">فواتير معلقة</span>
+            <strong>{{ pendingCount }}</strong>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+        <div class="card-body p-4">
+            <div class="premium-toolbar">
+                <div class="search-wrapper">
+                    <i class="fas fa-search search-icon"></i>
+                    <input
+                        type="text"
+                        class="form-control"
+                        placeholder="بحث باسم الفاتورة أو الطالب أو ولي الأمر..."
+                        [(ngModel)]="searchTerm"
+                        (input)="applyFilter()">
+                </div>
+
+                <div class="filter-wrapper">
+                    <select class="form-select" [(ngModel)]="selectedStudent" (change)="applyFilter()">
+                        <option value="all">كل الطلاب</option>
+                        <option *ngFor="let student of students" [value]="student.id">
+                            {{ student.fullName }}
+                        </option>
+                    </select>
+                </div>
+
+                <div class="filter-wrapper">
+                    <select class="form-select" [(ngModel)]="selectedStatus" (change)="applyFilter()">
+                        <option value="all">كل الحالات</option>
+                        <option value="Pending">معلقة</option>
+                        <option value="Partial">مدفوعة جزئياً</option>
+                        <option value="Overdue">متأخرة</option>
+                        <option value="Paid">مدفوعة</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="alert alert-danger mb-4" *ngIf="error">
+                {{ error }}
+            </div>
+
+            <div *ngIf="loading" class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2">جاري تحميل الفواتير...</p>
+            </div>
+
+            <div class="table-responsive" *ngIf="!loading">
+                <table class="table custom-table align-middle">
+                    <thead>
+                        <tr>
+                            <th>الفاتورة</th>
+                            <th>الطالب</th>
+                            <th>ولي الأمر</th>
+                            <th>الإجمالي</th>
+                            <th>المتبقي</th>
+                            <th>الاستحقاق</th>
+                            <th>الحالة</th>
+                            <th>إجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr *ngFor="let invoice of filteredInvoices">
+                            <td>
+                                <div class="fw-bold">{{ invoice.title }}</div>
+                                <small class="text-muted">{{ invoice.term }} - {{ invoice.academicYear }}</small>
+                            </td>
+                            <td>
+                                <div class="fw-semibold">{{ invoice.studentName }}</div>
+                                <small class="text-muted">{{ invoice.classRoomName || 'بدون فصل' }}</small>
+                            </td>
+                            <td>{{ invoice.parentName || 'غير مربوط' }}</td>
+                            <td>{{ formatCurrency(invoice.amount) }}</td>
+                            <td>{{ formatCurrency(invoice.remainingAmount) }}</td>
+                            <td>{{ invoice.dueDate | date:'d/M/yyyy' }}</td>
+                            <td>
+                                <span class="badge px-3 py-2 rounded-pill fw-bold" [ngClass]="getStatusClass(invoice.status)">
+                                    {{ getStatusLabel(invoice.status) }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-sm btn-icon" (click)="openEditModal(invoice)">
+                                        <i class="far fa-edit text-primary"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-icon" (click)="deleteInvoice(invoice)">
+                                        <i class="far fa-trash-alt text-danger"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr *ngIf="filteredInvoices.length === 0">
+                            <td colspan="8" class="text-center py-4 text-muted">لا توجد فواتير مطابقة للفلاتر الحالية.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal-backdrop fade show" *ngIf="showModal"></div>
+<div class="modal fade show d-block" *ngIf="showModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-0 p-4 align-items-center">
+                <h5 class="modal-title fw-bold mb-0">{{ isEditMode ? 'تعديل الفاتورة' : 'إضافة فاتورة جديدة' }}</h5>
+                <button type="button" class="btn-close shadow-none m-0 me-auto ms-0" (click)="closeModal()"></button>
+            </div>
+            <form (ngSubmit)="saveInvoice()">
+                <div class="modal-body p-4 pt-0">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">الطالب</label>
+                        <select class="form-select rounded-3" name="studentId" [(ngModel)]="currentInvoice.studentId" required>
+                            <option [ngValue]="undefined">اختر الطالب...</option>
+                            <option *ngFor="let student of students" [ngValue]="student.id">
+                                {{ student.fullName }}{{ student.parentName ? ' - ' + student.parentName : '' }}
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">عنوان الفاتورة</label>
+                        <input type="text" class="form-control rounded-3" name="title" [(ngModel)]="currentInvoice.title" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">الوصف</label>
+                        <textarea class="form-control rounded-3" rows="3" name="description" [(ngModel)]="currentInvoice.description"></textarea>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">العام الدراسي</label>
+                            <input type="text" class="form-control rounded-3" name="academicYear" [(ngModel)]="currentInvoice.academicYear" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">الترم</label>
+                            <input type="text" class="form-control rounded-3" name="term" [(ngModel)]="currentInvoice.term" required>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">المبلغ</label>
+                            <input type="number" min="1" class="form-control rounded-3" name="amount" [(ngModel)]="currentInvoice.amount" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">تاريخ الاستحقاق</label>
+                            <input type="date" class="form-control rounded-3" name="dueDate" [(ngModel)]="currentInvoice.dueDate" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 p-4 pt-0">
+                    <button type="button" class="btn btn-light rounded-3 px-4" (click)="closeModal()" [disabled]="submitting">إلغاء</button>
+                    <button type="submit" class="btn btn-premium px-5" [disabled]="submitting">
+                        {{ submitting ? 'جاري الحفظ...' : 'حفظ الفاتورة' }}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

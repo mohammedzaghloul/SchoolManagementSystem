@@ -1,0 +1,156 @@
+<!-- features/student/grades/my-grades/my-grades.component.html -->
+<div class="grades-container" dir="rtl">
+  <!-- Header -->
+  <div class="page-header">
+    <h1>درجاتي</h1>
+    <p>نظرة عامة على أدائك الدراسي</p>
+  </div>
+
+  <!-- Statistics Cards -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon blue">
+        <i class="fas fa-chart-line"></i>
+      </div>
+      <div class="stat-content">
+        <h3>المعدل العام</h3>
+        <p class="stat-value">{{ statistics.average | number:'1.1-1' }}%</p>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon green">
+        <i class="fas fa-trophy"></i>
+      </div>
+      <div class="stat-content">
+        <h3>أعلى درجة</h3>
+        <p class="stat-value">{{ statistics.highest }}%</p>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon yellow">
+        <i class="fas fa-check-circle"></i>
+      </div>
+      <div class="stat-content">
+        <h3>المواد الناجحة</h3>
+        <p class="stat-value">{{ statistics.passed }} / {{ statistics.total }}</p>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon purple">
+        <i class="fas fa-star"></i>
+      </div>
+      <div class="stat-content">
+        <h3>الترتيب</h3>
+        <p class="stat-value">#5</p>
+        <p class="stat-label">من 28 طالب</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chart Section -->
+  <div class="chart-card">
+    <h3>مقارنة الدرجات</h3>
+    <div class="chart-container">
+      <canvas id="gradesChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filters-section">
+    <div class="filter-group">
+      <label>المادة:</label>
+      <select [(ngModel)]="selectedSubject" class="form-control">
+        <option value="all">جميع المواد</option>
+        <option *ngFor="let subject of subjects" [value]="subject.name">
+          {{ subject.name }}
+        </option>
+      </select>
+    </div>
+
+    <div class="filter-group">
+      <label>الفصل الدراسي:</label>
+      <select [(ngModel)]="selectedTerm" class="form-control">
+        <option value="all">جميع الفصول</option>
+        <option value="first">الفصل الأول</option>
+        <option value="second">الفصل الثاني</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Subjects Summary -->
+  <div class="subjects-grid">
+    <div class="subject-card" *ngFor="let subject of subjects">
+      <div class="subject-header">
+        <h4>{{ subject.name }}</h4>
+        <span class="average-badge" [ngClass]="getGradeClass(subject.average)">
+          {{ subject.average | number:'1.1-1' }}%
+        </span>
+      </div>
+      
+      <div class="subject-stats">
+        <div class="stat">
+          <span class="label">أعلى درجة</span>
+          <span class="value highlight">{{ subject.highest }}%</span>
+        </div>
+        <div class="stat">
+          <span class="label">أقل درجة</span>
+          <span class="value">{{ subject.lowest }}%</span>
+        </div>
+        <div class="stat">
+          <span class="label">عدد الاختبارات</span>
+          <span class="value">{{ subject.grades.length }}</span>
+        </div>
+      </div>
+
+      <button class="btn-details" [routerLink]="['/student/grades/subject', subject.name]">
+        عرض التفاصيل
+        <i class="fas fa-arrow-left"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Detailed Grades Table -->
+  <div class="grades-table-card">
+    <h3>جميع الدرجات</h3>
+    
+    <table class="grades-table">
+      <thead>
+        <tr>
+          <th>المادة</th>
+          <th>الاختبار</th>
+          <th>التاريخ</th>
+          <th>الدرجة</th>
+          <th>التقدير</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let grade of filteredGrades">
+          <td>
+            <span class="subject-name">{{ grade.subject }}</span>
+          </td>
+          <td>{{ grade.examName }}</td>
+          <td>{{ grade.date | date:'d MMM yyyy' }}</td>
+          <td>
+            <span class="grade-value" [ngClass]="getGradeClass(grade.score)">
+              {{ grade.score }}%
+            </span>
+          </td>
+          <td>
+            <span class="grade-badge" [ngClass]="getGradeClass(grade.score)">
+              {{ getGradeText(grade.score) }}
+            </span>
+          </td>
+          <td>
+            <button class="btn-icon" [routerLink]="['/student/grades/details', grade.id]">
+              <i class="fas fa-eye"></i>
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

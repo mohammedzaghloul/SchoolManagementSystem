@@ -1,0 +1,99 @@
+<div class="page-container">
+    <div class="page-header d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="page-title text-gradient fw-bold">المستويات الدراسية</h2>
+            <p class="text-muted mb-0">إدارة المراحل والمستويات التعليمية</p>
+        </div>
+        <button class="btn btn-premium d-flex align-items-center gap-2" (click)="openAddModal()">
+            <i class="fas fa-plus"></i>
+            <span>إضافة مستوى جديد</span>
+        </button>
+    </div>
+
+    <div class="premium-toolbar">
+        <div class="search-wrapper">
+            <i class="fas fa-search search-icon"></i>
+            <input type="text" class="form-control" placeholder="بحث عن مستوى دراسي..."
+                [(ngModel)]="searchTerm" (input)="applyFilter()">
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table custom-table align-middle mb-0 text-center">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>المستوى</th>
+                            <th>الوصف</th>
+                            <th class="text-center">إجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr *ngFor="let grade of filteredGrades">
+                            <td class="text-muted fw-bold">#{{ grade.id }}</td>
+                            <td><span class="fw-bold text-dark">{{ grade.name }}</span></td>
+                            <td><span class="text-muted small">{{ grade.description || '—' }}</span></td>
+                            <td class="text-center">
+                                <div class="d-flex justify-content-center gap-2">
+                                    <button class="btn btn-sm btn-icon" (click)="openEditModal(grade)">
+                                        <i class="far fa-edit text-primary"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-icon" (click)="deleteGrade(grade.id)">
+                                        <i class="far fa-trash-alt text-danger"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr *ngIf="loading">
+                            <td colspan="4" class="py-5">جاري التحميل...</td>
+                        </tr>
+                        <tr *ngIf="!loading && filteredGrades.length === 0">
+                            <td colspan="4" class="py-5 text-muted text-center">
+                                <div class="opacity-25 mb-2">
+                                    <i class="fas fa-search fs-1"></i>
+                                </div>
+                                لا توجد مستويات دراسية متطابقة مع البحث
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-backdrop fade show" *ngIf="showModal"></div>
+<div class="modal fade show d-block" *ngIf="showModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header border-0 bg-light p-4">
+                <h5 class="modal-title fw-bold text-dark">{{ isEditMode ? 'تعديل مستوى' : 'إضافة مستوى جديد' }}</h5>
+                <button type="button" class="btn-close shadow-none m-0 me-auto ms-0" (click)="closeModal()"></button>
+            </div>
+            <form (ngSubmit)="saveGrade()">
+                <div class="modal-body p-4 pt-0">
+                    <div class="mb-3 pt-4">
+                        <label class="form-label fw-semibold text-secondary">اسم المستوى</label>
+                        <input type="text" class="form-control rounded-3" name="name" [(ngModel)]="currentGrade.name"
+                            required placeholder="مثال: الصف الأول الإعدادي">
+                    </div>
+                    <div class="mb-0">
+                        <label class="form-label fw-semibold text-secondary">الوصف (اختياري)</label>
+                        <textarea class="form-control rounded-3" name="description"
+                            [(ngModel)]="currentGrade.description" rows="3" placeholder="وصف موجز للمستوى..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 p-4 pt-0 d-flex justify-content-start gap-2">
+                    <button type="submit" class="btn btn-premium px-5" [disabled]="submitting">
+                        {{ submitting ? 'جاري الحفظ...' : 'حفظ البيانات' }}
+                    </button>
+                    <button type="button" class="btn btn-light px-4" (click)="closeModal()"
+                        [disabled]="submitting">إلغاء</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

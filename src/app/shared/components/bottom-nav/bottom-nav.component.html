@@ -1,0 +1,89 @@
+<nav class="bottom-nav" *ngIf="isAuthenticated">
+    <div class="nav-items">
+        <!-- Dashboard -->
+        <a [routerLink]="dashboardRoute" routerLinkActive="active" class="nav-item">
+            <div class="nav-icon-wrapper">
+                <i class="fas fa-th-large"></i>
+            </div>
+            <span>الرئيسية</span>
+        </a>
+
+        <!-- Attendance -->
+        <a [routerLink]="attendanceRoute" routerLinkActive="active" class="nav-item" *ngIf="attendanceRoute">
+            <div class="nav-icon-wrapper">
+                <i class="fas fa-user-check"></i>
+            </div>
+            <span>الحضور</span>
+        </a>
+
+        <!-- Classes -->
+        <a [routerLink]="classesRoute" routerLinkActive="active" class="nav-item" *ngIf="classesRoute">
+            <div class="nav-icon-wrapper">
+                <i class="fas fa-calendar-alt"></i>
+            </div>
+            <span>الحصص</span>
+        </a>
+
+        <!-- Payments (Parent specific) -->
+        <a [routerLink]="paymentsRoute" routerLinkActive="active" class="nav-item" *ngIf="paymentsRoute">
+            <div class="nav-icon-wrapper">
+                <i class="fas fa-file-invoice-dollar"></i>
+            </div>
+            <span>المصروفات</span>
+        </a>
+
+        <!-- Chat -->
+        <a routerLink="/chat" routerLinkActive="active" class="nav-item" (click)="onChatClick()">
+            <div class="nav-icon-wrapper">
+                <i class="fas fa-comment-dots"></i>
+                <span class="nav-badge" *ngIf="unreadChatCount > 0">{{ unreadChatCount }}</span>
+            </div>
+            <span>التواصل</span>
+        </a>
+
+        <!-- Menu Toggle -->
+        <button class="nav-item menu-btn border-0 bg-transparent" (click)="toggleMenu()">
+            <div class="nav-icon-wrapper">
+                <i class="fas fa-bars"></i>
+            </div>
+            <span>القائمة</span>
+        </button>
+    </div>
+
+    <!-- Bottom Sheet Menu (Floating Menu) -->
+    <div class="mobile-menu-overlay" *ngIf="showMenu" (click)="toggleMenu()"></div>
+    <div class="mobile-bottom-sheet" [class.open]="showMenu">
+        <div class="sheet-header">
+            <div class="drag-handle"></div>
+            <h5>القائمة الإضافية</h5>
+            <button class="close-btn" (click)="toggleMenu()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="sheet-content">
+            <a routerLink="/admin/students" class="sheet-item" (click)="toggleMenu()">
+                <i class="fas fa-user-graduate"></i>
+                <span>الطلاب</span>
+            </a>
+            <a routerLink="/admin/teachers" class="sheet-item" (click)="toggleMenu()">
+                <i class="fas fa-chalkboard-teacher"></i>
+                <span>المدرسين</span>
+            </a>
+            <a routerLink="/teacher/exams" class="sheet-item" (click)="toggleMenu()" *ngIf="userRole === 'Teacher'">
+                <i class="fas fa-file-alt"></i>
+                <span>الامتحانات</span>
+            </a>
+            <a routerLink="/profile" class="sheet-item" (click)="toggleMenu()">
+                <i class="fas fa-user-circle"></i>
+                <span>الملف الشخصي</span>
+            </a>
+            <a routerLink="/admin/reports" class="sheet-item" (click)="toggleMenu()">
+                <i class="fas fa-chart-pie"></i>
+                <span>التقارير</span>
+            </a>
+            <div class="sheet-divider"></div>
+            <button class="sheet-item text-danger" (click)="logout()">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>تسجيل الخروج</span>
+            </button>
+        </div>
+    </div>
+</nav>

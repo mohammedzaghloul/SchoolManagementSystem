@@ -1,0 +1,143 @@
+<div class="page-container" dir="rtl">
+    <div class="page-header d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="page-title text-gradient fw-bold">إدارة المدرسين</h2>
+            <p class="text-muted-dark mb-0">إجمالي المدرسين: {{ teachers.length }}</p>
+        </div>
+        <button class="btn btn-premium d-flex align-items-center gap-2" (click)="openAddModal()">
+            <i class="fas fa-plus"></i>
+            <span>إضافة مدرس جديد</span>
+        </button>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+        <div class="card-body p-4">
+            <!-- Toolbar -->
+            <div class="premium-toolbar">
+                <div class="search-wrapper">
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" class="form-control" placeholder="بحث عن مدرس بالاسم أو البريد..."
+                        [(ngModel)]="searchTerm" (input)="applyFilter()">
+                </div>
+
+                <div class="filter-wrapper">
+                    <select class="form-select" [(ngModel)]="selectedSubject" (change)="applyFilter()">
+                        <option value="all">كل المواد</option>
+                        <option *ngFor="let s of subjects" [value]="s.id">{{ s.name }}</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Loading State -->
+            <div *ngIf="loading" class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2">جاري تحميل المدرسين...</p>
+            </div>
+
+            <!-- Data Table -->
+            <div class="table-responsive" *ngIf="!loading">
+                <table class="table custom-table align-middle">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>المدرس</th>
+                            <th>المادة</th>
+                            <th>رقم الهاتف</th>
+                            <th>الحالة</th>
+                            <th>إجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr *ngFor="let teacher of filteredTeachers">
+                            <td class="text-muted fw-bold">#{{ teacher.id }}</td>
+                            <td>
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="avatar bg-light-blue text-blue">
+                                        <i class="fas fa-chalkboard-teacher fs-3"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0 fw-bold">{{ teacher.fullName }}</h6>
+                                        <small class="text-muted">{{ teacher.email }}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td><span class="fw-medium text-dark">{{ teacher.subjectName || 'عام' }}</span></td>
+                            <td><span class="text-secondary fw-semibold">{{ teacher.phone || '—' }}</span></td>
+                            <td>
+                                <span class="status-toggle-btn" (click)="toggleTeacherStatus(teacher)"
+                                    [class]="teacher.isActive ? 'badge bg-success-subtle text-success px-3 py-2 rounded-pill fw-bold cursor-pointer' : 'badge bg-danger-subtle text-danger px-3 py-2 rounded-pill fw-bold cursor-pointer'"
+                                    title="اضغط لتغيير الحالة">
+                                    <i class="fas fa-circle me-1" style="font-size: 0.5rem;"></i>
+                                    {{ teacher.isActive ? 'نشط' : 'غير نشط' }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-sm btn-icon" (click)="openEditModal(teacher)">
+                                        <i class="far fa-edit text-primary"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-icon" (click)="deleteTeacher(teacher.id)">
+                                        <i class="far fa-trash-alt text-danger"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr *ngIf="filteredTeachers.length === 0">
+                            <td colspan="6" class="text-center py-4 text-muted">لا يوجد مدرسين متطابقين مع البحث</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Modal -->
+<div class="modal-backdrop fade show" *ngIf="showModal"></div>
+<div class="modal fade show d-block" *ngIf="showModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header border-0 bg-light p-4">
+                <h5 class="modal-title fw-bold text-dark">{{ isEditMode ? 'تعديل بيانات مدرس' : 'إضافة مدرس جديد' }}</h5>
+                <button type="button" class="btn-close shadow-none m-0 me-auto ms-0" (click)="closeModal()"></button>
+            </div>
+            <form (ngSubmit)="saveTeacher()">
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold text-secondary">الاسم الكامل</label>
+                        <input type="text" class="form-control rounded-3" name="fullName"
+                            [(ngModel)]="currentTeacher.fullName" required placeholder="ادخل الاسم الرباعي">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold text-secondary">البريد الإلكتروني</label>
+                        <input type="email" class="form-control rounded-3" name="email"
+                            [(ngModel)]="currentTeacher.email" required placeholder="example@school.com">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold text-secondary">رقم الهاتف</label>
+                        <input type="text" class="form-control rounded-3" name="phone"
+                            [(ngModel)]="currentTeacher.phone" placeholder="01xxxxxxxxx">
+                    </div>
+                    <div class="mb-3" *ngIf="!isEditMode">
+                        <label class="form-label fw-semibold text-secondary">كلمة المرور</label>
+                        <input type="password" class="form-control rounded-3" name="password"
+                            [(ngModel)]="currentTeacher.password">
+                    </div>
+                    <div class="form-check form-switch mb-0 bg-light p-3 rounded-3 d-flex justify-content-between align-items-center m-0">
+                        <label class="form-check-label fw-semibold text-dark m-0">حساب المدرس نشط</label>
+                        <input class="form-check-input m-0 fs-5" type="checkbox" name="isActive" [(ngModel)]="currentTeacher.isActive">
+                    </div>
+                </div>
+                <div class="modal-footer border-0 p-4 pt-0 d-flex justify-content-start gap-2">
+                    <button type="submit" class="btn btn-premium px-5" [disabled]="submitting">
+                        {{ submitting ? 'جاري الحفظ...' : 'حفظ بيانات المدرس' }}
+                    </button>
+                    <button type="button" class="btn btn-light px-4" (click)="closeModal()"
+                        [disabled]="submitting">إلغاء</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

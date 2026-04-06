@@ -1,0 +1,75 @@
+<div class="support-page rtl-layout" dir="rtl">
+  <!-- Hero Section -->
+  <header class="support-hero">
+    <div class="hero-overlay"></div>
+    <div class="hero-content">
+      <div class="badge-accent">مركز المساعدة</div>
+      <h1>الدليل والمساعدة</h1>
+      <p>ابحث عن إجابات لأسئلتك أو تواصل معنا مباشرة</p>
+      
+      <div class="search-decoration">
+        <i class="fas fa-search"></i>
+        <input type="text" placeholder="كيف يمكننا مساعدتك اليوم؟" readonly>
+      </div>
+    </div>
+  </header>
+
+  <main class="support-container">
+    <!-- Contact Methods Grid -->
+    <section class="contact-grid">
+      <div class="contact-card shadow-sm">
+        <div class="card-glow"></div>
+        <div class="card-icon email">
+          <i class="fas fa-envelope-open-text"></i>
+        </div>
+        <div class="card-body">
+          <h3>تواصل عبر البريد</h3>
+          <p>نسعد باستلام استفساراتكم والرد عليها في أسرع وقت</p>
+          <a href="mailto:support&#64;school.com" class="contact-link">support&#64;school.com</a>
+        </div>
+      </div>
+
+      <div class="contact-card shadow-sm">
+        <div class="card-glow"></div>
+        <div class="card-icon phone">
+          <i class="fas fa-headset"></i>
+        </div>
+        <div class="card-body">
+          <h3>الدعم الهاتفي</h3>
+          <p>فريقنا متاح لمساعدتكم هاتفياً خلال ساعات العمل</p>
+          <a href="tel:+201234567890" class="contact-link text-ltr">+20 123 456 7890</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- FAQs Section -->
+    <section class="faq-container">
+      <div class="section-header">
+        <div class="title-with-icon">
+          <i class="fas fa-question-circle"></i>
+          <h3>أهم الأسئلة الشائعة</h3>
+        </div>
+      </div>
+
+      <div class="faq-accordion">
+        <div class="accordion-item shadow-sm" *ngFor="let faq of faqs; let i = index" [class.active]="openFaqIndex === i">
+          <button class="accordion-header" (click)="toggleFaq(i)">
+            <span class="question">{{ faq.question }}</span>
+            <i class="fas fa-chevron-down"></i>
+          </button>
+          <div class="accordion-body">
+            <div class="answer">{{ faq.answer }}</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Bottom Actions -->
+    <div class="support-footer">
+      <a routerLink="/" class="btn-home-back">
+        <i class="fas fa-arrow-right"></i>
+        <span>العودة للوحة التحكم الرئيسية</span>
+      </a>
+    </div>
+  </main>
+</div>

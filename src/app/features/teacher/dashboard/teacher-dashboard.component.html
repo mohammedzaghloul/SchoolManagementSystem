@@ -1,0 +1,108 @@
+<!-- features/teacher/dashboard/teacher-dashboard.component.html -->
+<div class="teacher-dashboard" dir="rtl">
+  <!-- Header -->
+  <div class="dashboard-header">
+    <h1>مرحباً، أستاذ {{ teacherName }}</h1>
+    <p class="date">{{ today | date:'EEEE, d MMMM yyyy' }}</p>
+  </div>
+
+  <!-- Stats Cards -->
+  <div class="stats-grid">
+    <div class="stat-card glass-card glass-card-hover">
+      <div class="stat-icon">
+        <i class="fas fa-users text-gradient ms-2"></i>
+      </div>
+      <div class="stat-content">
+        <h3 class="text-white">الحصص اليوم</h3>
+        <p class="stat-value text-gradient fw-bold">2</p>
+        <p class="stat-label">متوسط الحضور 95%</p>
+      </div>
+    </div>
+
+    <div class="stat-card glass-card glass-card-hover">
+      <div class="stat-icon">
+        <i class="fas fa-chalkboard-teacher text-gradient ms-2"></i>
+      </div>
+      <div class="stat-content">
+        <h3 class="text-white">الحصة الحالية</h3>
+        <p class="stat-value text-gradient fw-bold">الرياضيات - الجبر</p>
+        <p class="stat-label">28/30 طالب</p>
+      </div>
+    </div>
+
+    <div class="stat-card glass-card glass-card-hover">
+      <div class="stat-icon">
+        <i class="fas fa-clock text-gradient ms-2"></i>
+      </div>
+      <div class="stat-content">
+        <h3 class="text-white">الحصة القادمة</h3>
+        <p class="stat-value text-warning fw-bold">العلوم</p>
+        <p class="stat-label">بعد 30 دقيقة</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="quick-actions my-4">
+    <h2 class="section-title text-gradient mb-3">إجراءات سريعة</h2>
+    <div class="actions-grid g-3">
+      <button class="action-btn glass-card glass-card-hover p-3" [routerLink]="['/teacher/attendance/qr']">
+        <i class="fas fa-qrcode fs-3 mb-2 text-primary"></i>
+        <span>بدء حضور بـ QR</span>
+      </button>
+      <button class="action-btn glass-card glass-card-hover p-3" [routerLink]="['/teacher/attendance/face']">
+        <i class="fas fa-camera fs-3 mb-2 text-success"></i>
+        <span>بدء حضور بـ Face ID</span>
+      </button>
+      <button class="action-btn glass-card glass-card-hover p-3" [routerLink]="['/teacher/exams/create']">
+        <i class="fas fa-pen fs-3 mb-2 text-warning"></i>
+        <span>إنشاء اختبار</span>
+      </button>
+      <button class="action-btn glass-card glass-card-hover p-3" [routerLink]="['/teacher/grades']">
+        <i class="fas fa-star fs-3 mb-2 text-info"></i>
+        <span>إدخال درجات</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Recent Activity & Messages -->
+  <div class="dashboard-grid">
+    <!-- Recent Attendance -->
+    <div class="card glass-card recent-attendance">
+      <div class="card-header border-bottom border-secondary mb-3 pb-2">
+        <h3 class="text-white mb-0">آخر الحضور</h3>
+        <a href="#" [routerLink]="['/teacher/attendance']" class="text-info text-decoration-none small">عرض الكل</a>
+      </div>
+      <div class="card-body px-0">
+        <div class="attendance-item d-flex align-items-center mb-3 p-2 rounded glass-card-hover" *ngFor="let att of recentAttendance">
+          <img [src]="att.studentAvatar" alt="" class="rounded-circle border border-primary p-1 me-3 ms-3" style="width: 48px; height: 48px; object-fit: cover;">
+          <div class="item-info flex-grow-1">
+            <h4 class="mb-1 text-white fs-6">{{ att.studentName }}</h4>
+            <p class="mb-0 text-muted small">{{ att.time | date:'shortTime' }}</p>
+          </div>
+          <span class="badge" [ngClass]="att.status === 'present' ? 'gradient-success' : 'bg-danger'">
+            {{ att.status === 'present' ? 'حاضر' : 'غائب' }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Messages -->
+    <div class="card glass-card recent-messages">
+      <div class="card-header border-bottom border-secondary mb-3 pb-2">
+        <h3 class="text-white mb-0">آخر الرسائل</h3>
+        <a href="#" [routerLink]="['/chat']" class="text-info text-decoration-none small">فتح المحادثات</a>
+      </div>
+      <div class="card-body px-0">
+        <div class="message-item d-flex align-items-center mb-3 p-2 rounded glass-card-hover" *ngFor="let msg of recentMessages">
+          <img [src]="msg.senderAvatar" alt="" class="rounded-circle border border-primary p-1 me-3 ms-3" style="width: 48px; height: 48px; object-fit: cover;">
+          <div class="item-info flex-grow-1">
+            <h4 class="mb-1 text-white fs-6">{{ msg.senderName }}</h4>
+            <p class="mb-0 text-muted small text-truncate" style="max-width: 150px;">{{ msg.preview }}</p>
+          </div>
+          <span class="time small text-muted">{{ msg.time | date:'shortTime' }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

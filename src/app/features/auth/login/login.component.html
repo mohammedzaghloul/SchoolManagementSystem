@@ -1,0 +1,78 @@
+<div class="login-wrapper">
+
+  <!-- Right Column: Image & Text (First in DOM for RTL so it appears on the Right) -->
+  <div class="login-right">
+    <div class="overlay-content">
+      <div class="hero-icon">
+        <!-- Floating UI panel placeholder icon -->
+        <!-- <i class="fas fa-laptop-code"></i> -->
+      </div>
+      <h2>نظام إدارة مدرسي متكامل</h2>
+      <p>تسجيل الحضور - الاختبارات - التواصل مع أولياء الأمور</p>
+    </div>
+  </div>
+
+  <!-- Left Column: Login Form -->
+  <div class="login-left">
+    <div class="login-form-container">
+      <div class="login-header">
+        <div class="logo-circle">
+          <i class="fas fa-school"></i>
+        </div>
+        <h2>نظام إدارة المدرسة</h2>
+      </div>
+
+      <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
+        <div *ngIf="error" class="alert alert-danger">
+          <i class="fas fa-exclamation-circle"></i> {{ error }}
+        </div>
+
+        <div class="form-group">
+          <label for="email">اسم المستخدم أو الإيميل</label>
+          <div class="input-wrapper">
+            <input type="email" id="email" formControlName="email" class="form-control"
+              [ngClass]="{ 'is-invalid': f['email'].errors && (f['email'].dirty || f['email'].touched) }"
+              placeholder="أدخل اسم المستخدم">
+            <i class="fas fa-user input-icon"></i>
+          </div>
+          <div *ngIf="f['email'].errors && (f['email'].dirty || f['email'].touched)" class="invalid-feedback">
+            <div *ngIf="f['email'].errors['required']">الإيميل مطلوب</div>
+            <div *ngIf="f['email'].errors['email']">يجب أن يكون إيميل صحيح</div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="password">كلمة المرور</label>
+          <div class="input-wrapper">
+            <input [type]="showPassword ? 'text' : 'password'" id="password" formControlName="password"
+              class="form-control password-input"
+              [ngClass]="{ 'is-invalid': f['password'].errors && (f['password'].dirty || f['password'].touched) }"
+              placeholder="••••••••">
+            <i class="fas fa-lock input-icon"></i>
+            <button type="button" class="toggle-password-btn" (click)="togglePasswordVisibility()">
+              <i class="fas" [class.fa-eye]="!showPassword" [class.fa-eye-slash]="showPassword"></i>
+            </button>
+          </div>
+          <div *ngIf="f['password'].errors && (f['password'].dirty || f['password'].touched)" class="invalid-feedback">
+            <div *ngIf="f['password'].errors['required']">كلمة المرور مطلوبة</div>
+          </div>
+        </div>
+
+        <div class="forgot-password">
+          <a routerLink="/auth/forgot-password">هل نسيت كلمة المرور؟</a>
+        </div>
+
+        <div class="form-actions">
+          <button [disabled]="loading" class="btn btn-primary d-flex align-items-center justify-content-center w-100">
+            <span *ngIf="loading" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+            <span>تسجيل الدخول</span>
+          </button>
+        </div>
+
+        <div class="support-link">
+          <p>تحتاج مساعدة ؟ <a routerLink="/support">اتصل بالدعم</a></p>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

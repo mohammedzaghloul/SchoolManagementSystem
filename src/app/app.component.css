@@ -1,0 +1,56 @@
+/* Base settings - RTL by default */
+:host {
+    display: block;
+    font-family: 'Tajawal', sans-serif;
+    direction: rtl;
+}
+
+body {
+    margin: 0;
+    background-color: #f8fafc;
+    /* Very light gray to match the dashboard background */
+}
+
+/* App Layout Structure */
+.app-layout {
+    min-height: 100vh;
+    width: 100%;
+}
+
+.app-layout.is-authenticated {
+    display: flex;
+}
+
+.main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    margin-right: 0;
+    transition: margin-right 0.3s ease;
+    min-width: 0;
+    /* Prevent flex box un-shrinkable overflowing */
+}
+
+/* Only push content left if authenticated (sidebar is present) */
+.app-layout.is-authenticated .main-content {
+    margin-right: 260px;
+    /* Width of the sidebar */
+}
+
+.page-content {
+    padding: 24px;
+    flex: 1;
+    overflow-y: auto;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 991px) {
+    .app-layout.is-authenticated .main-content {
+        margin-right: 0 !important;
+    }
+
+    .page-content {
+        padding-bottom: 80px;
+        /* Space for bottom nav */
+    }
+}

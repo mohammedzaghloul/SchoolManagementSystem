@@ -1,0 +1,125 @@
+<!-- features/student/dashboard/student-dashboard.component.html -->
+<div class="student-dashboard" dir="rtl">
+  <!-- Welcome Section -->
+  <div class="welcome-section">
+    <div class="student-info">
+      <h1 class="text-gradient">مرحباً، {{ studentName }}</h1>
+      <p>{{ className }} - {{ gradeLevel }}</p>
+    </div>
+    <div class="attendance-status">
+      <div class="status-circle">
+        <svg viewBox="0 0 36 36">
+          <path d="M18 2.0845
+            a 15.9155 15.9155 0 0 1 0 31.831
+            a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#E5E7EB" stroke-width="3" />
+          <path d="M18 2.0845
+            a 15.9155 15.9155 0 0 1 0 31.831
+            a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#10B981" stroke-width="3"
+            [attr.stroke-dasharray]="attendancePercent + ', 100'" />
+        </svg>
+        <span class="percentage">{{ attendancePercent }}%</span>
+      </div>
+      <p>نسبة الحضور</p>
+    </div>
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="quick-actions row g-3">
+    <div class="col-md-3">
+      <button class="action-btn glass-card glass-card-hover w-100 p-3 h-100 d-flex align-items-center justify-content-center gap-2" [routerLink]="['/student/scan/qr']">
+        <i class="fas fa-qrcode fs-4 text-primary"></i>
+        <span class="fw-bold">تسجيل حضور</span>
+      </button>
+    </div>
+    <div class="col-md-3">
+      <button class="action-btn glass-card glass-card-hover w-100 p-3 h-100 d-flex align-items-center justify-content-center gap-2" [routerLink]="['/student/exams']">
+        <i class="fas fa-pencil-alt fs-4 text-warning"></i>
+        <span class="fw-bold">الاختبارات</span>
+      </button>
+    </div>
+    <div class="col-md-3">
+      <button class="action-btn glass-card glass-card-hover w-100 p-3 h-100 d-flex align-items-center justify-content-center gap-2" [routerLink]="['/student/grades']">
+        <i class="fas fa-chart-line fs-4 text-success"></i>
+        <span class="fw-bold">درجاتي</span>
+      </button>
+    </div>
+    <div class="col-md-3">
+      <button class="action-btn glass-card glass-card-hover w-100 p-3 h-100 d-flex align-items-center justify-content-center gap-2" [routerLink]="['/student/schedule']">
+        <i class="fas fa-calendar fs-4 text-info"></i>
+        <span class="fw-bold">جدولي</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Today's Schedule -->
+  <div class="schedule-card glass-card">
+    <h3>جدول اليوم</h3>
+    <div class="schedule-list">
+      <div class="schedule-item" *ngFor="let session of todaySessions">
+        <div class="time">{{ session.startTime }} - {{ session.endTime }}</div>
+        <div class="subject">{{ session.subject }}</div>
+        <div class="teacher">{{ session.teacherName }}</div>
+        <span class="status-badge" [class.completed]="session.completed" *ngIf="!session.isLive">
+          {{ session.completed ? 'تم' : 'قادمة' }}
+        </span>
+        <button class="btn btn-danger btn-sm rounded-pill px-3 fw-bold" *ngIf="session.isLive"
+          [routerLink]="['/live', session.id]">
+          انضم الآن <i class="fas fa-video ms-1"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Grades -->
+  <div class="grades-card glass-card">
+    <h3>آخر الدرجات</h3>
+    <div class="grades-list">
+      <div class="grade-item" *ngFor="let grade of recentGrades">
+        <div class="subject">{{ grade.subject }}</div>
+        <div class="grade">
+          <span class="score">{{ grade.score }}</span>
+          <span class="max">/ {{ grade.maxScore }}</span>
+        </div>
+      </div>
+    </div>
+    <a href="#" [routerLink]="['/student/grades']" class="view-all">عرض كل الدرجات</a>
+  </div>
+
+  <!-- Upcoming Exams -->
+  <div class="exams-card glass-card">
+    <h3>الاختبارات القادمة</h3>
+    <div class="exams-list">
+      <div class="exam-item" *ngFor="let exam of upcomingExams">
+        <div class="exam-header">
+          <h4>{{ exam.subject }}</h4>
+          <span class="date">{{ exam.date | date:'d MMM' }}</span>
+        </div>
+        <p>{{ exam.description }}</p>
+        <div class="exam-footer">
+          <span class="time"><i class="far fa-clock"></i> {{ exam.duration }}</span>
+          <span class="total-marks">{{ exam.totalMarks }} درجة</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Announcements -->
+  <div class="announcements-section mt-4 mb-4" dir="rtl">
+    <h3 class="section-title mb-3">📰 آخر الأخبار والتنبيهات</h3>
+    <div class="row g-3">
+      <div class="col-md-4" *ngFor="let announcement of announcements">
+        <div class="glass-card glass-card-hover p-3 h-100 border-start border-primary border-4">
+          <div class="d-flex justify-content-between mb-2">
+            <span class="badge gradient-primary small">إعلان</span>
+            <small class="text-muted">{{ announcement.createdAt | date:'short' }}</small>
+          </div>
+          <h6 class="fw-bold mb-2">{{ announcement.title }}</h6>
+          <p class="text-muted small mb-0">{{ announcement.content }}</p>
+        </div>
+      </div>
+      <div class="col-12 text-center py-4 bg-light rounded-4" *ngIf="announcements.length === 0">
+        <p class="text-muted mb-0">لا توجد إعلانات جديدة حالياً</p>
+      </div>
+    </div>
+  </div>
+</div>

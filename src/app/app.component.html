@@ -1,0 +1,17 @@
+<div class="app-layout" [class.is-authenticated]="isAuthenticated">
+    <!-- Sidebar only for authenticated users -->
+    <app-sidebar *ngIf="isAuthenticated"></app-sidebar>
+
+    <div [class.main-content]="isAuthenticated">
+        <!-- Header only for authenticated users -->
+        <app-header *ngIf="isAuthenticated"></app-header>
+
+        <div [class.page-content]="isAuthenticated">
+            <!-- Single router-outlet for all routes -->
+            <router-outlet></router-outlet>
+        </div>
+    </div>
+
+    <!-- Bottom Nav only for authenticated users -->
+    <app-bottom-nav *ngIf="isAuthenticated"></app-bottom-nav>
+</div>

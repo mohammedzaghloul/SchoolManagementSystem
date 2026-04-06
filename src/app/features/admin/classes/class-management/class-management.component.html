@@ -1,0 +1,170 @@
+<div class="page-container" dir="rtl">
+    <div class="page-header d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="page-title text-gradient fw-bold">إدارة الفصول الدراسية</h2>
+            <p class="text-muted mb-0">إنشاء القاعات والفصول الدراسية وتوزيعها على صفوف المراحل التعليمية</p>
+        </div>
+        <button class="btn btn-premium d-flex align-items-center gap-2" (click)="openAddModal()">
+            <i class="fas fa-plus"></i>
+            <span>إضافة فصل جديد</span>
+        </button>
+    </div>
+
+    <div class="premium-toolbar">
+        <div class="search-wrapper">
+            <i class="fas fa-search search-icon"></i>
+            <input type="text" class="form-control" placeholder="بحث عن فصل دراسي..."
+                [(ngModel)]="searchTerm" (input)="applyFilter()">
+        </div>
+
+        <div class="filter-wrapper">
+            <select class="form-select" [(ngModel)]="selectedGrade" (change)="applyFilter()">
+                <option value="all">كل المراحل</option>
+                <option *ngFor="let g of grades" [value]="g.id">{{ g.name }}</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Stats summary could go here -->
+
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4 list-container">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table align-middle mb-0 custom-premium-table">
+                    <thead>
+                        <tr>
+                            <th class="ps-4">المعرف</th>
+                            <th>الفصل الدراسي</th>
+                            <th>المستوى الدراسي</th>
+                            <th>السعة القصوى</th>
+                            <th>إشغال</th>
+                            <th class="text-center pe-4">إجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr *ngFor="let cls of filteredClasses; let i = index">
+                            <td class="ps-4 text-muted fw-bold">#{{ cls.id }}</td>
+                            <td>
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="class-icon rounded-circle d-flex align-items-center justify-content-center text-primary bg-primary-subtle shadow-sm">
+                                        <i class="fas fa-chalkboard-teacher"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0 fw-bold text-dark">{{ cls.name }}</h6>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge bg-light text-secondary border px-3 py-2 rounded-pill shadow-sm">
+                                    <i class="fas fa-layer-group me-1 text-primary"></i> 
+                                    {{ getGradeName(cls.gradeLevelId) || 'غير محدد' }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="fas fa-users text-muted bg-light p-2 rounded-circle"></i>
+                                    <span class="fw-bold text-dark">{{ cls.capacity || 0 }}</span> <span class="text-muted small">طالب</span>
+                                </div>
+                            </td>
+                            <td>
+                                <!-- Dummy visual indicator for occupation -->
+                                <div class="occupation-indicator">
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <span class="small text-muted fw-medium border-0 m-0">توزيع الطلاب</span>
+                                        <span class="small fw-bold text-success border-0 m-0">متاح</span>
+                                    </div>
+                                    <div class="progress" style="height: 6px;">
+                                        <div class="progress-bar bg-success rounded-pill" role="progressbar" style="width: 45%" aria-valuenow="45" aria-valuemin="0" aria-valuemax="100"></div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="text-center pe-4">
+                                <div class="d-flex justify-content-center gap-2">
+                                    <button class="btn btn-light rounded-circle shadow-sm btn-icon edit-btn" (click)="openEditModal(cls)" title="تعديل بيانات الفصل">
+                                        <i class="fas fa-pen text-primary"></i>
+                                    </button>
+                                    <button class="btn btn-light rounded-circle shadow-sm btn-icon delete-btn" (click)="deleteClass(cls.id)" title="حذف الفصل">
+                                        <i class="fas fa-trash-alt text-danger"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        
+                        <tr *ngIf="classes.length === 0 && !loading">
+                            <td colspan="6" class="text-center py-5">
+                                <i class="fas fa-chalkboard-teacher fs-1 text-muted mb-3 opacity-50"></i>
+                                <h5 class="text-dark fw-bold">لا توجد فصول دراسية مقيدة</h5>
+                                <p class="text-muted">ابدأ باضافة قاعات وفصول لربطها بالطلاب والمعلمين.</p>
+                                <button class="btn btn-outline-primary rounded-pill px-4 mt-2" (click)="openAddModal()">اضافة اول فصل</button>
+                            </td>
+                        </tr>
+                        <tr *ngIf="filteredClasses.length === 0">
+                            <td colspan="6" class="text-center py-5 text-muted">
+                                <div class="opacity-25 mb-2">
+                                    <i class="fas fa-search fs-1"></i>
+                                </div>
+                                لا توجد فصول دراسية متطابقة مع البحث
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="text-center py-5" *ngIf="loading">
+                <div class="spinner-border text-primary"></div>
+                <p class="mt-2 text-muted fw-medium">جاري جلب بيانات الفصول...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-backdrop fade show" *ngIf="showModal"></div>
+<div class="modal fade show d-block" *ngIf="showModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header border-0 p-4 align-items-center bg-light">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="modal-icon rounded-circle bg-white shadow-sm p-2 text-primary">
+                        <i class="fas" [ngClass]="isEditMode ? 'fa-pen' : 'fa-chalkboard-teacher'"></i>
+                    </div>
+                    <h5 class="modal-title fw-bold text-dark mb-0">{{ isEditMode ? 'تعديل بيانات الفصل/القاعة' : 'اضافة فصل دراسي جديد' }}</h5>
+                </div>
+                <button type="button" class="btn-close shadow-none m-0 me-auto ms-0" (click)="showModal = false"></button>
+            </div>
+            
+            <form (ngSubmit)="saveClass()">
+                <div class="modal-body p-4 pt-4">
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold text-secondary">اسم الفصل أو رقم القاعة</label>
+                        <input type="text" class="form-control form-control-lg rounded-3" name="name" [(ngModel)]="currentClass.name"
+                            required placeholder="مثال: فصل 1/أ  أو  قاعة ابن سينا">
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold text-secondary">المرحلة / المستوى الدراسي</label>
+                        <select class="form-select form-control-lg rounded-3" name="gradeLevelId"
+                            [(ngModel)]="currentClass.gradeLevelId" required>
+                            <option *ngFor="let g of grades" [value]="g.id">{{ g.name }}</option>
+                        </select>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label fw-semibold text-secondary">السعة القصوى للطلاب المقبولين</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control form-control-lg rounded-start-3 border-end-0 border-secondary-subtle" name="capacity"
+                                [(ngModel)]="currentClass.capacity" min="1" max="100">
+                            <span class="input-group-text bg-white border-start-0 border-secondary-subtle text-muted rounded-end-3">طالب</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-footer border-0 p-4 pt-0 d-flex justify-content-start gap-2">
+                    <button type="submit" class="btn btn-primary btn-lg rounded-3 px-4 shadow-sm" [disabled]="submitting">
+                        {{ isEditMode ? 'إحفظ بيانات الفصل' : 'إعتماد إضافة الفصل' }}
+                    </button>
+                    <button type="button" class="btn btn-light btn-lg rounded-3 px-4"
+                        (click)="showModal = false">إلغاء الأمر</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

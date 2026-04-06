@@ -1,0 +1,156 @@
+/* User Profile - Dark Theme */
+.profile-container.dark-theme {
+    padding: 25px;
+    background-color: #131625;
+    font-family: 'Tajawal', sans-serif;
+    direction: rtl;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Dark Cards */
+.dark-card {
+    background-color: #1c2033 !important;
+    border: 1px solid #2a2e45 !important;
+}
+
+/* Avatar */
+.avatar-circle {
+    width: 110px;
+    height: 110px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.05);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 3px solid rgba(251, 191, 36, 0.3);
+    margin: 0 auto;
+    overflow: hidden;
+}
+
+.avatar-fallback {
+    color: #f8fafc;
+    font-size: 2.2rem;
+    font-weight: 800;
+}
+
+.change-photo-btn {
+    background: #6366f1;
+    color: white;
+    font-size: 0.7rem;
+    font-weight: 600;
+    white-space: nowrap;
+    border: none;
+    padding: 5px 12px;
+}
+
+.text-muted-dark {
+    color: #8f95b2 !important;
+}
+
+.border-dark-line {
+    border-color: #2a2e45 !important;
+}
+
+.text-white {
+    color: #f1f5f9 !important;
+}
+
+/* Dark Inputs */
+.dark-input-group {
+    border: 1px solid #2e3453;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.dark-addon {
+    background-color: #232740 !important;
+    border: none !important;
+    color: #6b7280;
+}
+
+.dark-input {
+    background-color: #1c2033 !important;
+    border: none !important;
+    color: #e2e8f0 !important;
+    font-family: 'Tajawal', sans-serif;
+}
+
+.dark-input::placeholder {
+    color: #4b5563;
+}
+
+.dark-input[readonly] {
+    color: #94a3b8 !important;
+    cursor: not-allowed;
+}
+
+.dark-input:focus {
+    background-color: #1c2033 !important;
+    box-shadow: none !important;
+    border-color: #4f46e5 !important;
+}
+
+.toggle-pass {
+    cursor: pointer;
+    background-color: #232740 !important;
+}
+
+.toggle-pass:hover {
+    color: #a5b4fc !important;
+}
+
+.field-hint {
+    display: block;
+    color: #8f95b2;
+    margin-top: 0.4rem;
+    font-size: 0.82rem;
+}
+
+.field-error {
+    color: #fca5a5;
+    margin-top: 0.45rem;
+    font-size: 0.84rem;
+    font-weight: 600;
+}
+
+.security-note {
+    color: #cbd5e1;
+    background: rgba(99, 102, 241, 0.12);
+    border: 1px solid rgba(129, 140, 248, 0.22);
+    border-radius: 12px;
+    padding: 12px 14px;
+    line-height: 1.7;
+}
+
+.inline-alert {
+    border: none;
+    border-radius: 12px;
+}
+
+/* Primary Button */
+.btn-primary {
+    background-color: #4f46e5;
+    border-color: #4f46e5;
+}
+
+.btn-primary:hover {
+    background-color: #4338ca;
+    border-color: #4338ca;
+}
+
+.change-photo-btn:disabled {
+    opacity: 0.75;
+    cursor: wait;
+}

@@ -1,0 +1,193 @@
+<!-- features/parent/dashboard/parent-dashboard.component.html -->
+<div class="parent-dashboard" dir="rtl">
+  <!-- Welcome Header -->
+  <div class="welcome-header">
+    <div class="welcome-text">
+      <h1 class="text-gradient">مرحباً، {{ parentName }}</h1>
+      <p>نظرة عامة على أداء أبنائك الدراسي</p>
+      <div class="parent-info-mini mt-2" *ngIf="parentAddress">
+        <span class="me-3"><i class="fas fa-map-marker-alt me-1"></i> {{ parentAddress }}</span>
+        <span><i class="fas fa-envelope me-1"></i> {{ parentEmail }}</span>
+      </div>
+    </div>
+    <div class="date-display">
+      <i class="far fa-calendar-alt"></i>
+      <span>{{ today | date:'EEEE, d MMMM yyyy' }}</span>
+    </div>
+  </div>
+
+  <!-- Quick Actions Shortcuts -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-3">
+      <div class="glass-card glass-card-hover p-3 text-center action-card" routerLink="/chat">
+        <i class="fas fa-comments fs-3 mb-2 text-primary"></i>
+        <h6 class="mb-0">مراسلة المدرسين</h6>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="glass-card glass-card-hover p-3 text-center action-card" routerLink="/parent/fees">
+        <i class="fas fa-file-invoice-dollar fs-3 mb-2 text-success"></i>
+        <h6 class="mb-0">دفع المصروفات</h6>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="glass-card glass-card-hover p-3 text-center action-card" routerLink="/parent/calendar">
+        <i class="fas fa-calendar-check fs-3 mb-2 text-warning"></i>
+        <h6 class="mb-0">التقويم الدراسي</h6>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="glass-card glass-card-hover p-3 text-center action-card" routerLink="/profile">
+        <i class="fas fa-user-edit fs-3 mb-2 text-info"></i>
+        <h6 class="mb-0">تعديل البيانات</h6>
+      </div>
+    </div>
+  </div>
+
+  <!-- Children Summary Cards -->
+  <div class="children-grid">
+    <div class="child-card" *ngFor="let child of children">
+      <div class="child-header">
+        <img [src]="child.avatar || '/assets/images/default-avatar.png'" alt="" class="child-avatar">
+        <div class="child-info">
+          <h3>{{ child.fullName }}</h3>
+          <p class="class-name">{{ child.classRoomName }} - {{ child.gradeLevel }}</p>
+        </div>
+        <button class="btn-more" [routerLink]="['/parent/children', child.id]">
+          <i class="fas fa-chevron-left"></i>
+        </button>
+      </div>
+
+      <div class="child-stats">
+        <div class="stat-item">
+          <span class="stat-label">نسبة الحضور</span>
+          <div class="progress-bar">
+            <div class="progress" [style.width.%]="child.attendanceRate"
+              [style.background]="getAttendanceColor(child.attendanceRate)"></div>
+          </div>
+          <span class="stat-value">{{ child.attendanceRate }}%</span>
+        </div>
+
+        <div class="stat-row">
+          <div class="stat-block">
+            <span class="label">المعدل</span>
+            <span class="value" [ngClass]="{
+              'high': child.average >= 90,
+              'medium': child.average >= 75 && child.average < 90,
+              'low': child.average < 75
+            }">{{ child.average }}%</span>
+          </div>
+          <div class="stat-block">
+            <span class="label">الغياب</span>
+            <span class="value warning">{{ child.absences }} يوم</span>
+          </div>
+        </div>
+
+        <div class="recent-grades">
+          <h4>آخر الدرجات</h4>
+          <div class="grade-item" *ngFor="let grade of child.recentGrades">
+            <span class="subject">{{ grade.subject }}</span>
+            <span class="score" [ngClass]="{
+              'high': grade.score >= 90,
+              'medium': grade.score >= 75 && grade.score < 90,
+              'low': grade.score < 75
+            }">{{ grade.score }}%</span>
+          </div>
+          <a [routerLink]="['/parent/children', child.id, 'grades']" class="view-link">
+            عرض كل الدرجات
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Two Column Layout -->
+  <div class="dashboard-grid">
+    <!-- Left Column - Notifications & Events -->
+    <div class="left-column">
+      <!-- Important Alerts -->
+      <div class="alerts-card" *ngIf="pendingPayments > 0">
+        <div class="alert-header warning">
+          <i class="fas fa-exclamation-triangle"></i>
+          <h3>تنبيهات هامة</h3>
+        </div>
+        <div class="alert-body">
+          <p>يرجى سداد المصروفات الدراسية قبل نهاية الشهر الحالي.</p>
+          <p>المبلغ المستحق: <strong>{{ pendingPayments | currency }}</strong></p>
+          <button class="btn-pay">سداد الآن</button>
+        </div>
+      </div>
+
+      <!-- Upcoming Events -->
+      <div class="events-card">
+        <div class="card-header">
+          <h3>الأحداث القادمة</h3>
+          <a href="#" class="view-all">عرض الكل</a>
+        </div>
+        <div class="events-list">
+          <div class="event-item" *ngFor="let event of upcomingEvents">
+            <div class="event-date">
+              <span class="day">{{ event.date | date:'d' }}</span>
+              <span class="month">{{ event.date | date:'MMM' }}</span>
+            </div>
+            <div class="event-info">
+              <h4>{{ event.title }}</h4>
+              <p>{{ event.description }}</p>
+              <span class="event-time">
+                <i class="far fa-clock"></i> {{ event.time }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column - Recent Notifications -->
+    <div class="right-column">
+      <div class="notifications-card">
+        <div class="card-header">
+          <h3>آخر الإشعارات</h3>
+          <a href="#" class="view-all">عرض الكل</a>
+        </div>
+        <div class="notifications-list">
+          <div class="notification-item" *ngFor="let notif of recentNotifications" [class.unread]="!notif.isRead">
+            <div class="notification-icon" [ngClass]="notif.type">
+              <i class="fas" [ngClass]="{
+                'fa-user-graduate': notif.type === 'attendance',
+                'fa-pencil-alt': notif.type === 'grade',
+                'fa-calendar': notif.type === 'event',
+                'fa-credit-card': notif.type === 'payment'
+              }"></i>
+            </div>
+            <div class="notification-content">
+              <h4>{{ notif.title }}</h4>
+              <p>{{ notif.message }}</p>
+              <span class="time">{{ notif.time | date:'shortTime' }}</span>
+            </div>
+            <span class="unread-dot" *ngIf="!notif.isRead"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Announcements -->
+  <div class="announcements-section mt-4 mb-4" dir="rtl">
+    <h3 class="section-title mb-3">📰 آخر الأخبار والتنبيهات العامة</h3>
+    <div class="row g-3">
+      <div class="col-md-4" *ngFor="let announcement of announcements">
+        <div class="glass-card glass-card-hover p-3 h-100 border-start border-warning border-4">
+          <div class="d-flex justify-content-between mb-2">
+            <span class="badge gradient-warning small">تنبيه</span>
+            <small class="text-muted">{{ announcement.createdAt | date:'short' }}</small>
+          </div>
+          <h6 class="fw-bold mb-2">{{ announcement.title }}</h6>
+          <p class="text-muted small mb-0">{{ announcement.content }}</p>
+        </div>
+      </div>
+      <div class="col-12 text-center py-4 bg-light rounded-4" *ngIf="announcements.length === 0">
+        <p class="text-muted mb-0">لا توجد إعلانات عامة جديدة حالياً</p>
+      </div>
+    </div>
+  </div>
+</div>

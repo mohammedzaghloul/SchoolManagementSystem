@@ -1,0 +1,142 @@
+<!-- features/admin/students/student-add/student-add.component.html -->
+<div class="student-form-container" dir="rtl">
+  <div class="form-header">
+    <h2>إضافة طالب جديد</h2>
+    <p>أدخل بيانات الطالب لإنشاء حساب جديد</p>
+  </div>
+
+  <form [formGroup]="studentForm" (ngSubmit)="onSubmit()" class="student-form">
+    <!-- Image Upload -->
+    <div class="image-upload-section">
+      <div class="image-preview" [class.has-image]="imagePreview">
+        <img *ngIf="imagePreview" [src]="imagePreview" alt="Student photo">
+        <div *ngIf="!imagePreview" class="placeholder">
+          <i class="fas fa-camera"></i>
+          <span>صورة الطالب</span>
+        </div>
+        <div class="upload-overlay">
+          <label for="studentImage" class="upload-btn">
+            <i class="fas fa-upload"></i>
+            تغيير الصورة
+          </label>
+        </div>
+      </div>
+      <input type="file" id="studentImage" accept="image/*" (change)="onImageSelected($event)" hidden>
+    </div>
+
+    <!-- Personal Information -->
+    <div class="form-section">
+      <h3>المعلومات الشخصية</h3>
+      <div class="form-row">
+        <div class="form-group">
+          <label>الاسم الكامل <span class="required">*</span></label>
+          <input type="text" formControlName="fullName" class="form-control"
+                 [class.is-invalid]="studentForm.get('fullName')?.invalid && studentForm.get('fullName')?.touched">
+          <div class="error-message" *ngIf="studentForm.get('fullName')?.hasError('required')">
+            الاسم الكامل مطلوب
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>تاريخ الميلاد <span class="required">*</span></label>
+          <input type="date" formControlName="birthDate" class="form-control"
+                 [class.is-invalid]="studentForm.get('birthDate')?.invalid && studentForm.get('birthDate')?.touched">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>البريد الإلكتروني <span class="required">*</span></label>
+          <input type="email" formControlName="email" class="form-control"
+                 [class.is-invalid]="studentForm.get('email')?.invalid && studentForm.get('email')?.touched">
+          <div class="error-message" *ngIf="studentForm.get('email')?.hasError('required')">
+            البريد الإلكتروني مطلوب
+          </div>
+          <div class="error-message" *ngIf="studentForm.get('email')?.hasError('email')">
+            البريد الإلكتروني غير صحيح
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>رقم الهاتف</label>
+          <input type="tel" formControlName="phone" class="form-control">
+        </div>
+      </div>
+    </div>
+
+    <!-- Account Information -->
+    <div class="form-section">
+      <h3>معلومات الحساب</h3>
+      <div class="form-row">
+        <div class="form-group">
+          <label>كلمة المرور <span class="required">*</span></label>
+          <input type="password" formControlName="password" class="form-control"
+                 [class.is-invalid]="studentForm.get('password')?.invalid && studentForm.get('password')?.touched">
+          <div class="error-message" *ngIf="studentForm.get('password')?.hasError('required')">
+            كلمة المرور مطلوبة
+          </div>
+          <div class="error-message" *ngIf="studentForm.get('password')?.hasError('minlength')">
+            كلمة المرور يجب أن تكون 6 أحرف على الأقل
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Academic Information -->
+    <div class="form-section">
+      <h3>المعلومات الدراسية</h3>
+      <div class="form-row">
+        <div class="form-group">
+          <label>الفصل الدراسي <span class="required">*</span></label>
+          <select formControlName="classRoomId" class="form-control"
+                  [class.is-invalid]="studentForm.get('classRoomId')?.invalid && studentForm.get('classRoomId')?.touched">
+            <option value="">اختر الفصل</option>
+            <option *ngFor="let class of classes" [value]="class.id">
+              {{ class.name }} - {{ class.gradeLevel }}
+            </option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>ولي الأمر</label>
+          <select formControlName="parentId" class="form-control">
+            <option value="">اختر ولي الأمر</option>
+            <option *ngFor="let parent of parents" [value]="parent.id">
+              {{ parent.fullName }}
+            </option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Additional Information -->
+    <div class="form-section">
+      <h3>معلومات إضافية</h3>
+      <div class="form-row">
+        <div class="form-group full-width">
+          <label>العنوان</label>
+          <textarea formControlName="address" class="form-control" rows="3"></textarea>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group full-width">
+          <label>ملاحظات طبية</label>
+          <textarea formControlName="medicalNotes" class="form-control" rows="3"
+                    placeholder="حساسية - حالات خاصة - أدوية..."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- Form Actions -->
+    <div class="form-actions">
+      <button type="button" class="btn-secondary" routerLink="/admin/students">
+        إلغاء
+      </button>
+      <button type="submit" class="btn-primary" [disabled]="isSubmitting">
+        <i class="fas" [ngClass]="isSubmitting ? 'fa-spinner fa-spin' : 'fa-save'"></i>
+        {{ isSubmitting ? 'جاري الحفظ...' : 'حفظ الطالب' }}
+      </button>
+    </div>
+  </form>
+</div>

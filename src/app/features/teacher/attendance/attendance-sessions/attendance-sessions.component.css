@@ -1,0 +1,72 @@
+.page-container {
+    padding: 20px;
+}
+
+.head-title {
+    color: #4b6279;
+    font-size: 1.8rem;
+}
+
+.info-banner {
+    background-color: #f1f5f9;
+    color: #64748b;
+    border-top: 3px solid #00a0dc;
+    border-radius: 8px 8px 0 0;
+}
+
+.rounded-not-bottom {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.rounded-not-top {
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+    margin-top: -1.5rem;
+    border-radius: 0 0 8px 8px;
+    background-color: #2b936d;
+    color: white;
+    padding: 1rem;
+}
+
+.custom-table th {
+    background-color: #f8fafc;
+    color: #475569;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.badge-success {
+    background-color: #2b936d;
+    color: white;
+}
+
+.indicator-blue {
+    background-color: #38bdf8;
+    color: white;
+}
+
+.indicator-green {
+    background-color: #34d399;
+    color: white;
+}
+
+.btn-manual { background-color: #4b5563; color: white; border: none; }
+.btn-manual:hover { background-color: #374151; color: white; }
+
+.btn-scan { background-color: #3b82f6; color: white; border: none; }
+.btn-scan:hover { background-color: #2563eb; color: white; }
+
+.btn-qr { background-color: #10b981; color: white; border: none; }
+.btn-qr:hover { background-color: #059669; color: white; }
+
+.btn-cancel { background-color: #ef4444; color: white; border: none; }
+.btn-cancel:hover { background-color: #dc2626; color: white; }
+
+.btn-report { background-color: #f59e0b; color: white; border: none; }
+.btn-report:hover { background-color: #d97706; color: white; }
+
+.action-buttons {
+    min-width: 180px;
+    max-width: 200px;
+    margin: 0 auto;
+}

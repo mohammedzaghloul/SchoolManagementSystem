@@ -1,0 +1,193 @@
+<div class="page-container p-4 p-lg-5" dir="rtl">
+    <!-- Premium Dashboard Header -->
+    <div class="page-header d-flex flex-column flex-sm-row justify-content-between align-items-center mb-5 gap-3">
+        <div class="animate-fade-in">
+            <div class="d-flex align-items-center gap-3 mb-1">
+                <div class="header-icon-badge bg-primary text-white rounded-circle p-2 shadow-sm">
+                    <i class="fas fa-bolt-lightning fs-5"></i>
+                </div>
+                <h2 class="page-title mb-0 fw-800">مرحباً، أستاذ {{ teacherName }} 👋</h2>
+            </div>
+            <p class="text-secondary small mb-0 ps-5">نظرة عامة حية لنشاطك التعليمي ومؤشرات الحضور لليوم</p>
+        </div>
+        <a routerLink="/teacher/timetable"
+            class="btn btn-white btn-action-outline px-4 py-2-5 rounded-15 fw-800 shadow-premium hover-glow transition d-flex align-items-center gap-2">
+            <i class="fas fa-calendar-alt text-primary"></i>
+            جدول المحاضرات الكامل
+        </a>
+    </div>
+
+    <!-- Data Visualization Cards -->
+    <div class="row g-4 mb-5">
+        <div class="col-md-4">
+            <div class="card stat-card border-0 rounded-25 p-4 d-flex flex-row align-items-center gap-4">
+                <div class="stat-icon-box bg-blue-soft rounded-20">
+                    <i class="fas fa-user-graduate"></i>
+                </div>
+                <div class="text-start flex-grow-1">
+                    <p class="text-secondary x-small fw-800 ls-1 mb-1 opacity-75">إجمالي الطلاب</p>
+                    <h2 class="fw-800 mb-0 text-dark">{{ stats.totalStudents || 0 }}</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card stat-card border-0 rounded-25 p-4 d-flex flex-row align-items-center gap-4 border-bottom-primary">
+                <div class="stat-icon-box bg-green-soft rounded-20">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <div class="text-start flex-grow-1">
+                    <p class="text-secondary x-small fw-800 ls-1 mb-1 opacity-75">معدل الحضور</p>
+                    <h2 class="fw-800 mb-0 text-dark">{{ stats.attendanceAvg }}</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <a routerLink="/teacher/attendance" class="text-decoration-none">
+                <div class="card stat-card border-0 rounded-25 p-4 d-flex flex-row align-items-center gap-4 clickable-card overflow-hidden position-relative">
+                    <div class="stat-icon-box bg-purple-soft rounded-20">
+                        <i class="fas fa-clock-rotate-left"></i>
+                    </div>
+                    <div class="text-start flex-grow-1">
+                        <p class="text-secondary x-small fw-800 ls-1 mb-1 opacity-75">حصص اليوم</p>
+                        <h2 class="fw-800 mb-0 text-dark">{{ stats.todayClasses }}</h2>
+                    </div>
+                    <div class="position-absolute bottom-0 start-0 w-100 bg-purple h-2 opacity-10"></div>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <!-- Multi-Column Operational View -->
+    <div class="row g-5">
+        <!-- Dashboard Central Focus: Today's Class Controls -->
+        <div class="col-lg-7 order-lg-1">
+            <div class="card current-class-card border-0 rounded-25 h-100 animate-scale-in">
+                <div class="card-header bg-transparent border-0 pt-5 pb-3 px-5 d-flex align-items-center gap-3">
+                    <div class="pulse-indicator" *ngIf="currentSession"></div>
+                    <h5 class="fw-800 mb-0 text-dark-blue">
+                        {{ currentSession ? 'الحصة الجارية الآن' : 'حالة الجدول المدرسي' }}
+                    </h5>
+                </div>
+                <div class="card-body px-5 pb-5">
+                    <div class="current-class-content text-start" *ngIf="currentSession">
+                        <div class="mb-5">
+                            <div class="d-flex align-items-center gap-3 mb-2">
+                                <span class="badge badge-live rounded-pill py-2-5">
+                                    <i class="fas fa-circle fs-xxxs me-2 blink"></i> لايف
+                                </span>
+                                <span class="badge bg-primary-soft text-primary rounded-pill px-3 py-2 fw-800 x-small">
+                                    <i class="far fa-clock me-1"></i> {{ formatTime(currentSession.startTime) }}
+                                </span>
+                            </div>
+                            <h1 class="fw-800 text-dark-blue mb-1 display-5">{{ currentSession.subjectName }}</h1>
+                            <h4 class="text-secondary fw-700 opacity-75 d-flex align-items-center gap-2">
+                                <i class="fas fa-location-dot x-small"></i> {{ currentSession.classRoomName }}
+                            </h4>
+                        </div>
+
+                        <div class="row g-4 mb-5">
+                            <div class="col-sm-6">
+                                <div class="bg-light p-4 rounded-25 border-0 text-center shadow-tiny hover-glow transition">
+                                    <div class="text-muted x-small fw-800 ls-1 mb-2">الطلاب الحاضرين</div>
+                                    <div class="d-flex align-items-baseline justify-content-center gap-2">
+                                        <h1 class="fw-800 text-success mb-0 counter-animate">{{ currentSession.attendanceCount || 0 }}</h1>
+                                        <span class="text-muted fw-bold">/{{ currentSession.studentCount || 0 }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="bg-light p-4 rounded-25 border-0 text-center shadow-tiny hover-glow transition">
+                                    <div class="text-muted x-small fw-800 ls-1 mb-2">في انتظار الرصد</div>
+                                    <h1 class="fw-800 text-warning mb-0 counter-animate">
+                                        {{ (currentSession.studentCount || 0) - (currentSession.attendanceCount || 0) }}
+                                    </h1>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Pro Action Array -->
+                        <div class="d-flex flex-column gap-3">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <a [routerLink]="['/teacher/attendance/qr']" [queryParams]="{sessionId: currentSession.id}"
+                                        class="btn btn-dashboard-action btn-qr-glow w-100 animate-fade-in d-flex align-items-center justify-content-center gap-3">
+                                        <i class="fas fa-qrcode fs-4"></i>
+                                        بث رمز QR
+                                    </a>
+                                </div>
+                                <div class="col-md-6">
+                                    <a [routerLink]="['/teacher/attendance/face']" [queryParams]="{sessionId: currentSession.id}"
+                                        class="btn btn-dashboard-action btn-face-dark w-100 animate-fade-in d-flex align-items-center justify-content-center gap-3">
+                                        <i class="fas fa-id-card-clip fs-4"></i>
+                                        التعرف بالوجه
+                                    </a>
+                                </div>
+                            </div>
+                            <a [routerLink]="['/teacher/attendance/manual']" [queryParams]="{sessionId: currentSession.id}"
+                                class="btn btn-action-outline border-dashed w-100 py-3 rounded-20 fw-800 text-muted transition hover-primary">
+                                <i class="fas fa-list-check me-2"></i> الرصد اليدوي التقليدي
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="py-5 text-center animate-fade-in" *ngIf="!currentSession && !loading">
+                        <div class="mb-4 bg-light p-5 rounded-circle d-inline-flex mx-auto scale-up">
+                            <i class="fas fa-mug-hot fs-1 text-primary-light opacity-50"></i>
+                        </div>
+                        <h4 class="fw-800 text-dark-blue mb-2">وقت استراحة هادئ</h4>
+                        <p class="text-secondary opacity-75">لا توجد حصص جارية حالياً بحسب جدولك المعتمد.</p>
+                        <div class="mt-4">
+                            <a routerLink="/teacher/attendance" class="btn btn-primary px-5 py-2-5 rounded-pill fw-800 shadow-premium">إدارة جميع الحصص</a>
+                        </div>
+                    </div>
+
+                    <div class="py-10 text-center animate-fade-in" *ngIf="loading">
+                        <div class="spinner-grow text-primary" role="status" style="width: 4rem; height: 4rem;"></div>
+                        <h5 class="mt-4 text-secondary fw-800 opacity-75">جاري مزامنة القاعة الدراسية...</h5>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar: Daily Schedule Summary -->
+        <div class="col-lg-5 order-lg-2">
+            <div class="card glass-card border-0 rounded-25 h-100 animate-stagger">
+                <div class="card-header bg-transparent border-0 pt-5 pb-3 px-5 d-flex justify-content-between align-items-center">
+                    <h5 class="fw-800 mb-0 d-flex align-items-center gap-3">
+                        <i class="fas fa-calendar-day text-primary-light"></i>
+                        جدول حصص اليوم
+                    </h5>
+                    <span class="badge bg-primary-soft text-primary rounded-10 px-3 py-1-5 x-small fw-800">{{ todaySessions.length }} حصص</span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush px-4" *ngIf="todaySessions.length > 0">
+                        <div class="list-group-item session-item border-0 px-4 py-4 mb-3 d-flex justify-content-between align-items-center"
+                             *ngFor="let s of todaySessions"
+                             [class.active-session]="s.id === currentSession?.id">
+                            <div class="d-flex align-items-center gap-4">
+                                <div class="session-time-indicator" [class.bg-success]="s.id === currentSession?.id"></div>
+                                <div>
+                                    <h6 class="fw-800 mb-1" [style.color]="s.id === currentSession?.id ? '#4f46e5' : '#1e293b'">{{ s.subjectName }}</h6>
+                                    <div class="d-flex align-items-center gap-2 text-secondary opacity-75 x-small">
+                                        <i class="fas fa-building-columns"></i> {{ s.classRoomName }}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="text-end">
+                                <div class="fw-800 text-dark-blue small mb-2">{{ formatTime(s.startTime) }}</div>
+                                <span class="badge bg-success shadow-sm rounded-pill px-2 py-1 fs-xxs" *ngIf="s.id === currentSession?.id">جارية الآن</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="d-flex flex-column align-items-center justify-content-center text-center py-10"
+                        *ngIf="todaySessions.length === 0 && !loading">
+                        <i class="fas fa-calendar-day fs-1 text-light mb-4"></i>
+                        <p class="text-secondary fw-800 opacity-50">لا توجد حصص لليوم</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

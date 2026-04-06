@@ -1,0 +1,29 @@
+<!-- shared/components/qr-scanner/qr-scanner.component.html -->
+<div class="qr-scanner-container">
+  <div *ngIf="!hasCamera" class="no-camera">
+    <i class="fas fa-camera-slash"></i>
+    <p>الكاميرا غير متوفرة</p>
+  </div>
+
+  <div *ngIf="hasCamera" class="scanner-wrapper">
+    <div id="qr-reader" class="qr-reader" #qrReader></div>
+    
+    <div class="scanner-controls" *ngIf="isScanning">
+      <button class="btn-switch-camera" (click)="switchCamera()" *ngIf="cameras.length > 1">
+        <i class="fas fa-sync-alt"></i>
+        تبديل الكاميرا
+      </button>
+      <button class="btn-stop" (click)="stopScanner()">
+        <i class="fas fa-stop"></i>
+        إيقاف
+      </button>
+    </div>
+
+    <div class="scanner-overlay" *ngIf="!isScanning">
+      <button class="btn-start" (click)="startScanner()">
+        <i class="fas fa-camera"></i>
+        بدء المسح
+      </button>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,137 @@
+<div class="page-container" dir="rtl">
+    <div class="page-header d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="page-title text-gradient fw-bold">إدارة أولياء الأمور</h2>
+            <p class="text-muted mb-0">إجمالي أولياء الأمور: {{ parents.length }}</p>
+        </div>
+        <button class="btn btn-premium d-flex align-items-center gap-2" (click)="openAddModal()">
+            <i class="fas fa-plus"></i>
+            <span>إضافة ولي أمر جديد</span>
+        </button>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+        <div class="card-body p-4">
+            <div class="premium-toolbar">
+                <div class="search-wrapper">
+                    <i class="fas fa-search search-icon"></i>
+                    <input
+                        type="text"
+                        class="form-control"
+                        placeholder="بحث بالاسم أو البريد أو الهاتف..."
+                        [(ngModel)]="searchTerm"
+                        (input)="applyFilter()">
+                </div>
+            </div>
+
+            <div class="alert alert-danger mb-4" *ngIf="error">
+                {{ error }}
+            </div>
+
+            <div class="hint-box mb-4">
+                من هذه الشاشة يضيف الأدمن حساب ولي الأمر، وبعدها يمكن ربطه بالطالب من صفحة إدارة الطلاب.
+            </div>
+
+            <div *ngIf="loading" class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2">جاري تحميل أولياء الأمور...</p>
+            </div>
+
+            <div class="table-responsive" *ngIf="!loading">
+                <table class="table custom-table align-middle">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>ولي الأمر</th>
+                            <th>الهاتف</th>
+                            <th>العنوان</th>
+                            <th>عدد الأبناء</th>
+                            <th>إجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr *ngFor="let parent of filteredParents">
+                            <td class="text-muted fw-bold">#{{ parent.id }}</td>
+                            <td>
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="avatar bg-light-blue text-blue">
+                                        <i class="fas fa-user-friends fs-4"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0 fw-bold">{{ parent.fullName }}</h6>
+                                        <small class="text-muted">{{ parent.email }}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>{{ parent.phone || '—' }}</td>
+                            <td>{{ parent.address || '—' }}</td>
+                            <td>
+                                <span class="badge bg-info-subtle text-info px-3 py-2 rounded-pill fw-bold">
+                                    {{ parent.childrenCount || 0 }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-sm btn-icon" (click)="openEditModal(parent)">
+                                        <i class="far fa-edit text-primary"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-icon" (click)="deleteParent(parent)">
+                                        <i class="far fa-trash-alt text-danger"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr *ngIf="filteredParents.length === 0">
+                            <td colspan="6" class="text-center py-4 text-muted">لا يوجد أولياء أمور مطابقون للبحث.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal-backdrop fade show" *ngIf="showModal"></div>
+<div class="modal fade show d-block" *ngIf="showModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-0 p-4 align-items-center">
+                <h5 class="modal-title fw-bold mb-0">{{ isEditMode ? 'تعديل بيانات ولي الأمر' : 'إضافة ولي أمر جديد' }}</h5>
+                <button type="button" class="btn-close shadow-none m-0 me-auto ms-0" (click)="closeModal()"></button>
+            </div>
+            <form (ngSubmit)="saveParent()">
+                <div class="modal-body p-4 pt-0">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">الاسم الكامل</label>
+                        <input type="text" class="form-control rounded-3" name="fullName" [(ngModel)]="currentParent.fullName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">البريد الإلكتروني</label>
+                        <input type="email" class="form-control rounded-3" name="email" [(ngModel)]="currentParent.email" [readonly]="isEditMode" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">رقم الهاتف</label>
+                        <input type="text" class="form-control rounded-3" name="phone" [(ngModel)]="currentParent.phone">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">العنوان</label>
+                        <textarea class="form-control rounded-3" rows="3" name="address" [(ngModel)]="currentParent.address"></textarea>
+                    </div>
+                    <div class="mb-0" *ngIf="!isEditMode">
+                        <label class="form-label fw-semibold">كلمة المرور الأولى</label>
+                        <input type="password" class="form-control rounded-3" name="password" [(ngModel)]="currentParent.password">
+                        <small class="text-muted d-block mt-2">يمكنك تعديلها أو ترك القيمة الافتراضية Parent&#64;123.</small>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 p-4 pt-0">
+                    <button type="button" class="btn btn-light rounded-3 px-4" (click)="closeModal()" [disabled]="submitting">إلغاء</button>
+                    <button type="submit" class="btn btn-premium px-5" [disabled]="submitting">
+                        {{ submitting ? 'جاري الحفظ...' : 'حفظ البيانات' }}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

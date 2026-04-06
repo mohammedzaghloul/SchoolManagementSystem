@@ -1,0 +1,130 @@
+.page-container {
+    padding: 10px;
+    font-family: 'Tajawal', sans-serif;
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.page-title {
+    font-weight: 800;
+    color: #1f2937;
+    margin-bottom: 4px;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+}
+
+.stat-card {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 18px;
+    padding: 18px 20px;
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.04);
+}
+
+.stat-card.danger {
+    border-color: #fecaca;
+    background: #fff7f7;
+}
+
+.stat-card.info {
+    border-color: #bfdbfe;
+    background: #f8fbff;
+}
+
+.stat-label {
+    display: block;
+    color: #64748b;
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.stat-card strong {
+    font-size: 1.6rem;
+    color: #0f172a;
+}
+
+.premium-toolbar {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.search-wrapper {
+    position: relative;
+    flex: 1.5;
+}
+
+.filter-wrapper {
+    flex: 1;
+}
+
+.search-wrapper .form-control {
+    padding-right: 42px;
+}
+
+.search-icon {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #94a3b8;
+}
+
+.custom-table {
+    margin-bottom: 0;
+}
+
+.custom-table thead th {
+    background-color: transparent;
+    color: #6b7280;
+    font-weight: 600;
+    font-size: 0.9rem;
+    border-bottom: 2px solid #f3f4f6;
+    padding: 15px;
+    white-space: nowrap;
+}
+
+.custom-table tbody td {
+    padding: 18px 15px;
+    border-bottom: 1px solid #f3f4f6;
+    vertical-align: middle;
+}
+
+.custom-table tbody tr:hover {
+    background-color: #f8fafc;
+}
+
+.btn-icon {
+    width: 35px;
+    height: 35px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+
+.btn-icon:hover {
+    background-color: #f3f4f6;
+}
+
+@media (max-width: 900px) {
+    .premium-toolbar {
+        flex-direction: column;
+    }
+}

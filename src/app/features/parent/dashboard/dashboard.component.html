@@ -1,0 +1,120 @@
+<div class="parent-dashboard-container" dir="rtl">
+  <!-- Header: Welcome & Quick Pay -->
+  <header class="dashboard-header highlight-card shadow-sm" *ngIf="!loading">
+    <div class="welcome-text">
+       <h1>أهلاً بك، {{ parentName }}</h1>
+       <p>هذا هو الملخص اليومي لأبنائك في المدرسة</p>
+    </div>
+    
+    <div class="quick-stats" *ngIf="summary.pendingPaymentsAmount > 0">
+       <div class="stat-mini">
+          <span>المصاريف المطلوبة</span>
+          <strong>{{ formatCurrency(summary.pendingPaymentsAmount) }}</strong>
+       </div>
+       <button routerLink="/parent/payments" class="btn-pay-now">سدد الآن</button>
+    </div>
+  </header>
+
+  <!-- Children Simple Cards -->
+  <section class="children-section" *ngIf="!loading">
+    <div class="section-title">
+       <h3>أبنائي</h3>
+       <span class="count">{{ children.length }} طلاب</span>
+    </div>
+
+    <div class="children-list">
+       <article class="child-box shadow-sm" *ngFor="let child of children" (click)="selectChild(child)">
+          <div class="child-main">
+             <div class="child-avatar">
+                {{ child.fullName.charAt(0) }}
+             </div>
+             <div class="child-info">
+                <h4>{{ child.fullName }}</h4>
+                <p>{{ child.classRoomName }}</p>
+             </div>
+          </div>
+          <div class="child-status">
+             <div class="attendance-ring" [style.color]="getAttendanceColor(child.attendanceRate)">
+                {{ child.attendanceRate }}%
+                <span>الحضور</span>
+             </div>
+             <span class="badge" [ngClass]="getChildStatusClass(child.latestAttendanceStatus)">
+                {{ getChildStatusLabel(child.latestAttendanceStatus) }}
+             </span>
+          </div>
+       </article>
+    </div>
+  </section>
+
+  <!-- Floating Help & Chat -->
+  <div class="fab-container">
+     <button class="fab-chat" routerLink="/chat">
+        <i class="fas fa-comments"></i>
+        <span>كلم المدرسين</span>
+     </button>
+  </div>
+
+  <!-- Student Details Overlay (Modern Drawer/Modal) -->
+  <div class="details-overlay" *ngIf="selectedChild" (click)="closeDetails()">
+     <div class="details-drawer shadow-lg" (click)="$event.stopPropagation()">
+        <header>
+           <button class="btn-close" (click)="closeDetails()">×</button>
+           <div class="drawer-user">
+              <div class="drawer-avatar">{{ selectedChild.fullName.charAt(0) }}</div>
+              <div class="drawer-info">
+                 <h3>{{ selectedChild.fullName }}</h3>
+                 <p>{{ selectedChild.classRoomName }} - {{ selectedChild.gradeLevel }}</p>
+              </div>
+           </div>
+        </header>
+
+        <div class="drawer-content">
+           <!-- Stat Grid -->
+           <div class="stats-grid-details">
+              <div class="stat-box-d">
+                 <i class="fas fa-calendar-check color-green"></i>
+                 <span>نسبة الحضور</span>
+                 <strong>{{ selectedChild.attendanceRate }}%</strong>
+              </div>
+              <div class="stat-box-d">
+                 <i class="fas fa-user-times color-red"></i>
+                 <span>أيام الغياب</span>
+                 <strong>{{ selectedChild.absences }} أيام</strong>
+              </div>
+              <div class="stat-box-d">
+                 <i class="fas fa-chart-line color-blue"></i>
+                 <span>المتوسط العام</span>
+                 <strong>{{ selectedChild.average }}%</strong>
+              </div>
+           </div>
+
+           <!-- Recent Grades -->
+           <div class="detail-section">
+              <h4>آخر الدرجات</h4>
+              <div class="grade-list-simple">
+                 <div class="grade-item" *ngFor="let grade of selectedChild.recentGrades">
+                    <span>{{ grade.subject }}</span>
+                    <div class="grade-val">
+                       <div class="grade-bar" [style.width.%]="grade.score"></div>
+                       <strong>{{ grade.score }}%</strong>
+                    </div>
+                 </div>
+                 <div *ngIf="selectedChild.recentGrades.length === 0" class="empty-mini">لا توجد درجات مسجلة حالياً</div>
+              </div>
+           </div>
+
+           <!-- Quick Actions for child -->
+           <div class="drawer-actions">
+              <button class="btn-outline-p" (click)="closeDetails()">إغلاق</button>
+              <button class="btn-primary-p" routerLink="/chat">مراسلة المعلم الآن</button>
+           </div>
+        </div>
+     </div>
+  </div>
+
+  <!-- Loading State -->
+  <div class="loading-overlay" *ngIf="loading">
+     <div class="simple-spinner"></div>
+     <p>جاري تحميل بياناتك...</p>
+  </div>
+</div>

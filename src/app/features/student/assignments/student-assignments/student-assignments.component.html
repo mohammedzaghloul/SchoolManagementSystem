@@ -1,0 +1,69 @@
+<div class="assignments-container dark-theme min-vh-100">
+    <!-- Page Header -->
+    <div class="page-header d-flex justify-content-between align-items-center mb-4">
+        <h2 class="page-title text-white fw-bold mb-0">الواجبات والمهام</h2>
+    </div>
+
+    <!-- Filter Tabs -->
+    <div class="filter-tabs d-flex gap-2 mb-4">
+        <button class="filter-tab" [class.active]="activeTab === 'all'" (click)="applyTab('all')">الكل</button>
+        <button class="filter-tab" [class.active]="activeTab === 'pending'" (click)="applyTab('pending')">قيد
+            الانتظار</button>
+        <button class="filter-tab" [class.active]="activeTab === 'completed'"
+            (click)="applyTab('completed')">مكتملة</button>
+    </div>
+
+    <!-- Assignments List -->
+    <div class="assignments-list d-flex flex-column gap-3">
+        <div *ngIf="loading" class="text-center py-5">
+            <div class="spinner-border text-primary"></div>
+        </div>
+
+        <div *ngIf="!loading && filteredAssignments.length === 0" class="text-center py-5 text-muted-dark">
+            <i class="fas fa-tasks fs-1 mb-3"></i>
+            <p>لا توجد واجبات منزلية حالياً</p>
+        </div>
+
+        <div *ngFor="let a of filteredAssignments"
+            class="assignment-item dark-card rounded-4 p-4 d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-3">
+                <div class="d-flex flex-column">
+                    <span class="fw-bold text-white mb-1" [class.text-decoration-line-through]="a.isSubmitted">{{
+                        a.title }}</span>
+                    <p class="small text-muted mb-2">{{ a.description }}</p>
+                    <div class="d-flex align-items-center gap-3">
+                        <span class="subject-tag">{{ a.subjectName }}</span>
+                        <small class="text-muted-dark d-flex align-items-center gap-1">
+                            <i class="far fa-calendar-alt fs-xs"></i>
+                            آخر موعد: {{ a.dueDate | date:'mediumDate' }}
+                        </small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex flex-column align-items-end gap-2 text-end">
+                <span *ngIf="a.isSubmitted" class="status-badge badge-done">
+                    <i class="fas fa-check-circle me-1"></i>
+                    تم التسليم
+                </span>
+                <span *ngIf="!a.isSubmitted" class="status-badge badge-late">
+                    <i class="far fa-clock me-1"></i>
+                    قيد الانتظار
+                </span>
+
+                <input type="file" #fileInput hidden (change)="onFileSelected($event, a.id!)">
+                
+                <button *ngIf="!a.isSubmitted" [disabled]="submittingAssignmentId === a.id"
+                    (click)="fileInput.click()" class="btn btn-primary btn-sm px-4 rounded-3">
+                    <i class="fas fa-upload me-1"></i>
+                    تسليم الواجب
+                </button>
+                <a *ngIf="a.attachmentUrl" [href]="a.attachmentUrl" target="_blank"
+                    class="btn btn-outline-secondary btn-sm px-3 rounded-3">
+                    <i class="fas fa-download me-1"></i>
+                    تحميل المرفق
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
