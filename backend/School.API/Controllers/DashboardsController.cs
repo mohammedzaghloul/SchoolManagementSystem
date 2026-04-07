@@ -314,7 +314,6 @@ public class DashboardsController : BaseApiController
                 latestAttendanceAt = latestAttendance?.RecordedAt,
                 recentGrades = grades
                     .OrderByDescending(g => g.Date)
-                    .Take(3)
                     .Select(g => new
                     {
                         subject = g.Subject.Name,
