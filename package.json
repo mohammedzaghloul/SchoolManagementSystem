@@ -31,7 +31,7 @@
     "bootstrap": "^5.3.8",
     "chart.js": "^4.5.1",
     "html5-qrcode": "^2.3.8",
-    "ng2-charts": "^10.0.0",
+    "ng2-charts": "^6.0.1",
     "ngx-toastr": "^19.0.0",
     "rxjs": "~7.8.0",
     "wavesurfer.js": "^7.12.5",

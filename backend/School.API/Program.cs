@@ -13,6 +13,13 @@ using School.API.Hubs;
 using School.Infrastructure.BackgroundJobs;
 
 var builder = WebApplication.CreateBuilder(args);
+var railwayPort = Environment.GetEnvironmentVariable("PORT");
+
+if (!string.IsNullOrWhiteSpace(railwayPort))
+{
+    builder.WebHost.UseUrls($"http://0.0.0.0:{railwayPort}");
+}
+
 var allowedOrigins = builder.Configuration["Cors:AllowedOrigins"]?
     .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
