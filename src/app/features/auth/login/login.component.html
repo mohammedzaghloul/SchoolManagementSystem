@@ -28,16 +28,16 @@
         </div>
 
         <div class="form-group">
-          <label for="email">اسم المستخدم أو الإيميل</label>
+          <label for="email">البريد الإلكتروني</label>
           <div class="input-wrapper">
             <input type="email" id="email" formControlName="email" class="form-control"
               [ngClass]="{ 'is-invalid': f['email'].errors && (f['email'].dirty || f['email'].touched) }"
-              placeholder="أدخل اسم المستخدم">
+              placeholder="أدخل البريد الإلكتروني">
             <i class="fas fa-user input-icon"></i>
           </div>
           <div *ngIf="f['email'].errors && (f['email'].dirty || f['email'].touched)" class="invalid-feedback">
-            <div *ngIf="f['email'].errors['required']">الإيميل مطلوب</div>
-            <div *ngIf="f['email'].errors['email']">يجب أن يكون إيميل صحيح</div>
+            <div *ngIf="f['email'].errors['required']">البريد الإلكتروني مطلوب</div>
+            <div *ngIf="f['email'].errors['email']">يجب إدخال بريد إلكتروني صحيح</div>
           </div>
         </div>
 
@@ -70,7 +70,7 @@
         </div>
 
         <div class="support-link">
-          <p>تحتاج مساعدة ؟ <a routerLink="/support">اتصل بالدعم</a></p>
+          <p>تحتاج مساعدة؟ <a routerLink="/support">اتصل بالدعم</a></p>
         </div>
       </form>
     </div>

@@ -27,10 +27,14 @@
 - **السيرفر (Backend):** [http://localhost:5033](http://localhost:5033)
 
 ## 👤 بيانات الدخول التجريبية (Seeded Data)
-- **الأدمن:** `admin@school.com` / `Password123!`
-- **مدرس:** `teacher1@school.com` / `Password123!`
-- **طالب:** `student1@school.com` / `Password123!`
-- **ولي أمر:** `parent1@school.com` / `Password123!`
+- **الأدمن:** `admin@school.com` / `Admin@123`
+- **مدرس:** `ahmed@school.com` / `Teacher@123`
+- **مدرس:** `sara@school.com` / `Teacher@123`
+- **طالب:** `mohamed@school.com` / `Student@123`
+- **طالب:** `fatma@school.com` / `Student@123`
+- **ولي أمر:** `parent@school.com` / `Parent@123`
+
+> ملاحظة: تسجيل الدخول في النسخة الحالية يتم عبر **البريد الإلكتروني** فقط، وليس اسم المستخدم.
 
 ---
 تم التطوير بواسطة **mohammedzaghloul** 🚀✨
