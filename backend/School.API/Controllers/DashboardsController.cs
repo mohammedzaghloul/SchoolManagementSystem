@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using School.API.Infrastructure;
 using School.Infrastructure.Data;
 using School.Infrastructure.Identity;
 using System.Security.Claims;
@@ -27,7 +28,8 @@ public class DashboardsController : BaseApiController
         var totalStudents = await _context.Students.CountAsync();
         var totalTeachers = await _context.Teachers.CountAsync();
         var totalClasses = await _context.ClassRooms.CountAsync();
-        var monthStart = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+        var schoolToday = SchoolClock.Today;
+        var monthStart = new DateTime(schoolToday.Year, schoolToday.Month, 1);
         var nextMonthStart = monthStart.AddMonths(1);
 
         var totalAttendances = await _context.Attendances.CountAsync();
@@ -43,7 +45,7 @@ public class DashboardsController : BaseApiController
             .Sum(invoice => invoice.AmountPaid);
 
         var pendingFees = tuitionInvoices
-            .Where(invoice => invoice.AmountPaid < invoice.Amount && invoice.DueDate.Date < DateTime.Today)
+            .Where(invoice => invoice.AmountPaid < invoice.Amount && invoice.DueDate.Date < schoolToday)
             .Sum(invoice => invoice.Amount - invoice.AmountPaid);
 
         var recentStudents = await _context.Students
@@ -89,7 +91,7 @@ public class DashboardsController : BaseApiController
             return NotFound("Teacher not found");
         }
 
-        var today = DateTime.Today;
+        var today = SchoolClock.Today;
         var tomorrow = today.AddDays(1);
 
         var todaySessions = await _context.Sessions
@@ -158,11 +160,12 @@ public class DashboardsController : BaseApiController
             return NotFound("Student not found");
         }
 
-        var today = DateTime.Today;
+        var today = SchoolClock.Today;
+        var schoolNow = SchoolClock.Now;
 
         var nextSession = await _context.Sessions
             .Include(s => s.Subject)
-            .Where(s => s.ClassRoomId == student.ClassRoomId && (s.SessionDate > today || (s.SessionDate == today && s.StartTime >= DateTime.Now.TimeOfDay)))
+            .Where(s => s.ClassRoomId == student.ClassRoomId && (s.SessionDate > today || (s.SessionDate == today && s.StartTime >= schoolNow.TimeOfDay)))
             .OrderBy(s => s.SessionDate)
             .ThenBy(s => s.StartTime)
             .Select(s => new
@@ -224,7 +227,7 @@ public class DashboardsController : BaseApiController
                 TeacherName = s.Teacher.FullName,
                 StartTime = s.StartTime.ToString(@"hh\:mm"),
                 EndTime = s.EndTime.ToString(@"hh\:mm"),
-                Completed = s.SessionDate.Add(s.EndTime) < DateTime.Now,
+                Completed = s.SessionDate.Add(s.EndTime) < schoolNow,
                 IsLive = s.IsLive
             })
             .ToListAsync();
@@ -422,7 +425,7 @@ public class DashboardsController : BaseApiController
         var weeklyAttendance = new List<int>();
         for (int i = 5; i >= 0; i--)
         {
-            var date = DateTime.Today.AddDays(-i);
+            var date = SchoolClock.Today.AddDays(-i);
             var dayAttendances = await _context.Attendances
                 .Include(a => a.Session)
                 .Where(a => a.Session.SessionDate == date)

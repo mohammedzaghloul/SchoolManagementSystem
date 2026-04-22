@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using School.API.Infrastructure;
 using School.Application.Features.Attendance.Commands;
 using School.Application.Interfaces;
 using School.Infrastructure.Data;
@@ -107,7 +108,7 @@ public class AttendanceController : BaseApiController
         var sessionEnd = session.SessionDate.Date.Add(session.EndTime);
         var windowStart = sessionStart.AddMinutes(-AttendanceWindowOpensBeforeMinutes);
         var windowEnd = sessionEnd.AddHours(AttendanceWindowClosesAfterHours);
-        var now = DateTime.Now;
+        var now = SchoolClock.Now;
 
         if (now < windowStart)
         {

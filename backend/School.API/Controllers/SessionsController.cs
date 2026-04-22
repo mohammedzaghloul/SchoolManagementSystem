@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using School.API.Infrastructure;
 using School.Application.Features.Sessions.Commands;
 using School.Infrastructure.Data;
 using System.Security.Claims;
@@ -43,7 +44,7 @@ public class SessionsController : BaseApiController
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> GetScheduleOverview([FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate, [FromQuery] string? term)
     {
-        var rangeStart = (startDate ?? DateTime.Today).Date;
+        var rangeStart = (startDate ?? SchoolClock.Today).Date;
         var rangeEnd = (endDate ?? rangeStart.AddDays(42)).Date;
         var normalizedTerm = NormalizeTerm(term);
 
@@ -91,7 +92,7 @@ public class SessionsController : BaseApiController
             TotalSessions = items.Count,
             TotalTeachers = items.Select(item => item.TeacherId).Distinct().Count(),
             TotalClasses = items.Select(item => item.ClassRoomId).Distinct().Count(),
-            ScheduledToday = items.Count(item => item.SessionDate.Date == DateTime.Today),
+            ScheduledToday = items.Count(item => item.SessionDate.Date == SchoolClock.Today),
             Items = items
         });
     }
@@ -100,7 +101,7 @@ public class SessionsController : BaseApiController
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> GenerateTermSchedule([FromBody] GenerateTermScheduleRequest? request)
     {
-        var rangeStart = (request?.StartDate ?? DateTime.Today).Date;
+        var rangeStart = (request?.StartDate ?? SchoolClock.Today).Date;
         var rangeEnd = (request?.EndDate ?? rangeStart.AddDays(42)).Date;
         var normalizedTerm = NormalizeTerm(request?.Term);
 
@@ -164,9 +165,9 @@ public class SessionsController : BaseApiController
         if (teacher == null)
             return Ok(new List<object>()); // Return empty instead of 404
 
-        var targetDate = (date ?? DateTime.Today).Date;
+        var targetDate = (date ?? SchoolClock.Today).Date;
         var nextDay = targetDate.AddDays(1);
-        var now = DateTime.Now;
+        var now = SchoolClock.Now;
 
         var sessionRows = await _context.Sessions
             .Include(s => s.Subject)
@@ -228,7 +229,7 @@ public class SessionsController : BaseApiController
     [HttpGet("active")]
     public async Task<IActionResult> GetActiveSessions()
     {
-        var today = DateTime.Today;
+        var today = SchoolClock.Today;
         var tomorrow = today.AddDays(1);
 
         var sessions = await _context.Sessions
@@ -245,7 +246,7 @@ public class SessionsController : BaseApiController
                 TeacherName = s.Teacher != null ? s.Teacher.FullName : "—",
                 StartTime = s.SessionDate.Add(s.StartTime),
                 EndTime = s.SessionDate.Add(s.EndTime),
-                IsActive = s.SessionDate.Add(s.StartTime) <= DateTime.Now && s.SessionDate.Add(s.EndTime) >= DateTime.Now
+                IsActive = s.SessionDate.Add(s.StartTime) <= SchoolClock.Now && s.SessionDate.Add(s.EndTime) >= SchoolClock.Now
             })
             .ToListAsync();
 
@@ -262,8 +263,8 @@ public class SessionsController : BaseApiController
             return Unauthorized("Student not found");
         }
 
-        var now = DateTime.Now;
-        var today = DateTime.Today;
+        var now = SchoolClock.Now;
+        var today = SchoolClock.Today;
         var tomorrow = today.AddDays(1);
 
         var todaySessions = await _context.Sessions
@@ -374,7 +375,7 @@ public class SessionsController : BaseApiController
     [HttpGet]
     public async Task<IActionResult> GetSessions()
     {
-        var today = DateTime.Today;
+        var today = SchoolClock.Today;
         var tomorrow = today.AddDays(1);
 
         var sessions = await _context.Sessions
@@ -392,7 +393,7 @@ public class SessionsController : BaseApiController
                 StartTime = s.SessionDate.Add(s.StartTime),
                 EndTime = s.SessionDate.Add(s.EndTime),
                 DayOfWeek = (int)s.SessionDate.DayOfWeek,
-                IsActive = s.SessionDate.Add(s.StartTime) <= DateTime.Now && s.SessionDate.Add(s.EndTime) >= DateTime.Now
+                IsActive = s.SessionDate.Add(s.StartTime) <= SchoolClock.Now && s.SessionDate.Add(s.EndTime) >= SchoolClock.Now
             })
             .ToListAsync();
 

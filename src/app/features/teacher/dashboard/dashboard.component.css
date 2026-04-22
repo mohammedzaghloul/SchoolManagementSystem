@@ -80,6 +80,20 @@
     box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
 }
 
+.badge-attendance-window {
+    background: #f59e0b;
+    color: #fff;
+    font-weight: 800;
+    padding: 6px 16px !important;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.28);
+}
+
+.badge-outline-warning {
+    background: rgba(245, 158, 11, 0.12);
+    color: #b45309;
+    border: 1px solid rgba(245, 158, 11, 0.24);
+}
+
 .blink {
     animation: blinker 1s linear infinite;
 }
@@ -135,6 +149,23 @@
 .btn-dashboard-action:hover {
     transform: translateY(-4px) scale(1.02) !important;
     filter: brightness(1.1) !important;
+}
+
+.status-note {
+    color: #475569;
+    font-weight: 600;
+    line-height: 1.7;
+}
+
+.subtle-chip {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 0.45rem 0.9rem;
+    background: rgba(99, 102, 241, 0.08);
+    color: #4f46e5;
+    font-weight: 700;
+    font-size: 0.85rem;
 }
 
 /* RTL Adjustments */

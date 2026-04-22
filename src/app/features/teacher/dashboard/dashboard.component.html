@@ -1,5 +1,4 @@
 <div class="page-container p-4 p-lg-5" dir="rtl">
-    <!-- Premium Dashboard Header -->
     <div class="page-header d-flex flex-column flex-sm-row justify-content-between align-items-center mb-5 gap-3">
         <div class="animate-fade-in">
             <div class="d-flex align-items-center gap-3 mb-1">
@@ -17,7 +16,6 @@
         </a>
     </div>
 
-    <!-- Data Visualization Cards -->
     <div class="row g-4 mb-5">
         <div class="col-md-4">
             <div class="card stat-card border-0 rounded-25 p-4 d-flex flex-row align-items-center gap-4">
@@ -59,32 +57,40 @@
         </div>
     </div>
 
-    <!-- Multi-Column Operational View -->
     <div class="row g-5">
-        <!-- Dashboard Central Focus: Today's Class Controls -->
         <div class="col-lg-7 order-lg-1">
             <div class="card current-class-card border-0 rounded-25 h-100 animate-scale-in">
                 <div class="card-header bg-transparent border-0 pt-5 pb-3 px-5 d-flex align-items-center gap-3">
                     <div class="pulse-indicator" *ngIf="currentSession"></div>
                     <h5 class="fw-800 mb-0 text-dark-blue">
-                        {{ currentSession ? 'الحصة الجارية الآن' : 'حالة الجدول المدرسي' }}
+                        {{ currentSession ? 'الحصة الجارية الآن' : (attendanceFocusSession ? 'آخر حصة ما زالت متاحة للرصد' : 'حالة الجدول المدرسي') }}
                     </h5>
                 </div>
+
                 <div class="card-body px-5 pb-5">
-                    <div class="current-class-content text-start" *ngIf="currentSession">
+                    <div class="current-class-content text-start" *ngIf="heroSession">
                         <div class="mb-5">
-                            <div class="d-flex align-items-center gap-3 mb-2">
-                                <span class="badge badge-live rounded-pill py-2-5">
-                                    <i class="fas fa-circle fs-xxxs me-2 blink"></i> لايف
+                            <div class="d-flex align-items-center gap-3 mb-2 flex-wrap">
+                                <span class="badge badge-live rounded-pill py-2-5" *ngIf="currentSession">
+                                    <i class="fas fa-circle fs-xxxs me-2 blink"></i> جارية الآن
+                                </span>
+                                <span class="badge badge-attendance-window rounded-pill py-2-5" *ngIf="isAttendanceWindowState">
+                                    <i class="fas fa-clipboard-check me-2"></i> نافذة الرصد مفتوحة
                                 </span>
                                 <span class="badge bg-primary-soft text-primary rounded-pill px-3 py-2 fw-800 x-small">
-                                    <i class="far fa-clock me-1"></i> {{ formatTime(currentSession.startTime) }}
+                                    <i class="far fa-clock me-1"></i> {{ formatTime(heroSession.startTime) }}
                                 </span>
                             </div>
-                            <h1 class="fw-800 text-dark-blue mb-1 display-5">{{ currentSession.subjectName }}</h1>
+
+                            <h1 class="fw-800 text-dark-blue mb-1 display-5">{{ heroSession.subjectName }}</h1>
                             <h4 class="text-secondary fw-700 opacity-75 d-flex align-items-center gap-2">
-                                <i class="fas fa-location-dot x-small"></i> {{ currentSession.classRoomName }}
+                                <i class="fas fa-location-dot x-small"></i> {{ heroSession.classRoomName }}
                             </h4>
+
+                            <p class="status-note mt-3 mb-0" *ngIf="isAttendanceWindowState">
+                                يمكنك استكمال الرصد لهذه الحصة الآن
+                                <span class="fw-800" *ngIf="heroSession.attendanceWindowLabel">({{ heroSession.attendanceWindowLabel }})</span>
+                            </p>
                         </div>
 
                         <div class="row g-4 mb-5">
@@ -92,8 +98,8 @@
                                 <div class="bg-light p-4 rounded-25 border-0 text-center shadow-tiny hover-glow transition">
                                     <div class="text-muted x-small fw-800 ls-1 mb-2">الطلاب الحاضرين</div>
                                     <div class="d-flex align-items-baseline justify-content-center gap-2">
-                                        <h1 class="fw-800 text-success mb-0 counter-animate">{{ currentSession.attendanceCount || 0 }}</h1>
-                                        <span class="text-muted fw-bold">/{{ currentSession.studentCount || 0 }}</span>
+                                        <h1 class="fw-800 text-success mb-0 counter-animate">{{ heroSession.attendanceCount || 0 }}</h1>
+                                        <span class="text-muted fw-bold">/{{ heroSession.studentCount || 0 }}</span>
                                     </div>
                                 </div>
                             </div>
@@ -101,43 +107,54 @@
                                 <div class="bg-light p-4 rounded-25 border-0 text-center shadow-tiny hover-glow transition">
                                     <div class="text-muted x-small fw-800 ls-1 mb-2">في انتظار الرصد</div>
                                     <h1 class="fw-800 text-warning mb-0 counter-animate">
-                                        {{ (currentSession.studentCount || 0) - (currentSession.attendanceCount || 0) }}
+                                        {{ (heroSession.studentCount || 0) - (heroSession.attendanceCount || 0) }}
                                     </h1>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Pro Action Array -->
                         <div class="d-flex flex-column gap-3">
                             <div class="row g-3">
                                 <div class="col-md-6">
-                                    <a [routerLink]="['/teacher/attendance/qr']" [queryParams]="{sessionId: currentSession.id}"
+                                    <a [routerLink]="['/teacher/attendance/qr']" [queryParams]="{sessionId: heroSession.id}"
                                         class="btn btn-dashboard-action btn-qr-glow w-100 animate-fade-in d-flex align-items-center justify-content-center gap-3">
                                         <i class="fas fa-qrcode fs-4"></i>
                                         بث رمز QR
                                     </a>
                                 </div>
                                 <div class="col-md-6">
-                                    <a [routerLink]="['/teacher/attendance/face']" [queryParams]="{sessionId: currentSession.id}"
+                                    <a [routerLink]="['/teacher/attendance/face']" [queryParams]="{sessionId: heroSession.id}"
                                         class="btn btn-dashboard-action btn-face-dark w-100 animate-fade-in d-flex align-items-center justify-content-center gap-3">
                                         <i class="fas fa-id-card-clip fs-4"></i>
                                         التعرف بالوجه
                                     </a>
                                 </div>
                             </div>
-                            <a [routerLink]="['/teacher/attendance/manual']" [queryParams]="{sessionId: currentSession.id}"
+                            <a [routerLink]="['/teacher/attendance/manual']" [queryParams]="{sessionId: heroSession.id}"
                                 class="btn btn-action-outline border-dashed w-100 py-3 rounded-20 fw-800 text-muted transition hover-primary">
                                 <i class="fas fa-list-check me-2"></i> الرصد اليدوي التقليدي
                             </a>
                         </div>
                     </div>
 
-                    <div class="py-5 text-center animate-fade-in" *ngIf="!currentSession && !loading">
+                    <div class="py-5 text-center animate-fade-in" *ngIf="!heroSession && !loading">
                         <div class="mb-4 bg-light p-5 rounded-circle d-inline-flex mx-auto scale-up">
                             <i class="fas fa-mug-hot fs-1 text-primary-light opacity-50"></i>
                         </div>
-                        <h4 class="fw-800 text-dark-blue mb-2">وقت استراحة هادئ</h4>
-                        <p class="text-secondary opacity-75">لا توجد حصص جارية حالياً بحسب جدولك المعتمد.</p>
+                        <h4 class="fw-800 text-dark-blue mb-2">لا توجد حصة جارية الآن</h4>
+                        <p class="text-secondary opacity-75 mb-2" *ngIf="lastCompletedSession">
+                            آخر حصة انتهت اليوم عند {{ formatTime(lastCompletedSession.endTime) }}.
+                        </p>
+                        <p class="text-secondary opacity-75 mb-2" *ngIf="!lastCompletedSession && nextUpcomingSession">
+                            الحصة التالية تبدأ عند {{ formatTime(nextUpcomingSession.startTime) }}.
+                        </p>
+                        <p class="text-secondary opacity-75" *ngIf="!nextUpcomingSession">
+                            انتهى جدول اليوم الحالي، ويمكنك مراجعة الحصص من شاشة الحضور والغياب.
+                        </p>
+                        <div class="mt-4 d-flex flex-wrap justify-content-center gap-2">
+                            <span class="subtle-chip" *ngIf="stats.todayClasses">إجمالي حصص اليوم: {{ stats.todayClasses }}</span>
+                            <span class="subtle-chip" *ngIf="lastCompletedSession">آخر مادة: {{ lastCompletedSession.subjectName }}</span>
+                        </div>
                         <div class="mt-4">
                             <a routerLink="/teacher/attendance" class="btn btn-primary px-5 py-2-5 rounded-pill fw-800 shadow-premium">إدارة جميع الحصص</a>
                         </div>
@@ -151,7 +168,6 @@
             </div>
         </div>
 
-        <!-- Sidebar: Daily Schedule Summary -->
         <div class="col-lg-5 order-lg-2">
             <div class="card glass-card border-0 rounded-25 h-100 animate-stagger">
                 <div class="card-header bg-transparent border-0 pt-5 pb-3 px-5 d-flex justify-content-between align-items-center">
@@ -178,6 +194,7 @@
                             <div class="text-end">
                                 <div class="fw-800 text-dark-blue small mb-2">{{ formatTime(s.startTime) }}</div>
                                 <span class="badge bg-success shadow-sm rounded-pill px-2 py-1 fs-xxs" *ngIf="s.id === currentSession?.id">جارية الآن</span>
+                                <span class="badge badge-outline-warning shadow-sm rounded-pill px-2 py-1 fs-xxs" *ngIf="s.id !== currentSession?.id && s.id === attendanceFocusSession?.id">الرصد متاح</span>
                             </div>
                         </div>
                     </div>
