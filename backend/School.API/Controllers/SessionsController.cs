@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using School.API.Infrastructure;
 using School.Application.Features.Sessions.Commands;
 using School.Infrastructure.Data;
+using System.Globalization;
 using System.Security.Claims;
 
 namespace School.API.Controllers;
@@ -38,6 +39,116 @@ public class SessionsController : BaseApiController
     {
         var sessionId = await Mediator.Send(command);
         return Ok(sessionId);
+    }
+
+    [HttpPost]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> CreateSession([FromBody] CreateAdminSessionRequest? request)
+    {
+        if (request == null)
+        {
+            return BadRequest(new { message = "بيانات الحصة غير مكتملة." });
+        }
+
+        if (request.TeacherId <= 0 || request.ClassRoomId <= 0 || request.SubjectId <= 0)
+        {
+            return BadRequest(new { message = "يُرجى تحديد المدرس والمادة والفصل قبل إنشاء الحصة." });
+        }
+
+        if (!TryParseSessionTime(request.StartTime, out var startTime) || !TryParseSessionTime(request.EndTime, out var endTime))
+        {
+            return BadRequest(new { message = "تعذر قراءة توقيت الحصة المحدد من القائمة." });
+        }
+
+        if (endTime <= startTime)
+        {
+            return BadRequest(new { message = "وقت نهاية الحصة يجب أن يكون بعد وقت البداية." });
+        }
+
+        var attendanceType = NormalizeAttendanceType(request.AttendanceType);
+        if (attendanceType == null)
+        {
+            return BadRequest(new { message = "نوع الرصد غير مدعوم. اختر QR أو Face أو Manual." });
+        }
+
+        var sessionDate = request.SessionDate.Date;
+
+        var teacher = await _context.Teachers
+            .AsNoTracking()
+            .FirstOrDefaultAsync(currentTeacher => currentTeacher.Id == request.TeacherId && currentTeacher.IsActive);
+
+        if (teacher == null)
+        {
+            return NotFound(new { message = "المدرس المحدد غير موجود أو غير نشط." });
+        }
+
+        var classRoom = await _context.ClassRooms
+            .AsNoTracking()
+            .Include(currentClassRoom => currentClassRoom.GradeLevel)
+            .FirstOrDefaultAsync(currentClassRoom => currentClassRoom.Id == request.ClassRoomId);
+
+        if (classRoom == null)
+        {
+            return NotFound(new { message = "الفصل المحدد غير موجود." });
+        }
+
+        var subject = await _context.Subjects
+            .AsNoTracking()
+            .FirstOrDefaultAsync(currentSubject => currentSubject.Id == request.SubjectId && currentSubject.IsActive);
+
+        if (subject == null)
+        {
+            return NotFound(new { message = "المادة المحددة غير موجودة أو غير مفعلة." });
+        }
+
+        if (subject.TeacherId.HasValue && subject.TeacherId.Value != teacher.Id)
+        {
+            return BadRequest(new { message = "هذه المادة ليست مرتبطة بالمدرس المختار." });
+        }
+
+        if (subject.ClassRoomId.HasValue && subject.ClassRoomId.Value != classRoom.Id)
+        {
+            return BadRequest(new { message = "هذه المادة ليست مرتبطة بالفصل المختار." });
+        }
+
+        var hasConflict = await _context.Sessions.AnyAsync(session =>
+            session.SessionDate == sessionDate &&
+            (session.TeacherId == teacher.Id || session.ClassRoomId == classRoom.Id) &&
+            session.StartTime < endTime &&
+            startTime < session.EndTime);
+
+        if (hasConflict)
+        {
+            return Conflict(new { message = "يوجد تعارض في هذا الموعد مع حصة أخرى للمدرس أو للفصل." });
+        }
+
+        var session = new School.Domain.Entities.Session
+        {
+            Title = string.IsNullOrWhiteSpace(request.Title) ? $"حصة {subject.Name}" : request.Title.Trim(),
+            SessionDate = sessionDate,
+            StartTime = startTime,
+            EndTime = endTime,
+            AttendanceType = attendanceType,
+            TeacherId = teacher.Id,
+            ClassRoomId = classRoom.Id,
+            SubjectId = subject.Id
+        };
+
+        _context.Sessions.Add(session);
+        await _context.SaveChangesAsync();
+
+        return Ok(new
+        {
+            session.Id,
+            message = "تم إنشاء الحصة بنجاح.",
+            sessionDate = session.SessionDate,
+            startTime = session.SessionDate.Add(session.StartTime),
+            endTime = session.SessionDate.Add(session.EndTime),
+            teacherName = teacher.FullName ?? "غير محدد",
+            classRoomName = classRoom.Name ?? "غير محدد",
+            subjectName = subject.Name ?? "حصة دراسية",
+            attendanceType = session.AttendanceType ?? "QR"
+        });
     }
 
     [HttpGet("admin/schedule-overview")]
@@ -414,6 +525,32 @@ public class SessionsController : BaseApiController
         return normalized;
     }
 
+    private static bool TryParseSessionTime(string? value, out TimeSpan result)
+    {
+        if (TimeSpan.TryParse(value, CultureInfo.InvariantCulture, out result))
+        {
+            return true;
+        }
+
+        return TimeSpan.TryParse(value, out result);
+    }
+
+    private static string? NormalizeAttendanceType(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return "QR";
+        }
+
+        return value.Trim().ToLowerInvariant() switch
+        {
+            "qr" => "QR",
+            "face" => "Face",
+            "manual" => "Manual",
+            _ => null
+        };
+    }
+
     private static AttendanceWindowDescriptor DescribeAttendanceWindow(DateTime startTime, DateTime endTime, DateTime now)
     {
         var windowStart = startTime.AddMinutes(-30);
@@ -440,4 +577,16 @@ public class GenerateTermScheduleRequest
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }
     public string? Term { get; set; }
+}
+
+public class CreateAdminSessionRequest
+{
+    public string? Title { get; set; }
+    public DateTime SessionDate { get; set; }
+    public string StartTime { get; set; } = string.Empty;
+    public string EndTime { get; set; } = string.Empty;
+    public int TeacherId { get; set; }
+    public int ClassRoomId { get; set; }
+    public int SubjectId { get; set; }
+    public string? AttendanceType { get; set; }
 }

@@ -61,6 +61,29 @@ export interface GenerateTermScheduleResult {
   message: string;
 }
 
+export interface CreateAdminSessionPayload {
+  title?: string;
+  sessionDate: string;
+  startTime: string;
+  endTime: string;
+  teacherId: number;
+  classRoomId: number;
+  subjectId: number;
+  attendanceType: 'QR' | 'Face' | 'Manual';
+}
+
+export interface CreateAdminSessionResult {
+  id: number;
+  message: string;
+  sessionDate: string;
+  startTime: string;
+  endTime: string;
+  teacherName: string;
+  classRoomName: string;
+  subjectName: string;
+  attendanceType: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -97,8 +120,8 @@ export class SessionService {
     return this.api.get<Session>(`/api/Sessions/${id}`);
   }
 
-  async createSession(data: any): Promise<Session> {
-    return this.api.post<Session>('/api/Sessions', data);
+  async createSession(data: CreateAdminSessionPayload): Promise<CreateAdminSessionResult> {
+    return this.api.post<CreateAdminSessionResult>('/api/Sessions', data);
   }
 
   async getAdminScheduleOverview(startDate: string, endDate: string, term: string = 'all'): Promise<AdminScheduleOverview> {
