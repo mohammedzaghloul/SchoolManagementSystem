@@ -37,6 +37,50 @@ init_db()
 # Lite Mode Face Detector (Haar Cascades)
 # This works on any machine without heavy AI libraries
 face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+profile_face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_profileface.xml')
+
+def prepare_variants(img):
+    if img is None:
+        return []
+
+    if img.shape[1] > 1280:
+        ratio = 1280 / img.shape[1]
+        img = cv2.resize(img, None, fx=ratio, fy=ratio, interpolation=cv2.INTER_AREA)
+
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    equalized = cv2.equalizeHist(gray)
+    blurred = cv2.GaussianBlur(equalized, (3, 3), 0)
+    return [gray, equalized, blurred]
+
+def detect_faces(img):
+    variants = prepare_variants(img)
+    detection_settings = [
+        {"scaleFactor": 1.1, "minNeighbors": 5, "minSize": (90, 90)},
+        {"scaleFactor": 1.05, "minNeighbors": 4, "minSize": (72, 72)},
+        {"scaleFactor": 1.03, "minNeighbors": 3, "minSize": (60, 60)},
+    ]
+
+    for variant in variants:
+        for settings in detection_settings:
+            faces = face_cascade.detectMultiScale(variant, **settings)
+            if len(faces) > 0:
+                return faces
+
+        for settings in detection_settings:
+            faces = profile_face_cascade.detectMultiScale(variant, **settings)
+            if len(faces) > 0:
+                return faces
+
+            flipped = cv2.flip(variant, 1)
+            flipped_faces = profile_face_cascade.detectMultiScale(flipped, **settings)
+            if len(flipped_faces) > 0:
+                width = variant.shape[1]
+                converted = []
+                for (x, y, w, h) in flipped_faces:
+                    converted.append((width - x - w, y, w, h))
+                return np.array(converted)
+
+    return []
 
 @app.get("/")
 def read_root():
@@ -55,8 +99,7 @@ async def train(student_id: int = Form(...), file: UploadFile = File(...)):
     if img is None:
         raise HTTPException(status_code=400, detail="Invalid image file.")
 
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    faces = face_cascade.detectMultiScale(gray, 1.1, 4)
+    faces = detect_faces(img)
 
     if len(faces) == 0:
         raise HTTPException(status_code=400, detail="No face detected. Please try another photo.")
@@ -81,8 +124,7 @@ async def recognize(file: UploadFile = File(...)):
     if img is None:
         raise HTTPException(status_code=400, detail="Invalid image file.")
 
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    faces = face_cascade.detectMultiScale(gray, 1.1, 4)
+    faces = detect_faces(img)
 
     if len(faces) == 0:
         return {"message": "No face detected in camera.", "recognized": []}

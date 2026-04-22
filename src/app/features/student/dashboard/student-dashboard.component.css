@@ -70,14 +70,10 @@
 
 /* Quick Actions */
 .quick-actions {
-    display: flex;
-    gap: 12px;
-    margin-bottom: 20px;
-    flex-wrap: wrap;
+    margin-bottom: 24px;
 }
 
 .action-btn {
-    flex: 1;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -256,4 +252,91 @@
 
 .exam-footer i {
     margin-left: 4px;
+}
+
+.next-session-card {
+    padding: 16px;
+    border-right: 4px solid #10b981;
+}
+
+.next-session-card h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 800;
+}
+
+.btn-scan-compact {
+    background: #10b981;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    padding: 10px 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    font-weight: 700;
+    font-size: 0.8rem;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.small-text {
+    font-size: 0.75rem !important;
+}
+
+@media (max-width: 768px) {
+    .student-dashboard {
+        padding: 10px; /* Reduced from 20px */
+    }
+
+    .welcome-section {
+        padding: 12px;
+        justify-content: space-between;
+    }
+
+    .welcome-section h1 {
+        font-size: 1.2rem;
+    }
+
+    .status-circle {
+        width: 55px;
+        height: 55px;
+    }
+
+    .status-circle svg {
+        width: 55px;
+        height: 55px;
+    }
+
+    .schedule-card,
+    .grades-card,
+    .exams-card {
+        padding: 12px;
+        margin-bottom: 15px;
+    }
+
+    .action-btn {
+        padding: 8px 4px !important;
+        gap: 4px !important;
+    }
+    
+    .action-btn i {
+        font-size: 1.2rem !important;
+    }
+
+    .schedule-item .time {
+        min-width: 75px;
+        font-size: 0.7rem;
+    }
+}
+
+/* For very small devices */
+@media (max-width: 400px) {
+    .welcome-section {
+        padding: 12px;
+    }
+    
+    .quick-actions {
+        gap: 8px;
+    }
 }

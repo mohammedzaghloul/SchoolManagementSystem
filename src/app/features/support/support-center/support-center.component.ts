@@ -11,8 +11,21 @@ import { AuthService } from '../../../core/services/auth.service';
   styleUrls: ['./support-center.component.css']
 })
 export class SupportCenterComponent {
-  currentRole = this.authService.getCurrentUser()?.role || '';
+  currentRole = '';
   openFaqIndex: number | null = null;
+  showGuide = false;
+
+  constructor(private authService: AuthService) {
+    this.currentRole = this.authService.getCurrentUser()?.role || '';
+  }
+
+  startGuide(): void {
+    this.showGuide = true;
+  }
+
+  closeGuide(): void {
+    this.showGuide = false;
+  }
 
   faqs = [
     {
@@ -32,8 +45,6 @@ export class SupportCenterComponent {
       answer: 'من صفحة الملف الشخصي ستجد قسمًا خاصًا بتغيير كلمة المرور. أدخل كلمة المرور الحالية ثم الجديدة، ويمكنك فقط إظهار ما تكتبه أثناء الإدخال، وليس عرض كلمة المرور المحفوظة نفسها.'
     }
   ];
-
-  constructor(private authService: AuthService) { }
 
   toggleFaq(index: number): void {
     this.openFaqIndex = this.openFaqIndex === index ? null : index;

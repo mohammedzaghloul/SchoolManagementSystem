@@ -20,6 +20,91 @@ public class ExamsController : BaseApiController
     [AllowAnonymous]
     public IActionResult Ping() => Ok(new { message = "Exams API is live!" });
 
+    [HttpGet]
+    public async Task<IActionResult> GetExams()
+    {
+        IQueryable<School.Domain.Entities.Exam> query = _context.Exams
+            .Include(e => e.Subject)
+            .Include(e => e.ClassRoom)
+            .Include(e => e.Teacher);
+
+        if (User.IsInRole("Teacher"))
+        {
+            var userEmail = User.FindFirstValue(ClaimTypes.Email);
+            var teacher = await _context.Teachers.FirstOrDefaultAsync(t => t.Email == userEmail);
+            if (teacher == null)
+            {
+                return NotFound("Teacher not found");
+            }
+
+            query = query.Where(e => e.TeacherId == teacher.Id);
+        }
+        else if (User.IsInRole("Student"))
+        {
+            var userEmail = User.FindFirstValue(ClaimTypes.Email);
+            var student = await _context.Students.FirstOrDefaultAsync(s => s.Email == userEmail);
+            if (student == null)
+            {
+                return NotFound("Student not found");
+            }
+
+            query = query.Where(e => e.ClassRoomId == student.ClassRoomId);
+        }
+
+        var exams = await query
+            .OrderByDescending(e => e.StartTime)
+            .Select(e => new
+            {
+                e.Id,
+                e.Title,
+                e.Description,
+                SubjectId = e.SubjectId,
+                SubjectName = e.Subject != null ? e.Subject.Name : "N/A",
+                ClassRoomId = e.ClassRoomId,
+                ClassRoomName = e.ClassRoom != null ? e.ClassRoom.Name : "N/A",
+                e.StartTime,
+                e.EndTime,
+                TotalMarks = e.MaxScore,
+                e.MaxScore,
+                e.ExamType,
+                Duration = (int)(e.EndTime - e.StartTime).TotalMinutes,
+                QuestionCount = _context.Questions.Count(q => q.ExamId == e.Id)
+            })
+            .ToListAsync();
+
+        return Ok(exams);
+    }
+
+    [HttpGet("classroom/{classId:int}")]
+    public async Task<IActionResult> GetClassRoomExams(int classId)
+    {
+        var exams = await _context.Exams
+            .Include(e => e.Subject)
+            .Include(e => e.ClassRoom)
+            .Where(e => e.ClassRoomId == classId)
+            .OrderByDescending(e => e.StartTime)
+            .Select(e => new
+            {
+                e.Id,
+                e.Title,
+                e.Description,
+                SubjectId = e.SubjectId,
+                SubjectName = e.Subject != null ? e.Subject.Name : "N/A",
+                ClassRoomId = e.ClassRoomId,
+                ClassRoomName = e.ClassRoom != null ? e.ClassRoom.Name : "N/A",
+                e.StartTime,
+                e.EndTime,
+                TotalMarks = e.MaxScore,
+                e.MaxScore,
+                e.ExamType,
+                Duration = (int)(e.EndTime - e.StartTime).TotalMinutes,
+                QuestionCount = _context.Questions.Count(q => q.ExamId == e.Id)
+            })
+            .ToListAsync();
+
+        return Ok(exams);
+    }
+
     [HttpGet("results-by-exam/{id:int}")]
     public async Task<IActionResult> GetExamResults(int id)
     {
@@ -146,6 +231,12 @@ public class ExamsController : BaseApiController
         });
     }
 
+    [HttpGet("{id:int}/take")]
+    public Task<IActionResult> GetExamForTaking(int id)
+    {
+        return GetExamDetails(id);
+    }
+
 
     [HttpPost]
     [HttpPost("create")]
@@ -190,6 +281,87 @@ public class ExamsController : BaseApiController
         _context.Exams.Add(exam);
         await _context.SaveChangesAsync();
         return Ok(new { id = exam.Id, message = "Exam created successfully" });
+    }
+
+    [HttpPut("{id:int}")]
+    [Authorize(Roles = "Teacher,Admin")]
+    public async Task<IActionResult> UpdateExam(int id, [FromBody] ExamCreateDto dto)
+    {
+        var exam = await _context.Exams
+            .Include(e => e.Questions)
+                .ThenInclude(q => q.Choices)
+            .FirstOrDefaultAsync(e => e.Id == id);
+
+        if (exam == null)
+        {
+            return NotFound(new { message = "الاختبار غير موجود." });
+        }
+
+        if (!User.IsInRole("Admin"))
+        {
+            var userEmail = User.FindFirstValue(ClaimTypes.Email);
+            var teacher = await _context.Teachers.FirstOrDefaultAsync(t => t.Email == userEmail);
+            if (teacher == null)
+            {
+                return NotFound("Teacher not found");
+            }
+
+            if (exam.TeacherId != teacher.Id)
+            {
+                return Forbid();
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(dto.Title) || dto.ClassRoomId <= 0 || dto.SubjectId <= 0)
+        {
+            return BadRequest(new { message = "يرجى استكمال بيانات الاختبار الأساسية." });
+        }
+
+        var startTime = dto.StartTime ?? dto.Date;
+        if (startTime == null)
+        {
+            return BadRequest(new { message = "يرجى تحديد موعد بداية الاختبار." });
+        }
+
+        var endTime = dto.EndTime ?? startTime.Value.AddMinutes(dto.Duration > 0 ? dto.Duration : 60);
+
+        exam.Title = dto.Title.Trim();
+        exam.Description = string.IsNullOrWhiteSpace(dto.Description) ? null : dto.Description.Trim();
+        exam.ClassRoomId = dto.ClassRoomId;
+        exam.SubjectId = dto.SubjectId;
+        exam.StartTime = startTime.Value;
+        exam.EndTime = endTime;
+        exam.MaxScore = dto.TotalMarks > 0 ? dto.TotalMarks : exam.MaxScore;
+        exam.ExamType = string.IsNullOrWhiteSpace(dto.Type) ? exam.ExamType : dto.Type.Trim();
+
+        if (exam.Questions.Any())
+        {
+            _context.QuestionChoices.RemoveRange(exam.Questions.SelectMany(question => question.Choices));
+            _context.Questions.RemoveRange(exam.Questions);
+        }
+
+        if (dto.Questions != null)
+        {
+            foreach (var qDto in dto.Questions)
+            {
+                var question = new School.Domain.Entities.Question
+                {
+                    Text = qDto.Text,
+                    Score = qDto.Marks,
+                    Choices = qDto.Options?.Select((opt, index) => new School.Domain.Entities.QuestionChoice
+                    {
+                        Text = opt,
+                        IsCorrect = index == qDto.CorrectAnswer
+                    }).ToList() ?? new List<School.Domain.Entities.QuestionChoice>()
+                };
+
+                exam.Questions.Add(question);
+            }
+        }
+
+        await _context.SaveChangesAsync();
+
+        return Ok(new { id = exam.Id, message = "Exam updated successfully" });
     }
 
     public class ExamCreateDto

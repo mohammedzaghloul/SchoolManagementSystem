@@ -1,0 +1,13 @@
+providers = ["node"]
+
+[phases.setup]
+nixPkgs = ["nodejs_20"]
+
+[phases.install]
+cmds = ["npm install --legacy-peer-deps"]
+
+[phases.build]
+cmds = ["node --max-old-space-size=1536 ./node_modules/@angular/cli/bin/ng build --configuration production"]
+
+[start]
+cmd = "npm start"

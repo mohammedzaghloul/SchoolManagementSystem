@@ -1,11 +1,7 @@
 {
-  "$schema": "https://json.schemastore.org/launchsettings.json",
   "profiles": {
     "http": {
       "commandName": "Project",
-      "dotnetRunMessages": true,
-      "launchBrowser": false,
-      "applicationUrl": "http://localhost:5033",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
         "ConnectionStrings__DefaultConnection": "Server=.;Database=SchoolDb1;Trusted_Connection=True;TrustServerCertificate=True",
@@ -16,7 +12,25 @@
         "Cloudinary__CloudName": "",
         "Cloudinary__ApiKey": "",
         "Cloudinary__ApiSecret": ""
+      },
+      "dotnetRunMessages": true,
+      "applicationUrl": "http://localhost:5033"
+    },
+    "IIS Express": {
+      "commandName": "IISExpress",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
       }
+    }
+  },
+  "$schema": "https://json.schemastore.org/launchsettings.json",
+  "iisSettings": {
+    "windowsAuthentication": false,
+    "anonymousAuthentication": true,
+    "iisExpress": {
+      "applicationUrl": "http://localhost:59528/",
+      "sslPort": 44310
     }
   }
 }

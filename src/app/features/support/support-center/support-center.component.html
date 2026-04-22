@@ -1,74 +1,97 @@
 <div class="support-page rtl-layout" dir="rtl">
-  <!-- Hero Section -->
-  <header class="support-hero">
-    <div class="hero-overlay"></div>
-    <div class="hero-content">
-      <div class="badge-accent">مركز المساعدة</div>
-      <h1>الدليل والمساعدة</h1>
-      <p>ابحث عن إجابات لأسئلتك أو تواصل معنا مباشرة</p>
-      
-      <div class="search-decoration">
-        <i class="fas fa-search"></i>
-        <input type="text" placeholder="كيف يمكننا مساعدتك اليوم؟" readonly>
-      </div>
+  <!-- Minimalist Hero Section -->
+  <header class="support-hero-minimal">
+    <div class="container py-5 text-center">
+      <div class="support-badge mb-3">مركز المساعدة</div>
+      <h1 class="display-5 fw-bold text-white mb-3">الدليل والمساعدة</h1>
+      <p class="lead text-white-50 mb-4">كيف يمكننا مساعدتك اليوم؟</p>
+      <button class="btn btn-primary rounded-pill px-4 py-2 fw-bold shadow-premium" (click)="startGuide()">
+        <i class="fas fa-play me-2"></i>
+        ابدأ الجولة التعليمية
+      </button>
     </div>
   </header>
 
-  <main class="support-container">
-    <!-- Contact Methods Grid -->
-    <section class="contact-grid">
-      <div class="contact-card shadow-sm">
-        <div class="card-glow"></div>
-        <div class="card-icon email">
-          <i class="fas fa-envelope-open-text"></i>
-        </div>
-        <div class="card-body">
-          <h3>تواصل عبر البريد</h3>
-          <p>نسعد باستلام استفساراتكم والرد عليها في أسرع وقت</p>
-          <a href="mailto:support&#64;school.com" class="contact-link">support&#64;school.com</a>
+  <!-- Walkthrough Overlay (Matching Image 3) -->
+  <div class="guide-overlay" *ngIf="showGuide">
+    <div class="guide-container glass-card shadow-lg p-4">
+      <div class="guide-content text-center mb-4">
+        <h4 class="fw-bold mb-3">مرحباً بك في جولتنا!</h4>
+        <p class="text-white-50">هنا ستتعرف على كيفية استخدام كافة مميزات النظام بسهولة.</p>
+      </div>
+      
+      <div class="guide-actions d-flex justify-content-between align-items-center bg-white p-3 rounded-4 shadow-sm">
+        <button class="btn btn-light d-flex align-items-center gap-2 px-3 fw-bold text-muted rounded-3" (click)="closeGuide()">
+            <i class="fas fa-times"></i>
+            إلغاء
+        </button>
+        <button class="btn btn-primary d-flex align-items-center gap-2 px-4 shadow-sm fw-bold rounded-3">
+            التالي
+            <i class="fas fa-chevron-left"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <main class="support-container mt-n5">
+    <!-- Quick Contact Cards -->
+    <div class="row g-4 mb-5">
+      <div class="col-md-6">
+        <div class="support-contact-card glass-card h-100 p-4">
+          <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="icon-circle bg-primary-soft text-primary">
+              <i class="fas fa-envelope-open-text fs-4"></i>
+            </div>
+            <h3 class="h5 mb-0">تواصل عبر البريد</h3>
+          </div>
+          <p class="text-muted small">نسعد باستلام استفساراتكم والرد عليها في أسرع وقت</p>
+          <a href="mailto:support&#64;school.com" class="btn btn-outline-primary btn-sm rounded-pill w-100 mt-2">support&#64;school.com</a>
         </div>
       </div>
 
-      <div class="contact-card shadow-sm">
-        <div class="card-glow"></div>
-        <div class="card-icon phone">
-          <i class="fas fa-headset"></i>
-        </div>
-        <div class="card-body">
-          <h3>الدعم الهاتفي</h3>
-          <p>فريقنا متاح لمساعدتكم هاتفياً خلال ساعات العمل</p>
-          <a href="tel:+201234567890" class="contact-link text-ltr">+20 123 456 7890</a>
-        </div>
-      </div>
-    </section>
-
-    <!-- FAQs Section -->
-    <section class="faq-container">
-      <div class="section-header">
-        <div class="title-with-icon">
-          <i class="fas fa-question-circle"></i>
-          <h3>أهم الأسئلة الشائعة</h3>
+      <div class="col-md-6">
+        <div class="support-contact-card glass-card h-100 p-4">
+          <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="icon-circle bg-success-soft text-success">
+              <i class="fas fa-headset fs-4"></i>
+            </div>
+            <h3 class="h5 mb-0">الدعم الهاتفي</h3>
+          </div>
+          <p class="text-muted small">فريقنا متاح لمساعدتكم هاتفياً خلال ساعات العمل</p>
+          <a href="tel:+201234567890" class="btn btn-outline-success btn-sm rounded-pill w-100 mt-2 text-ltr">+20 123 456 7890</a>
         </div>
       </div>
+    </div>
 
-      <div class="faq-accordion">
-        <div class="accordion-item shadow-sm" *ngFor="let faq of faqs; let i = index" [class.active]="openFaqIndex === i">
-          <button class="accordion-header" (click)="toggleFaq(i)">
-            <span class="question">{{ faq.question }}</span>
-            <i class="fas fa-chevron-down"></i>
-          </button>
-          <div class="accordion-body">
-            <div class="answer">{{ faq.answer }}</div>
+    <!-- FAQ Section -->
+    <section class="faq-simple">
+      <h4 class="fw-bold mb-4 d-flex align-items-center gap-2">
+        <i class="fas fa-question-circle text-primary"></i>
+        أهم الأسئلة الشائعة
+      </h4>
+      
+      <div class="accordion accordion-flush bg-transparent border-0" id="supportFaq">
+        <div class="accordion-item bg-transparent border-bottom border-light" *ngFor="let faq of faqs; let i = index">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed bg-transparent py-4 text-white" type="button" 
+                    [class.collapsed]="openFaqIndex !== i" (click)="toggleFaq(i)">
+              {{ faq.question }}
+            </button>
+          </h2>
+          <div class="accordion-collapse collapse" [class.show]="openFaqIndex === i">
+            <div class="accordion-body text-white-50 py-3">
+              {{ faq.answer }}
+            </div>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- Bottom Actions -->
-    <div class="support-footer">
-      <a routerLink="/" class="btn-home-back">
-        <i class="fas fa-arrow-right"></i>
-        <span>العودة للوحة التحكم الرئيسية</span>
+    <!-- Nav Back -->
+    <div class="mt-5 pt-4 border-top border-dark text-center">
+      <a routerLink="/" class="text-decoration-none text-muted-dark small-hover">
+        <i class="fas fa-arrow-right me-2"></i>
+        <span>العودة للرئيسية</span>
       </a>
     </div>
   </main>

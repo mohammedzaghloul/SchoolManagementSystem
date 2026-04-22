@@ -125,6 +125,13 @@
                         <input type="password" class="form-control rounded-3" name="password"
                             [(ngModel)]="currentTeacher.password">
                     </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold text-secondary">المادة الدراسية</label>
+                        <select class="form-select rounded-3" name="subjectId" [(ngModel)]="currentTeacher.subjectId">
+                            <option [ngValue]="null" disabled>اختر مادة المدرس...</option>
+                            <option *ngFor="let s of subjects" [ngValue]="s.id">{{ s.name }}</option>
+                        </select>
+                    </div>
                     <div class="form-check form-switch mb-0 bg-light p-3 rounded-3 d-flex justify-content-between align-items-center m-0">
                         <label class="form-check-label fw-semibold text-dark m-0">حساب المدرس نشط</label>
                         <input class="form-check-input m-0 fs-5" type="checkbox" name="isActive" [(ngModel)]="currentTeacher.isActive">

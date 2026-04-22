@@ -7,6 +7,8 @@ export interface Grade {
     value: number;
     date: string;
     remarks?: string;
+    term?: string;
+    academicYear?: string;
 }
 
 export interface GradeLevel {

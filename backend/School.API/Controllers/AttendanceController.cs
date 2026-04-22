@@ -15,13 +15,20 @@ public class AttendanceController : BaseApiController
     private readonly SchoolDbContext _context;
     private readonly IFaceRecognitionService _faceRecognition;
     private readonly IFileStorageService _storage;
+    private readonly ILogger<AttendanceController> _logger;
 
-    public AttendanceController(IQrCodeService qrCodeService, SchoolDbContext context, IFaceRecognitionService faceRecognition, IFileStorageService storage)
+    public AttendanceController(
+        IQrCodeService qrCodeService,
+        SchoolDbContext context,
+        IFaceRecognitionService faceRecognition,
+        IFileStorageService storage,
+        ILogger<AttendanceController> logger)
     {
         _qrCodeService = qrCodeService;
         _context = context;
         _faceRecognition = faceRecognition;
         _storage = storage;
+        _logger = logger;
     }
 
     private async Task<School.Domain.Entities.Student?> GetCurrentStudentAsync()
@@ -38,7 +45,6 @@ public class AttendanceController : BaseApiController
     [HttpPost("scan-qr")]
     public async Task<ActionResult<bool>> ScanQr(ScanQrCommand command)
     {
-        // 1. If StudentId is not provided, get it from current logged in user
         if (command.StudentId == 0)
         {
             var userEmail = User.FindFirstValue(ClaimTypes.Email);
@@ -47,22 +53,21 @@ public class AttendanceController : BaseApiController
             command.StudentId = student.Id;
         }
 
-        // 2. Decode the token to get the SessionId if missing
-        try 
+        try
         {
             var decodedString = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(command.QrToken));
             var parts = decodedString.Split('|');
             var payloadParts = parts[0].Split(':');
             command.SessionId = int.Parse(payloadParts[0]);
         }
-        catch 
+        catch
         {
             return BadRequest("Invalid QR Code format.");
         }
 
         var result = await Mediator.Send(command);
         if (!result) return BadRequest("Invalid or expired QR token.");
-        
+
         return Ok(result);
     }
 
@@ -188,25 +193,23 @@ public class AttendanceController : BaseApiController
 
     [HttpPost("face/{sessionId}")]
     [Authorize(Roles = "Teacher,Admin")]
-    public async Task<ActionResult> FaceAttendance(int sessionId, IFormFile file)
+    public async Task<ActionResult> FaceAttendance(int sessionId, [FromForm] IFormFile file)
     {
         if (file == null || file.Length == 0)
             return BadRequest(new { success = false, message = "لم يتم إرسال صورة" });
 
-        // 1. Get the session info
         var session = await _context.Sessions.FindAsync(sessionId);
         if (session == null)
-            return NotFound(new { success = false, message = "السكشن غير موجود" });
+            return NotFound(new { success = false, message = "الحصة غير موجودة" });
 
-        // 2. Perform Face Recognition
         using var ms = new MemoryStream();
         await file.CopyToAsync(ms);
         var bytes = ms.ToArray();
 
         int recognizedStudentId = 0;
-        bool recognized = false;
+        var recognized = false;
 
-        try 
+        try
         {
             var faceResult = await _faceRecognition.RecognizeFaceAsync(bytes, file.FileName);
             if (faceResult.Success)
@@ -217,29 +220,23 @@ public class AttendanceController : BaseApiController
         }
         catch (Exception ex)
         {
-            // Log error but maybe provide a fallback or sensible error message
-            // If the AI service is down, we might want to inform the user
+            _logger.LogWarning(ex, "Face recognition failed while recording attendance for session {SessionId}.", sessionId);
         }
 
-        // 3. Fallback/Mock logic for testing if recognition fails or service is down
         if (!recognized)
         {
-             // For DEMO purposes: If not recognized, we can try to find the student in the session who isn't present
-             // but it's better to tell the user that "Recognition Failed"
-             return Ok(new { success = false, message = "لم يتم التعرف على الوجه. يرجى المحاولة مرة أخرى أو التأكد من إضاءة المكان." });
+            return Ok(new { success = false, message = "لم يتم التعرف على الوجه. يرجى المحاولة مرة أخرى أو التأكد من إضاءة المكان." });
         }
 
-        // 4. Record Attendance
         var student = await _context.Students.FindAsync(recognizedStudentId);
         if (student == null)
-             return BadRequest(new { success = false, message = "الطالب غير مسجل في النظام" });
+            return BadRequest(new { success = false, message = "الطالب غير مسجل في النظام" });
 
-        // Check if already recorded
         var existing = await _context.Attendances
             .AnyAsync(a => a.SessionId == sessionId && a.StudentId == recognizedStudentId);
 
         if (existing)
-             return Ok(new { success = true, alreadyPresent = true, studentName = student.FullName, message = "تم تسجيل حضورك مسبقاً" });
+            return Ok(new { success = true, alreadyPresent = true, studentName = student.FullName, message = "تم تسجيل حضورك مسبقاً" });
 
         var attendance = new School.Domain.Entities.Attendance
         {
@@ -265,13 +262,13 @@ public class AttendanceController : BaseApiController
     }
 
     [HttpPost("manual")]
+    [HttpPost("mark-manual")]
     [Authorize(Roles = "Teacher,Admin")]
     public async Task<ActionResult> ManualAttendance([FromBody] ManualAttendanceDto dto)
     {
         if (dto.Records == null || dto.Records.Count == 0)
             return BadRequest("لا توجد سجلات");
 
-        // ClassId is actually the SessionId sent from frontend
         int sessionId = 0;
         int.TryParse(dto.ClassId, out sessionId);
 
@@ -307,40 +304,62 @@ public class AttendanceController : BaseApiController
 
     [HttpPost("enroll-face")]
     [Authorize(Roles = "Teacher,Admin,Student")]
-    public async Task<ActionResult> EnrollFace([FromForm] int studentId, IFormFile file)
+    public async Task<ActionResult> EnrollFace([FromForm] int studentId, [FromForm] IFormFile file)
     {
         if (file == null || file.Length == 0)
-            return BadRequest("لم يتم إرسال صورة");
+            return BadRequest(new { success = false, message = "لم يتم إرسال صورة." });
 
-        // If Student role, ensure they are only enrolling themselves
         if (User.IsInRole("Student"))
         {
             var userEmail = User.FindFirstValue(ClaimTypes.Email);
             var student = await _context.Students.FirstOrDefaultAsync(s => s.Email == userEmail);
             if (student == null || student.Id != studentId)
-                return Unauthorized("لا يمكنك تسجيل وجه لطالب آخر");
+                return Unauthorized(new { success = false, message = "لا يمكنك تسجيل وجه لطالب آخر." });
         }
 
         using var ms = new MemoryStream();
         await file.CopyToAsync(ms);
         var bytes = ms.ToArray();
 
-        var success = await _faceRecognition.TrainFaceAsync(studentId, bytes, file.FileName);
-        
-        if (!success)
-            return BadRequest("فشل تسجيل الوجه. تأكد من وضوح الصورة ووجود وجه واحد فقط.");
-
-        // Upload to Cloudinary for profile picture
-        string profilePicUrl = await _storage.UploadFileAsync(file, "StudentProfiles");
-        
-        var studentDb = await _context.Students.FindAsync(studentId);
-        if (studentDb != null)
+        var trainResult = await _faceRecognition.TrainFaceAsync(studentId, bytes, file.FileName);
+        if (!trainResult.Success)
         {
-            studentDb.ProfilePictureUrl = profilePicUrl;
-            await _context.SaveChangesAsync();
+            return BadRequest(new
+            {
+                success = false,
+                message = trainResult.Message ?? "تعذر تسجيل الوجه. تأكد من وضوح الصورة أو من توفر خدمة التعرف على الوجه."
+            });
         }
 
-        return Ok(new { success = true, profilePicUrl, message = "تم تسجيل بصمة الوجه بنجاح وتحديث الصورة الشخصية" });
+        string? profilePicUrl = null;
+        var profileUpdated = false;
+
+        try
+        {
+            profilePicUrl = await _storage.UploadFileAsync(file, "StudentProfiles");
+
+            var studentDb = await _context.Students.FindAsync(studentId);
+            if (studentDb != null && !string.IsNullOrWhiteSpace(profilePicUrl))
+            {
+                studentDb.ProfilePictureUrl = profilePicUrl;
+                await _context.SaveChangesAsync();
+                profileUpdated = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Face enrollment succeeded for student {StudentId}, but profile picture upload failed.", studentId);
+        }
+
+        return Ok(new
+        {
+            success = true,
+            profilePicUrl,
+            profileUpdated,
+            message = profileUpdated
+                ? "تم تسجيل بصمة الوجه بنجاح وتحديث الصورة الشخصية."
+                : (trainResult.Message ?? "تم تسجيل بصمة الوجه بنجاح.")
+        });
     }
 }
 

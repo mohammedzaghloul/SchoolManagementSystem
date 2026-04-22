@@ -259,6 +259,8 @@ export class FaceAttendanceComponent implements OnInit, OnDestroy {
     }
   }
 
+  private liveScanTimer: any;
+
   async startCamera() {
     try {
       this.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
@@ -266,16 +268,29 @@ export class FaceAttendanceComponent implements OnInit, OnDestroy {
         this.videoElement.nativeElement.srcObject = this.stream;
       }
       this.isCameraOn = true;
-      this.statusMessage = 'يرجى وضع الوجه أمام الكاميرا';
+      this.statusMessage = 'التعرف الحي نشط (امسح الوجه الآن)';
       this.scanResult = 'none';
       this.recognizedStudent = null;
+
+      // Start automatic scanning loop (Every 3 seconds)
+      this.startLiveScanning();
     } catch (error) {
       this.statusMessage = 'مشكلة في تشغيل الكاميرا';
       this.scanResult = 'error';
     }
   }
 
+  private startLiveScanning() {
+    if (this.liveScanTimer) clearInterval(this.liveScanTimer);
+    this.liveScanTimer = setInterval(async () => {
+      if (this.isCameraOn && !this.isScanning && this.selectedSessionId) {
+        await this.captureAndScan();
+      }
+    }, 3000); // 3 seconds interval for live detection
+  }
+
   stopCamera() {
+    if (this.liveScanTimer) clearInterval(this.liveScanTimer);
     if (this.stream) {
       this.stream.getTracks().forEach(track => track.stop());
       this.stream = null;
@@ -319,7 +334,7 @@ export class FaceAttendanceComponent implements OnInit, OnDestroy {
         this.attendanceLog.unshift({ name: this.recognizedStudent.name, time: new Date() });
       } else {
         this.scanResult = 'error';
-        this.statusMessage = result?.message || 'لم يتم التعورف، يرجى المحاولة.';
+        this.statusMessage = result?.message || 'لم يتم التعرض، يرجى المحاولة.';
       }
     } catch (err: any) {
       this.isScanning = false;

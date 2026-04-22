@@ -23,30 +23,51 @@
     </div>
   </div>
 
+  <!-- Active/Next Session Banner -->
+  <div class="next-session-card glass-card shadow-premium mb-3" *ngIf="nextSession">
+    <div class="d-flex justify-content-between align-items-center">
+      <div class="session-info">
+        <span class="badge gradient-success mb-2">الحصة القادمة</span>
+        <h3 class="mb-1">{{ nextSession.subjectName }}</h3>
+        <p class="text-muted small mb-0">
+          <i class="far fa-clock me-1"></i> 
+          <span class="text-primary fw-bold" *ngIf="timeUntilSession">متبقي: {{ timeUntilSession }}</span>
+          <span *ngIf="!timeUntilSession">تبدأ في: {{ nextSession.startTime | date:'h:mm a' }}</span>
+        </p>
+      </div>
+      <div class="session-action">
+        <button class="btn-scan-compact" [routerLink]="['/student/scan/qr']">
+          <i class="fas fa-qrcode"></i>
+          <span>سجل الآن</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Quick Actions -->
-  <div class="quick-actions row g-3">
-    <div class="col-md-3">
-      <button class="action-btn glass-card glass-card-hover w-100 p-3 h-100 d-flex align-items-center justify-content-center gap-2" [routerLink]="['/student/scan/qr']">
-        <i class="fas fa-qrcode fs-4 text-primary"></i>
-        <span class="fw-bold">تسجيل حضور</span>
+  <div class="quick-actions row g-2">
+    <div class="col-3">
+      <button class="action-btn glass-card glass-card-hover w-100 p-2 h-100 d-flex flex-column align-items-center justify-content-center gap-1" [routerLink]="['/student/scan/qr']">
+        <i class="fas fa-qrcode fs-5 text-primary"></i>
+        <span class="fw-bold small-text">حضور</span>
       </button>
     </div>
-    <div class="col-md-3">
-      <button class="action-btn glass-card glass-card-hover w-100 p-3 h-100 d-flex align-items-center justify-content-center gap-2" [routerLink]="['/student/exams']">
-        <i class="fas fa-pencil-alt fs-4 text-warning"></i>
-        <span class="fw-bold">الاختبارات</span>
+    <div class="col-3">
+      <button class="action-btn glass-card glass-card-hover w-100 p-2 h-100 d-flex flex-column align-items-center justify-content-center gap-1" [routerLink]="['/student/exams']">
+        <i class="fas fa-pencil-alt fs-5 text-warning"></i>
+        <span class="fw-bold small-text">اختبارات</span>
       </button>
     </div>
-    <div class="col-md-3">
-      <button class="action-btn glass-card glass-card-hover w-100 p-3 h-100 d-flex align-items-center justify-content-center gap-2" [routerLink]="['/student/grades']">
-        <i class="fas fa-chart-line fs-4 text-success"></i>
-        <span class="fw-bold">درجاتي</span>
+    <div class="col-3">
+      <button class="action-btn glass-card glass-card-hover w-100 p-2 h-100 d-flex flex-column align-items-center justify-content-center gap-1" [routerLink]="['/student/grades']">
+        <i class="fas fa-chart-line fs-5 text-success"></i>
+        <span class="fw-bold small-text">درجات</span>
       </button>
     </div>
-    <div class="col-md-3">
-      <button class="action-btn glass-card glass-card-hover w-100 p-3 h-100 d-flex align-items-center justify-content-center gap-2" [routerLink]="['/student/schedule']">
-        <i class="fas fa-calendar fs-4 text-info"></i>
-        <span class="fw-bold">جدولي</span>
+    <div class="col-3">
+      <button class="action-btn glass-card glass-card-hover w-100 p-2 h-100 d-flex flex-column align-items-center justify-content-center gap-1" [routerLink]="['/student/schedule']">
+        <i class="fas fa-calendar fs-5 text-info"></i>
+        <span class="fw-bold small-text">جدول</span>
       </button>
     </div>
   </div>

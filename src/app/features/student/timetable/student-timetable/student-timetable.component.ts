@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ElementRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { SessionService } from '../../../../core/services/session.service';
 import { AuthService } from '../../../../core/services/auth.service';
@@ -13,6 +13,46 @@ import { Session } from '../../../../core/models/session.model';
 })
 export class StudentTimetableComponent implements OnInit {
   sessions: Session[] = [];
+  isFullScreen = false;
+  @ViewChild('timetableContent') timetableContent!: ElementRef;
+
+  toggleFullScreen() {
+    this.isFullScreen = !this.isFullScreen;
+  }
+
+  async downloadTimetable() {
+    if (this.loading) return;
+    
+    // Inject html2canvas if not already present
+    if (!(window as any).html2canvas) {
+      const script = document.createElement('script');
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+      document.body.appendChild(script);
+      
+      await new Promise((resolve) => {
+        script.onload = resolve;
+      });
+    }
+
+    try {
+      const element = this.timetableContent.nativeElement;
+      const canvas = await (window as any).html2canvas(element, {
+        backgroundColor: '#121421',
+        scale: 2,
+        useCORS: true,
+        logging: false
+      });
+      
+      const dataUrl = canvas.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.href = dataUrl;
+      link.download = `جدول-${this.studentName}-${new Date().toLocaleDateString('ar-EG')}.png`;
+      link.click();
+    } catch (err) {
+      console.error('Download failed:', err);
+      this.error = 'فشل في تحميل الجدول كصورة. حاول مرة أخرى.';
+    }
+  }
 
   daysOfWeek = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس'];
   timeSlots = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00'];
@@ -86,5 +126,20 @@ export class StudentTimetableComponent implements OnInit {
     if (subjectName.includes('نشاط')) return 'bg-gray-blue';
 
     return 'bg-blue'; // default
+  }
+
+  getSubjectIcon(subjectName: string | undefined): string {
+    if (!subjectName) return '';
+    const name = subjectName.toLowerCase();
+    
+    if (name.includes('رياضيات')) return 'fa-calculator';
+    if (name.includes('علوم')) return 'fa-flask';
+    if (name.includes('عربية')) return 'fa-feather';
+    if (name.includes('إنجليزية')) return 'fa-language';
+    if (name.includes('دراسات')) return 'fa-globe-americas';
+    if (name.includes('دين')) return 'fa-mosque';
+    if (name.includes('حاسب')) return 'fa-laptop-code';
+    
+    return 'fa-book';
   }
 }

@@ -50,7 +50,8 @@ body {
     }
 
     .page-content {
-        padding-bottom: 80px;
+        padding: 12px;
+        padding-bottom: 90px;
         /* Space for bottom nav */
     }
 }

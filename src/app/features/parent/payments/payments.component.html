@@ -1,132 +1,273 @@
 <section class="payments-shell" dir="rtl">
-  <!-- 1. Super Clean Summary -->
   <div class="payments-header" *ngIf="!loading; else loadingState">
-     <div class="header-main">
+    <div class="header-main">
+      <div>
         <h1>سداد المصروفات</h1>
-        
-        <div class="term-selector-simple">
-           <button [class.active]="selectedTerm === 'الكل'" (click)="setTerm('الكل')">الكل</button>
-           <button [class.active]="selectedTerm === 'الفصل الأول'" (click)="setTerm('الفصل الأول')">الترم الأول</button>
-           <button [class.active]="selectedTerm === 'الفصل الثاني'" (click)="setTerm('الفصل الثاني')">الترم الثاني</button>
-        </div>
+        <p>بوابة دفع مبسطة وجاهزة للعرض مع دعم Vodafone Cash وفوري والبطاقات البنكية.</p>
+      </div>
 
-        <div class="main-balance-card shadow-sm">
-           <span>إجمالي المطلوب سداده</span>
-           <strong>{{ formatCurrency(remainingTotal) }}</strong>
-        </div>
-     </div>
+      <div class="term-selector-simple">
+        <button
+          *ngFor="let term of termOptions"
+          [class.active]="selectedTerm === term"
+          (click)="setTerm(term)">
+          {{ term === 'الكل' ? 'الكل' : term }}
+        </button>
+      </div>
+    </div>
+
+    <div class="summary-grid">
+      <article class="summary-card primary">
+        <span>إجمالي المطلوب سداده</span>
+        <strong>{{ formatCurrency(remainingTotal) }}</strong>
+      </article>
+
+      <article class="summary-card">
+        <span>إجمالي ما تم سداده</span>
+        <strong>{{ formatCurrency(paidTotal) }}</strong>
+      </article>
+
+      <article class="summary-card warning">
+        <span>فواتير متأخرة</span>
+        <strong>{{ overdueCount }}</strong>
+      </article>
+
+      <article class="summary-card accent">
+        <span>رقم Vodafone Cash</span>
+        <strong>{{ walletNumber }}</strong>
+      </article>
+    </div>
   </div>
 
-  <!-- 2. Simple Invoice List -->
   <section class="invoice-section" *ngIf="!loading">
-     <div class="section-title-row">
-        <h3>الفواتير المطلوبة</h3>
-        <a routerLink="/parent/dashboard" class="back-link">الرجوع للرئيسية</a>
-     </div>
+    <div class="section-title-row">
+      <h3>الفواتير المطلوبة</h3>
+      <a routerLink="/parent/dashboard" class="back-link">الرجوع للرئيسية</a>
+    </div>
 
-     <div class="invoice-simple-list" *ngIf="pendingInvoices.length > 0; else noInvoices">
-        <article class="invoice-simple-item shadow-sm" *ngFor="let invoice of pendingInvoices">
-           <div class="invoice-info">
-              <h4>{{ invoice.title }}</h4>
-              <p>للطالب: {{ invoice.studentName }}</p>
-           </div>
-           <div class="invoice-price">
-              <strong>{{ formatCurrency(invoice.remainingAmount) }}</strong>
-              <button 
-                 class="btn-pay-single" 
-                 (click)="payInvoice(invoice)"
-                 [disabled]="payingInvoiceId === invoice.id">
-                 {{ payingInvoiceId === invoice.id ? 'جاري...' : 'سدد الآن' }}
-              </button>
-           </div>
-        </article>
-     </div>
+    <div class="invoice-simple-list" *ngIf="pendingInvoices.length > 0; else noInvoices">
+      <article class="invoice-simple-item shadow-sm" *ngFor="let invoice of pendingInvoices">
+        <div class="invoice-info">
+          <div class="invoice-heading">
+            <h4>{{ invoice.title }}</h4>
+            <span class="status-pill" [ngClass]="getStatusClass(invoice.status)">{{ getStatusLabel(invoice.status) }}</span>
+          </div>
+          <p>للطالب: {{ invoice.studentName }}</p>
+          <small>تاريخ الاستحقاق: {{ invoice.dueDate | date:'d MMMM yyyy' }}</small>
+        </div>
+
+        <div class="invoice-price">
+          <strong>{{ formatCurrency(invoice.remainingAmount) }}</strong>
+          <button
+            class="btn-pay-single"
+            (click)="payInvoice(invoice)"
+            [disabled]="payingInvoiceId === invoice.id">
+            {{ payingInvoiceId === invoice.id ? 'جاري التأكيد...' : 'سدد الآن' }}
+          </button>
+        </div>
+      </article>
+    </div>
   </section>
 
-  <!-- 3. Payment History (Simplified) -->
   <section class="history-section" *ngIf="!loading && paymentHistory.length > 0">
-     <div class="section-title-row">
-        <h3>مدفوعات سابقة</h3>
-     </div>
+    <div class="section-title-row">
+      <h3>مدفوعات سابقة</h3>
+    </div>
 
-     <div class="history-simple-list">
-        <article class="history-simple-item" *ngFor="let invoice of paymentHistory">
-           <div class="history-info">
-              <strong>{{ invoice.title }}</strong>
-              <p>{{ (invoice.paidAt | date:'d/M/yyyy') || 'تم السداد' }}</p>
-           </div>
-           <div class="history-action">
-              <span>{{ formatCurrency(invoice.amountPaid) }}</span>
-              <button (click)="printReceipt(invoice)" class="btn-receipt-icon">
-                 <i class="fas fa-file-invoice"></i> إيصال
-              </button>
-           </div>
-        </article>
-     </div>
+    <div class="history-simple-list">
+      <article class="history-simple-item" *ngFor="let invoice of paymentHistory">
+        <div class="history-info">
+          <strong>{{ invoice.title }}</strong>
+          <p>
+            {{ (invoice.paidAt | date:'d/M/yyyy') || 'تم السداد' }}
+            <span *ngIf="invoice.paymentMethod"> • {{ invoice.paymentMethod }}</span>
+          </p>
+        </div>
+
+        <div class="history-action">
+          <span>{{ formatCurrency(invoice.amountPaid) }}</span>
+          <button (click)="printReceipt(invoice)" class="btn-receipt-icon">
+            <i class="fas fa-file-invoice"></i> إيصال
+          </button>
+        </div>
+      </article>
+    </div>
   </section>
 
-  <!-- Re-using existing Gateway Modal (it's already good but I'll make it simpler) -->
   <div class="gateway-overlay" *ngIf="showGateway">
     <div class="gateway-modal">
       <header>
         <h3>تأكيد الدفع</h3>
         <button class="btn-close" (click)="closeGateway()">×</button>
       </header>
-      
+
       <div class="gateway-content-simple">
         <div class="step-input" *ngIf="paymentStep === 'input'">
           <div class="bill-summary">
             <span>الفاتورة: {{ activeInvoice?.title }}</span>
-            <strong>المبلغ: {{ formatCurrency(activeInvoice?.remainingAmount || 0) }}</strong>
+            <strong>المبلغ المتبقي: {{ formatCurrency(activeInvoice?.remainingAmount || 0) }}</strong>
+          </div>
+
+          <div class="input-minimal">
+            <label>قيمة الدفعة</label>
+            <input
+              type="number"
+              [(ngModel)]="paymentAmount"
+              min="1"
+              [max]="activeInvoice?.remainingAmount || 0"
+              placeholder="أدخل المبلغ المطلوب سداده">
           </div>
 
           <div class="simple-payment-form">
             <p>اختر وسيلة الدفع:</p>
-            <div class="method-toggles">
-               <button *ngFor="let method of paymentMethods" 
-                       [class.active]="selectedMethod === method"
-                       (click)="selectMethod(method)">{{ method }}</button>
+
+            <div class="method-grid">
+              <button
+                type="button"
+                class="method-card"
+                *ngFor="let method of paymentMethods"
+                [class.active]="selectedMethod === method.value"
+                (click)="selectMethod(method.value)">
+                <i [class]="method.icon"></i>
+                <div>
+                  <strong>{{ method.label }}</strong>
+                  <span>{{ method.hint }}</span>
+                </div>
+              </button>
             </div>
-            
-            <div class="input-minimal" *ngIf="selectedMethod === 'بطاقة'">
-               <input type="text" placeholder="رقم البطاقة (16 رقم)">
+
+            <div class="card-inputs" *ngIf="selectedMethod === 'card'">
+              <div class="input-minimal">
+                <label>اسم صاحب البطاقة</label>
+                <input type="text" [(ngModel)]="cardDetails.name" placeholder="الاسم كما هو على البطاقة">
+              </div>
+
+              <div class="input-minimal">
+                <label>رقم البطاقة</label>
+                <input type="text" placeholder="xxxx xxxx xxxx xxxx" [value]="cardDetails.number" (input)="formatCardNumber($event)">
+              </div>
+
+              <div class="row g-2">
+                <div class="col-6">
+                  <div class="input-minimal">
+                    <label>تاريخ الانتهاء</label>
+                    <input type="text" placeholder="MM/YY" [value]="cardDetails.expiry" (input)="formatExpiry($event)">
+                  </div>
+                </div>
+
+                <div class="col-6">
+                  <div class="input-minimal">
+                    <label>CVC</label>
+                    <input type="password" [(ngModel)]="cardDetails.cvc" placeholder="***" maxlength="4">
+                  </div>
+                </div>
+              </div>
             </div>
-            <div class="input-minimal" *ngIf="selectedMethod === 'محفظة إلكترونية'">
-               <input type="tel" placeholder="رقم الموبايل">
+
+            <div class="wallet-panel" *ngIf="selectedMethod === 'vodafone_cash'">
+              <div class="input-minimal">
+                <label>رقم Vodafone Cash لاستقبال التعليمات</label>
+                <input type="tel" [(ngModel)]="walletNumber" placeholder="0100">
+              </div>
+
+              <div class="helper-box">
+                <i class="fas fa-paper-plane"></i>
+                <span>سيتم إرسال رقم المرجع وتعليمات السداد على {{ walletNumber || 'رقمك المسجل' }}.</span>
+              </div>
+            </div>
+
+            <div class="fawry-info" *ngIf="selectedMethod === 'fawry'">
+              <p>سيتم إصدار كود فوري جاهز للطباعة أو العرض، وبعدها يمكنك تأكيد السداد من داخل البوابة.</p>
+            </div>
+
+            <div class="support-note">
+              <i class="fas fa-headset"></i>
+              <span>لدعم العرض التجريبي: رقم المتابعة الحالي {{ supportNumber }}</span>
             </div>
           </div>
 
-          <button class="btn-confirm-final" (click)="processGatewayPayment()" [disabled]="gatewayLoading">
-            تأكيد الدفع الآن
+          <button class="btn-confirm-final" (click)="processGatewayPayment()" [disabled]="!canSubmitGateway">
+            الاستمرار إلى الدفع
           </button>
         </div>
 
         <div class="step-processing" *ngIf="paymentStep === 'processing'">
+          <div class="bank-connection">
+            <div class="secure-icon"><i class="fas fa-shield-alt"></i></div>
+            <div class="simple-spinner"></div>
+            <p>جاري تجهيز العملية بشكل آمن...</p>
+            <span class="text-muted tiny">يرجى الانتظار لحظات</span>
+          </div>
+        </div>
+
+        <div class="step-otp" *ngIf="paymentStep === 'otp'">
+          <div class="otp-header">
+            <i class="fas fa-mobile-alt mb-3 fs-1 text-primary"></i>
+            <h4>التحقق من العملية</h4>
+            <p>{{ gatewayMessage }}</p>
+          </div>
+
+          <div class="reference-inline" *ngIf="paymentCode">
+            <span>المرجع الحالي</span>
+            <strong>{{ paymentCode }}</strong>
+          </div>
+
+          <div class="input-minimal text-center">
+            <label>أدخل رمز التحقق</label>
+            <input type="text" [(ngModel)]="otpCode" placeholder="0 0 0 0" class="otp-input-field" maxlength="4">
+          </div>
+
+          <div class="target-caption" *ngIf="verificationTarget">
+            تم إرسال الرمز إلى {{ verificationTarget }}
+          </div>
+
+          <button class="btn-confirm-final" (click)="verifyOtp()" [disabled]="otpCode.length < 4">
+            تأكيد الدفع ({{ formatCurrency(paymentAmount) }})
+          </button>
+          <button class="btn-link mt-2" (click)="paymentStep = 'input'">إلغاء والعودة</button>
+        </div>
+
+        <div class="step-reference" *ngIf="paymentStep === 'reference'">
+          <div class="reference-card">
+            <span>كود فوري</span>
+            <strong>{{ paymentCode }}</strong>
+            <p>{{ gatewayMessage }}</p>
+          </div>
+
+          <button class="btn-confirm-final" (click)="confirmReferencePayment()">
+            تم السداد وأريد التأكيد
+          </button>
+          <button class="btn-link mt-2" (click)="paymentStep = 'input'">رجوع</button>
+        </div>
+
+        <div class="step-processing" *ngIf="paymentStep === 'finalizing'">
           <div class="simple-spinner"></div>
-          <p>جاري سداد المبلغ...</p>
+          <p>جاري تأكيد المعاملة من البوابة...</p>
         </div>
 
         <div class="step-success" *ngIf="paymentStep === 'success'">
-          <div class="big-check">✓</div>
-          <h4>تم الدفع بنجاح</h4>
-          <button class="btn-done" (click)="closeGateway()">شكراً</button>
+          <div class="big-check-animated">
+            <i class="fas fa-check-circle"></i>
+          </div>
+          <h4>تمت العملية بنجاح</h4>
+          <p class="success-copy">{{ successMessage }}</p>
+          <p class="text-muted">رقم العملية: {{ lastReference }}</p>
+          <button class="btn-done" (click)="closeGateway()">العودة للمصروفات</button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Keep the printable receipt as is for official records -->
   <div class="printable-receipt" *ngIf="receiptToShow" id="print-section">
-     <!-- Content same as before but kept for window.print() -->
-     <div class="receipt-header">
-        <h2>إيصال سداد - مدرسة المتحدة</h2>
-        <p>الرقم: {{ receiptToShow.referenceNumber }}</p>
-     </div>
-     <div class="receipt-body">
-        <p>اسم الطالب: {{ receiptToShow.studentName }}</p>
-        <p>المبلغ: {{ formatCurrency(receiptToShow.amountPaid) }}</p>
-        <p>التاريخ: {{ receiptToShow.paidAt | date:'medium' }}</p>
-     </div>
+    <div class="receipt-header">
+      <h2>إيصال سداد - مدرسة المتحدة</h2>
+      <p>الرقم: {{ receiptToShow.referenceNumber }}</p>
+    </div>
+    <div class="receipt-body">
+      <p>اسم الطالب: {{ receiptToShow.studentName }}</p>
+      <p>المبلغ: {{ formatCurrency(receiptToShow.amountPaid) }}</p>
+      <p>التاريخ: {{ receiptToShow.paidAt | date:'medium' }}</p>
+    </div>
   </div>
 
   <ng-template #loadingState>
@@ -134,6 +275,6 @@
   </ng-template>
 
   <ng-template #noInvoices>
-    <div class="empty-state-simple">لا يوجد مبالغ مستحقة حالياً. شكراً لك!</div>
+    <div class="empty-state-simple">لا يوجد مبالغ مستحقة حاليًا. شكرًا لك!</div>
   </ng-template>
 </section>

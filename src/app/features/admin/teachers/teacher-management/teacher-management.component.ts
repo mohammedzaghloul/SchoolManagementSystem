@@ -100,6 +100,7 @@ export class TeacherManagementComponent implements OnInit {
       email: '',
       phone: '',
       password: 'Teacher@123',
+      subjectId: null,
       isActive: true
     };
     this.showModal = true;
@@ -124,8 +125,12 @@ export class TeacherManagementComponent implements OnInit {
     this.submitting = true;
     try {
       const payload = { ...this.currentTeacher };
-      if (!payload.subjectId) {
+      
+      // Fix: API requires subjectId as a valid number, and it might come from template as a string
+      if (payload.subjectId === 'null' || payload.subjectId === '') {
         delete payload.subjectId; 
+      } else if (payload.subjectId !== null && payload.subjectId !== undefined) {
+        payload.subjectId = Number(payload.subjectId);
       }
 
       if (this.isEditMode) {

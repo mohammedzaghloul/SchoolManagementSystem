@@ -15,24 +15,22 @@
         </div>
     </div>
 
-    <div class="header-center">
-        <div class="search-bar">
-            <i class="fas fa-search"></i>
-            <input type="text" placeholder="ابحث عن صفحة أو ميزة..." (input)="onSearchChange($event)">
+    <div class="header-left" *ngIf="!isProfilePage">
+        <!-- SVG Branding for mobile/sidebar toggle compatibility -->
+        <div class="mobile-logo d-lg-none me-3" routerLink="/dashboard">
+            <svg width="28" height="28" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M30 10L55 22L30 34L5 22L30 10Z" fill="#3B82F6" />
+                <path d="M15 28V38C15 38 22 45 30 45C38 45 45 38 45 38V28" stroke="#3B82F6" stroke-width="4" fill="none" />
+            </svg>
         </div>
-    </div>
-
-    <div class="header-left">
-        <button class="icon-btn theme-toggle" (click)="toggleTheme()" [attr.aria-label]="isDarkMode ? 'الوضع الفاتح' : 'الوضع الداكن'">
-            <i class="far fa-moon" *ngIf="!isDarkMode"></i>
-            <i class="fas fa-sun text-warning" *ngIf="isDarkMode"></i>
-        </button>
-
-        <div class="notification-box" [class.open]="showNotifications" (click)="toggleNotifications($event)">
-            <button class="icon-btn notification-trigger" [class.has-unread]="unreadCount > 0" aria-label="الإشعارات">
+        
+        <div class="notification-box" [class.open]="showNotifications">
+            <button class="btn btn-icon position-relative" (click)="toggleNotifications($event)" aria-label="الإشعارات">
                 <i class="far fa-bell"></i>
+                <span *ngIf="unreadCount > 0" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                    {{ unreadCount }}
+                </span>
             </button>
-            <span class="badge" *ngIf="unreadCount > 0">{{ unreadCount }}</span>
 
             <div class="dropdown-menu notifications-menu shadow-lg border-0" *ngIf="showNotifications"
                 (click)="$event.stopPropagation()">

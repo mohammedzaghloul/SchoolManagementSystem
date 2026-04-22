@@ -11,17 +11,17 @@
         <!-- Attendance -->
         <a [routerLink]="attendanceRoute" routerLinkActive="active" class="nav-item" *ngIf="attendanceRoute">
             <div class="nav-icon-wrapper">
-                <i class="fas fa-user-check"></i>
+                <i class="fas" [ngClass]="userRole === 'Admin' ? 'fa-chalkboard-teacher' : 'fa-user-check'"></i>
             </div>
-            <span>الحضور</span>
+            <span>{{ attendanceLabel }}</span>
         </a>
 
         <!-- Classes -->
         <a [routerLink]="classesRoute" routerLinkActive="active" class="nav-item" *ngIf="classesRoute">
             <div class="nav-icon-wrapper">
-                <i class="fas fa-calendar-alt"></i>
+                <i class="fas" [ngClass]="classesIcon"></i>
             </div>
-            <span>الحصص</span>
+            <span>{{ classesLabel }}</span>
         </a>
 
         <!-- Payments (Parent specific) -->

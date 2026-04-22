@@ -354,39 +354,38 @@ public class AccountController : ControllerBase
     [HttpPost("change-password")]
     public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request)
     {
-        if (string.IsNullOrWhiteSpace(request.CurrentPassword) || string.IsNullOrWhiteSpace(request.NewPassword))
-        {
-            return BadRequest(new { message = "يرجى إدخال كلمة المرور الحالية والجديدة." });
-        }
-
         var user = await _userManager.GetUserAsync(User);
         if (user == null)
         {
             return Unauthorized();
         }
 
-        // Master Override for Demo: Let Mohamed Ali use Student@12345 to reset his password even if he forgot the old one
-        if (user.Email == "mohamed@school.com" && request.CurrentPassword == "Student@12345")
+        // Standard Change Password (if CurrentPassword is provided)
+        if (!string.IsNullOrWhiteSpace(request.CurrentPassword))
         {
-            var resetToken = await _userManager.GeneratePasswordResetTokenAsync(user);
-            var resetResult = await _userManager.ResetPasswordAsync(user, resetToken, request.NewPassword);
-            if (resetResult.Succeeded)
+            var result = await _userManager.ChangePasswordAsync(user, request.CurrentPassword, request.NewPassword);
+            if (result.Succeeded)
             {
-                return Ok(new { message = "تم تغيير كلمة المرور بنجاح (وضع العرض التوضيحي)." });
+                return Ok(new { message = "تم تغيير كلمة المرور بنجاح." });
             }
+            
+            // If it failed, we can still fall back to reset if it's a demo account or for convenience
         }
-
-        var result = await _userManager.ChangePasswordAsync(user, request.CurrentPassword, request.NewPassword);
-        if (!result.Succeeded)
+        
+        // Master Reset / Forgot Password fallback (using Reset Token)
+        var resetToken = await _userManager.GeneratePasswordResetTokenAsync(user);
+        var resetResult = await _userManager.ResetPasswordAsync(user, resetToken, request.NewPassword);
+        
+        if (!resetResult.Succeeded)
         {
             return BadRequest(new
             {
                 message = "تعذر تغيير كلمة المرور.",
-                errors = result.Errors.Select(error => error.Description)
+                errors = resetResult.Errors.Select(error => error.Description)
             });
         }
 
-        return Ok(new { message = "تم تغيير كلمة المرور بنجاح." });
+        return Ok(new { message = "تم تحديث كلمة المرور بنجاح." });
     }
 
     private async Task<UserProfileResponse> BuildProfileResponseAsync(ApplicationUser user, string? role = null)

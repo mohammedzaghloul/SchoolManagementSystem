@@ -1,18 +1,35 @@
 <div class="grades-container min-vh-100 dark-theme pe-4">
-    <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h3 class="mb-0 text-white fw-bold ms-auto">نتائج الاختبارات</h3>
+    <!-- Header & Filters -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+        <h3 class="mb-0 text-white fw-bold">نتائج الاختبارات</h3>
+        
+        <div class="d-flex gap-2">
+            <select class="form-select form-select-sm bg-dark text-white border-dark rounded-pill px-3" 
+                    [(ngModel)]="selectedYear" (change)="filterGrades()" style="min-width: 120px;">
+                <option value="الكل">جميع السنوات</option>
+                <option *ngFor="let y of years" [value]="y">{{ y }}</option>
+            </select>
+            
+            <select class="form-select form-select-sm bg-dark text-white border-dark rounded-pill px-3" 
+                    [(ngModel)]="selectedTerm" (change)="filterGrades()" style="min-width: 120px;">
+                <option value="الكل">جميع الفترات</option>
+                <ng-container *ngFor="let t of terms">
+                  <option *ngIf="t !== 'الكل'" [value]="t">{{ t }}</option>
+                </ng-container>
+            </select>
+        </div>
     </div>
 
     <div class="text-center py-5" *ngIf="loading">
         <div class="spinner-border text-primary" role="status"></div>
     </div>
 
-    <div class="alert alert-info text-center" *ngIf="!loading && grades.length === 0">
-        لا توجد درجات مسجلة لك حتى الآن.
+    <div class="alert alert-info text-center border-0 bg-dark bg-opacity-50 text-secondary rounded-4" 
+         *ngIf="!loading && filteredGrades.length === 0">
+        لا توجد درجات مسجلة لهذه الفترة حالياً.
     </div>
 
-    <div class="row g-4" *ngIf="!loading && grades.length > 0">
+    <div class="row g-4" *ngIf="!loading && filteredGrades.length > 0">
         <!-- Summary Panel (Left in LTR, Right in RTL depending on layout, here RTL means col-4 on left side visually but code order might dictate it. Let's put Summary first in row but styled correctly for layout) -->
         <!-- The screenshot shows Summary on the Left. In RTL, Left is "end" so col-md-4 order-md-2? Actually, let's just make it col-md-4 -->
         <div class="col-12 col-md-4">
@@ -58,7 +75,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr *ngFor="let grade of grades" class="border-bottom border-darker">
+                            <tr *ngFor="let grade of filteredGrades" class="border-bottom border-darker">
                                 <td class="py-4 fw-bold">{{ grade.subjectName || 'مادة' }}</td>
                                 <td class="py-4">100 / {{ grade.value }}</td>
                                 <td class="py-4 w-25">

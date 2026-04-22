@@ -25,6 +25,10 @@ export class HeaderComponent implements OnInit, OnDestroy {
   isDarkMode = false;
   notifications: Notification[] = [];
 
+  get isProfilePage(): boolean {
+    return this.router.url === '/profile';
+  }
+
   private authSub?: Subscription;
   private unreadCountSub?: Subscription;
   private notificationStoreSub?: Subscription;

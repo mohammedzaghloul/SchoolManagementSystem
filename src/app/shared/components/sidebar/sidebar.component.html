@@ -1,13 +1,24 @@
 <div class="sidebar">
     <div class="sidebar-brand">
-        <div class="logo-container">
-            <div class="logo-main">
-                <i class="fas fa-graduation-cap"></i>
-                <div class="logo-glow"></div>
-            </div>
-            <div class="logo-text">
-                <span class="brand-name">المتحدة</span>
-                <span class="brand-sub">للغات - التعليم الذكي</span>
+        <div class="logo-wrapper d-flex align-items-center gap-2 mb-4">
+            <svg width="40" height="40" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M30 15L55 27L30 39L5 27L30 15Z" fill="#A855F7" />
+                <path d="M30 15L55 27L30 39L5 27L30 15Z" fill="url(#logoGrad)" />
+                <path d="M15 32V42C15 42 22 49 30 49C38 49 45 42 45 42V32" stroke="white" stroke-width="2" opacity="0.3" fill="none" />
+                <path d="M30 15L55 27L30 39L5 27L30 15Z" stroke="white" stroke-width="0.5" opacity="0.2" fill="none"/>
+                <!-- Tassel -->
+                <path d="M55 27V40" stroke="#3B82F6" stroke-width="2" stroke-linecap="round"/>
+                <circle cx="55" cy="42" r="3" fill="#3B82F6"/>
+                <defs>
+                    <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#A855F7" />
+                        <stop offset="100%" stop-color="#3B82F6" />
+                    </linearGradient>
+                </defs>
+            </svg>
+            <div class="logo-text d-flex flex-column">
+                <span class="main-name uppercase fw-bold text-white tracking-widest" style="font-size: 1.1rem; line-height: 1;">NEXTGEN</span>
+                <span class="sub-name text-blue-400 fw-bold" style="font-size: 0.9rem; letter-spacing: 2px;">LEARNING</span>
             </div>
         </div>
     </div>

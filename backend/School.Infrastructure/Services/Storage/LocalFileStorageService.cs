@@ -17,37 +17,53 @@ public class LocalFileStorageService : IFileStorageService
     {
         if (file == null || file.Length == 0) return "";
 
-        string uploadPath = Path.Combine(_env.WebRootPath, "uploads", folderName);
+        var webRootPath = EnsureWebRootPath();
+        var uploadPath = Path.Combine(webRootPath, "uploads", folderName);
         if (!Directory.Exists(uploadPath)) Directory.CreateDirectory(uploadPath);
 
-        string fileName = $"{DateTime.UtcNow.Ticks}_{file.FileName}";
-        string filePath = Path.Combine(uploadPath, fileName);
+        var safeFileName = Path.GetFileName(file.FileName);
+        var fileName = $"{DateTime.UtcNow.Ticks}_{safeFileName}";
+        var filePath = Path.Combine(uploadPath, fileName);
 
-        using (var stream = new FileStream(filePath, FileMode.Create))
-        {
-            await file.CopyToAsync(stream);
-        }
+        using var stream = new FileStream(filePath, FileMode.Create);
+        await file.CopyToAsync(stream);
 
-        // Return the relative URL
         return $"/uploads/{folderName}/{fileName}";
     }
 
     public Task<bool> DeleteFileAsync(string fileUrl)
     {
-        try 
+        try
         {
-            // Convert URL to physical path
-            string relativePath = fileUrl.TrimStart('/');
-            string physicalPath = Path.Combine(_env.WebRootPath, relativePath);
-            
+            var relativePath = fileUrl.TrimStart('/');
+            var physicalPath = Path.Combine(EnsureWebRootPath(), relativePath);
+
             if (File.Exists(physicalPath))
             {
                 File.Delete(physicalPath);
                 return Task.FromResult(true);
             }
         }
-        catch { }
-        
+        catch
+        {
+        }
+
         return Task.FromResult(false);
+    }
+
+    private string EnsureWebRootPath()
+    {
+        var webRootPath = _env.WebRootPath;
+        if (string.IsNullOrWhiteSpace(webRootPath))
+        {
+            webRootPath = Path.Combine(_env.ContentRootPath, "wwwroot");
+        }
+
+        if (!Directory.Exists(webRootPath))
+        {
+            Directory.CreateDirectory(webRootPath);
+        }
+
+        return webRootPath;
     }
 }

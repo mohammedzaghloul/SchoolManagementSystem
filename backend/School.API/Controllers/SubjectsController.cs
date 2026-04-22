@@ -166,7 +166,7 @@ public class SubjectsController : BaseApiController
         var subject = await _context.Subjects.FindAsync(id);
         if (subject == null)
         {
-            return NotFound(new { message = "المادة غير موجودة." });
+            return Ok(true);
         }
 
         _context.Subjects.Remove(subject);

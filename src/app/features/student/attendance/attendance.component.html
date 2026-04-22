@@ -1,21 +1,27 @@
 <div class="attendance-page rtl-layout" dir="rtl">
-  <!-- Top Banner / Header -->
   <header class="premium-header" *ngIf="!loading">
     <div class="header-content">
       <div class="header-titles">
-        <span class="badge-premium">{{ gradeLevel || 'بوابة الطالب' }}</span>
-        <h1>الحضور والغياب</h1>
-        <p class="subtitle"><i class="fas fa-university me-2"></i> {{ className || 'فصل 1/أ' }}</p>
+        <span class="badge-premium">{{ gradeLevel || 'بوابة الطالب الذكية' }}</span>
+        <h1>{{ registrationTitle }}</h1>
+        <p class="subtitle"><i class="fas fa-info-circle me-2"></i> {{ registrationDescription }}</p>
+        <div class="countdown-chip" *ngIf="countdownMessage && !activeSession">
+          <i class="far fa-clock"></i>
+          <span>{{ countdownMessage }}</span>
+        </div>
       </div>
-      <button routerLink="/student/scan/qr" class="btn-scan-premium" [disabled]="!canOpenQrScanner">
-        <div class="btn-icon">
-          <i class="fas fa-qrcode"></i>
-        </div>
-        <div class="btn-text">
-          <strong>سجل حضورك</strong>
-          <span>الحصة الحالية</span>
-        </div>
-      </button>
+
+      <div class="header-actions-attendance" *ngIf="canOpenQrScanner">
+        <button routerLink="/student/scan/qr" class="btn-scan-premium pulse-animation">
+          <div class="btn-icon">
+            <i class="fas fa-qrcode"></i>
+          </div>
+          <div class="btn-text">
+            <strong>سجل حضورك الآن</strong>
+            <span>افتح الكاميرا</span>
+          </div>
+        </button>
+      </div>
     </div>
   </header>
 
@@ -23,82 +29,104 @@
     <div class="spinner-container">
       <div class="premium-spinner"></div>
     </div>
-    <p>جاري تحميل سجلات الحضور...</p>
+    <p>جاري تحميل سجلات حضورك...</p>
   </div>
 
   <main class="page-container" *ngIf="!loading">
-    <!-- Quick Stats Grid -->
+    <div class="error-banner" *ngIf="errorMsg">
+      <i class="fas fa-circle-exclamation"></i>
+      <span>{{ errorMsg }}</span>
+    </div>
+
     <section class="stats-grid">
-      <div class="stat-card rate-card shadow-sm">
-        <div class="stat-icon"><i class="fas fa-chart-pie"></i></div>
+      <div class="stat-card rate-card shadow-sm glass-card">
+        <div class="stat-icon"><i class="fas fa-chart-line"></i></div>
         <div class="stat-info">
-          <span class="label">نسبة الحضور</span>
+          <span class="label">المعدل العام للحضور</span>
           <strong class="value">{{ summary.attendanceRate }}%</strong>
         </div>
         <div class="stat-progress">
-          <div class="progress-bar" [style.width.%]="summary.attendanceRate"></div>
+          <div class="progress-bar gradient-success" [style.width.%]="summary.attendanceRate"></div>
         </div>
       </div>
-      <div class="stat-card present shadow-sm">
-        <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+
+      <div class="stat-card shadow-sm stat-success">
+        <div class="stat-icon text-success"><i class="fas fa-check-circle"></i></div>
         <div class="stat-info">
           <span class="label">حاضر</span>
           <strong class="value">{{ summary.present }}</strong>
         </div>
       </div>
-      <div class="stat-card absent shadow-sm">
-        <div class="stat-icon"><i class="fas fa-times-circle"></i></div>
+
+      <div class="stat-card shadow-sm stat-danger">
+        <div class="stat-icon text-danger"><i class="fas fa-times-circle"></i></div>
         <div class="stat-info">
           <span class="label">غائب</span>
           <strong class="value">{{ summary.absent }}</strong>
         </div>
       </div>
-      <div class="stat-card late shadow-sm">
-        <div class="stat-icon"><i class="fas fa-clock"></i></div>
+
+      <div class="stat-card shadow-sm stat-warning">
+        <div class="stat-icon text-warning"><i class="fas fa-user-clock"></i></div>
         <div class="stat-info">
-          <span class="label">تأخير</span>
+          <span class="label">متأخر</span>
           <strong class="value">{{ summary.late }}</strong>
         </div>
       </div>
     </section>
 
-    <!-- Main Layout: 2 Columns -->
+    <section class="insights-grid" *ngIf="insightCards.length">
+      <article class="insight-card" *ngFor="let insight of insightCards" [ngClass]="insight.tone">
+        <div class="insight-icon">
+          <i [class]="insight.icon"></i>
+        </div>
+        <div class="insight-content">
+          <span>{{ insight.title }}</span>
+          <strong>{{ insight.value }}</strong>
+          <small>{{ insight.detail }}</small>
+        </div>
+      </article>
+    </section>
+
     <div class="main-layout-grid">
-      <!-- Right: Today's Timeline -->
       <section class="content-panel timeline-panel shadow-sm">
         <div class="panel-header">
-          <h3><i class="fas fa-calendar-day me-2"></i> حصص اليوم</h3>
-          <span class="session-count">{{ todaySessions.length }} حصص</span>
+          <h3><i class="fas fa-calendar-day me-2"></i> جدول حصص اليوم</h3>
+          <span class="session-count">{{ todaySessions.length }} حصص اليوم</span>
         </div>
 
         <div class="timeline-container" *ngIf="hasSessionsToday; else emptyToday">
           <div class="timeline-item" *ngFor="let session of todaySessions" [ngClass]="getSessionStateClass(session)">
             <div class="time-marker">
-              <span>{{ session.startTime | date:'shortTime' }}</span>
+              <span>{{ session.startTime | date:'h:mm a' }}</span>
             </div>
             <div class="session-card-inner">
               <div class="session-main-info">
                 <strong>{{ session.subjectName || session.title }}</strong>
-                <span class="instructor" *ngIf="session.teacherName">{{ session.teacherName }}</span>
+                <span class="instructor small" *ngIf="session.teacherName">{{ session.teacherName }}</span>
+                <small class="session-meta" *ngIf="session.attendanceType">
+                  {{ getMethodLabel(session.attendanceType) }}
+                </small>
               </div>
-              <div class="session-status-tag">
+              <div class="session-status-tag" [ngClass]="getSessionStateClass(session)">
                 {{ getSessionStateLabel(session) }}
               </div>
             </div>
           </div>
         </div>
+
         <ng-template #emptyToday>
-          <div class="empty-state">
-            <i class="fas fa-calendar-times"></i>
-            <p>لا توجد حصص مجدولة لليوم.</p>
+          <div class="empty-state text-center py-5">
+            <i class="fas fa-calendar-times opacity-25 fs-1 mb-3"></i>
+            <p class="text-muted">لا يوجد حصص دراسية مجدولة لهذا اليوم.</p>
           </div>
         </ng-template>
       </section>
 
-      <!-- Left: Recent History -->
       <section class="content-panel history-panel shadow-sm" *ngIf="recentRecords.length > 0">
         <div class="panel-header">
-          <h3><i class="fas fa-history me-2"></i> سجلات الحضور الأخيرة</h3>
+          <h3><i class="fas fa-history me-2"></i> سجل الحضور الأخير</h3>
+          <span class="session-count">{{ summary.total }} تسجيل</span>
         </div>
 
         <div class="history-list">
@@ -106,15 +134,15 @@
             <div class="record-indicator" [ngClass]="getStatusClass(record)"></div>
             <div class="record-content">
               <div class="record-row">
-                <strong class="subject">{{ record.subjectName || record.sessionName || 'حصة دراسية' }}</strong>
+                <strong class="subject">{{ record.subjectName || record.sessionName || 'حصة مدرسية' }}</strong>
                 <span class="status-badge" [ngClass]="getStatusClass(record)">
-                  <i class="fas" [ngClass]="record.status === 'Present' || record.isPresent ? 'fa-check' : 'fa-times'"></i>
                   {{ getStatusLabel(record) }}
                 </span>
               </div>
               <div class="record-meta">
-                <span><i class="far fa-calendar-alt me-1"></i> {{ record.recordedAt | date:'d/M/yyyy' }}</span>
+                <span><i class="far fa-calendar-alt me-1"></i> {{ record.recordedAt | date:'d MMMM' }}</span>
                 <span><i class="far fa-clock me-1"></i> {{ record.recordedAt | date:'h:mm a' }}</span>
+                <span *ngIf="record.method"><i class="fas fa-fingerprint me-1"></i> {{ getMethodLabel(record.method) }}</span>
               </div>
             </div>
           </div>

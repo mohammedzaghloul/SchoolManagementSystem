@@ -88,29 +88,29 @@
     font-size: 0.75rem;
 }
 
-/* Specific Subject Colors Matching Mockup */
+/* Specific Subject Colors Matching Mockup - Vibrant versions */
 .bg-blue {
-    background-color: #1d4ed8 !important;
+    background: linear-gradient(135deg, #3b82f6, #1d4ed8) !important;
 }
 
-/* رياضيات */
 .bg-green {
-    background-color: #0f766e !important;
+    background: linear-gradient(135deg, #10b981, #059669) !important;
 }
 
-/* علوم */
 .bg-purple {
-    background-color: #4c1d95 !important;
+    background: linear-gradient(135deg, #a855f7, #7c3aed) !important;
 }
 
-/* لغة عربية */
 .bg-teal {
-    background-color: #0f4a50 !important;
+    background: linear-gradient(135deg, #14b8a6, #0d9488) !important;
 }
 
-/* لغة إنجليزية */
 .bg-dark-gray {
-    background-color: #1e293b !important;
+    background: linear-gradient(135deg, #64748b, #475569) !important;
+}
+
+.bg-gray-blue {
+    background: linear-gradient(135deg, #94a3b8, #64748b) !important;
 }
 
 /* دراسات/دين */
@@ -125,3 +125,68 @@
 }
 
 /* حاسب آلي */
+
+.btn-primary-p {
+    background-color: #3b82f6 !important;
+    border: none;
+    font-size: 0.9rem;
+    padding: 8px 16px;
+}
+
+.timetable-container.full-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 10000;
+    padding: 12px;
+    overflow-y: auto;
+}
+
+@media (max-width: 768px) {
+    .dark-theme {
+        padding: 10px;
+    }
+
+    .user-info h5 {
+        font-size: 0.9rem;
+    }
+
+    .page-title {
+        font-size: 1.2rem;
+    }
+
+    .header-actions button {
+        font-size: 0.8rem;
+        padding: 6px 12px !important;
+    }
+
+    .page-header {
+        flex-direction: row; /* Match header horizontal if we can */
+        justify-content: space-between !important;
+        align-items: center !important;
+        gap: 10px;
+    }
+
+    .timetable-grid th,
+    .timetable-grid td {
+        padding: 6px 2px !important;
+        font-size: 0.7rem;
+    }
+
+    .subject-card {
+        min-width: 65px;
+        padding: 6px 2px !important;
+        border-radius: 6px !important;
+    }
+
+    .subject-card div {
+        font-size: 0.7rem;
+        line-height: 1.1;
+    }
+
+    .subject-card small {
+        font-size: 0.6rem;
+    }
+}

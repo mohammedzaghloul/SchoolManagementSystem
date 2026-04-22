@@ -15,24 +15,28 @@ public class FaceController : BaseApiController
     }
 
     [HttpPost("train/{studentId}")]
-    public async Task<ActionResult> TrainFace(int studentId, IFormFile file)
+    public async Task<ActionResult> TrainFace(int studentId, [FromForm] IFormFile file)
     {
         if (file == null || file.Length == 0)
-            return BadRequest("Image is required");
+            return BadRequest(new { success = false, message = "Image is required" });
 
         using var ms = new MemoryStream();
         await file.CopyToAsync(ms);
-        
-        try 
+
+        var result = await _faceRecognitionService.TrainFaceAsync(studentId, ms.ToArray(), file.FileName);
+        if (result.Success)
         {
-            var result = await _faceRecognitionService.TrainFaceAsync(studentId, ms.ToArray(), file.FileName);
-            if (result) return Ok(new { success = true });
-            return BadRequest("Training failed");
+            return Ok(new
+            {
+                success = true,
+                message = result.Message ?? "Face trained successfully"
+            });
         }
-        catch(Exception) 
+
+        return BadRequest(new
         {
-            // For demo purposes, we can return success if the actual python backend is not running
-            return Ok(new { success = true, fallback = true, message = "Demo fallback: Face trained successfully" });
-        }
+            success = false,
+            message = result.Message ?? "Training failed"
+        });
     }
 }

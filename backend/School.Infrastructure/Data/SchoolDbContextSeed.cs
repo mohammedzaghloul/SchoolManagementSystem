@@ -303,17 +303,32 @@ public class SchoolDbContextSeed
                 var classStudents = students.Where(s => s.ClassRoomId == session.ClassRoomId).ToList();
                 foreach (var student in classStudents)
                 {
-                    var isPresent = new Random(student.Id + session.Id).Next(100) > 15; // ~85% attendance
+                    var attendanceRoll = new Random((student.Id * 31) + (session.Id * 17)).Next(100);
+                    var status = attendanceRoll switch
+                    {
+                        > 19 => "Present",
+                        > 12 => "Late",
+                        _ => "Absent"
+                    };
+
+                    var isPresent = status != "Absent";
+                    var minutesAfterStart = status switch
+                    {
+                        "Late" => 12,
+                        "Present" => 2,
+                        _ => 0
+                    };
+
                     context.Attendances.Add(new Attendance
                     {
                         StudentId = student.Id,
                         SessionId = session.Id,
                         IsPresent = isPresent,
-                        Status = isPresent ? "Present" : "Absent",
-                        Notes = "",
-                        Time = session.SessionDate.Add(session.StartTime).AddMinutes(isPresent ? 2 : 0),
+                        Status = status,
+                        Notes = status == "Late" ? "وصل بعد بداية الحصة بدقائق." : "",
+                        Time = session.SessionDate.Add(session.StartTime).AddMinutes(minutesAfterStart),
                         RecordedAt = session.SessionDate.Add(session.StartTime),
-                        Method = session.AttendanceType
+                        Method = status == "Late" ? "Manual" : session.AttendanceType
                     });
                 }
             }
@@ -377,6 +392,19 @@ public class SchoolDbContextSeed
                     DueDate = DateTime.Today.AddDays(25 + student.Id),
                     Status = "Pending",
                     Notes = "تشمل الأنشطة والخدمات الرقمية."
+                });
+                context.TuitionInvoices.Add(new TuitionInvoice
+                {
+                    StudentId = student.Id,
+                    Title = "رسوم التقييم الشهري",
+                    Description = "رسوم اختبارات المتابعة الشهرية والتقارير الأكاديمية.",
+                    AcademicYear = academicYear,
+                    Term = "الخدمات",
+                    Amount = 450m + (student.Id % 2) * 50m,
+                    AmountPaid = 0m,
+                    DueDate = DateTime.Today.AddDays(5 + student.Id),
+                    Status = "Pending",
+                    Notes = "فاتورة إضافية لعرض سيناريوهات متعددة في بوابة الدفع."
                 });
             }
 

@@ -23,7 +23,10 @@ export class BottomNavComponent implements OnInit, OnDestroy {
   // Role-based route shortcuts
   dashboardRoute = '/';
   attendanceRoute: string | null = null;
+  attendanceLabel = 'الحضور';
   classesRoute: string | null = null;
+  classesLabel = 'الحصص';
+  classesIcon = 'fa-calendar-alt';
   paymentsRoute: string | null = null;
 
   constructor(
@@ -50,20 +53,29 @@ export class BottomNavComponent implements OnInit, OnDestroy {
     switch (role) {
       case 'Admin':
         this.dashboardRoute = '/admin/dashboard';
-        this.attendanceRoute = null;
+        this.attendanceRoute = '/admin/teachers';
+        this.attendanceLabel = 'المدرسين';
         this.classesRoute = '/admin/students';
+        this.classesLabel = 'الطلاب';
+        this.classesIcon = 'fa-user-graduate';
         this.paymentsRoute = null;
         break;
       case 'Teacher':
         this.dashboardRoute = '/teacher/dashboard';
         this.attendanceRoute = '/teacher/attendance';
-        this.classesRoute = '/teacher/videos';
+        this.attendanceLabel = 'الحضور';
+        this.classesRoute = '/teacher/classes';
+        this.classesLabel = 'حصصي';
+        this.classesIcon = 'fa-chalkboard';
         this.paymentsRoute = null;
         break;
       case 'Student':
         this.dashboardRoute = '/student/dashboard';
         this.attendanceRoute = '/student/attendance';
+        this.attendanceLabel = 'حضوري';
         this.classesRoute = '/student/timetable';
+        this.classesLabel = 'جدولي';
+        this.classesIcon = 'fa-calendar-alt';
         this.paymentsRoute = null;
         break;
       case 'Parent':
@@ -74,7 +86,6 @@ export class BottomNavComponent implements OnInit, OnDestroy {
         break;
       default:
         this.dashboardRoute = '/';
-        this.paymentsRoute = null;
     }
   }
 

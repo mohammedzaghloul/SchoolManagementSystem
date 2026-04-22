@@ -108,27 +108,33 @@ export class QrAttendanceComponent implements OnInit, OnDestroy {
     this.timer = setInterval(() => {
       this.countdown--;
       if (this.countdown <= 0) {
-        // Auto-regenerate QR when expired
         this.regenerateQr();
         this.countdown = 300;
       }
     }, 1000);
 
-    // 2. Refresh QR token from DB every 30 seconds
+    // 2. Refresh QR token from DB every 5 seconds (as requested)
     this.autoRefreshTimer = setInterval(async () => {
       await this.regenerateQr();
-    }, 30000);
+    }, 5000);
 
-    // 3. Refresh attendance list from DB every 5 seconds (live updates)
+    // 3. Detect scan and refresh QR immediately when presentCount changes
+    let lastPresentCount = 0;
     this.listRefreshTimer = setInterval(async () => {
       if (this.selectedSessionId) {
         try {
           const attendance: any = await this.attendanceService.getSessionAttendance(this.selectedSessionId);
           this.attendanceList = Array.isArray(attendance) ? attendance : attendance?.data || [];
           this.computeStats();
+          
+          if (this.stats.present > lastPresentCount) {
+            console.log('[QR] Student scan detected, refreshing QR token now.');
+            lastPresentCount = this.stats.present;
+            await this.regenerateQr();
+          }
         } catch { }
       }
-    }, 5000);
+    }, 2000);
   }
 
   private async regenerateQr() {

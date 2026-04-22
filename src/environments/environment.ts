@@ -1,9 +1,14 @@
 // environments/environment.ts
 export const environment = {
   production: false,
-  apiUrl: 'http://localhost:5033',
-  signalRUrl: 'http://localhost:5033/chathub',
-  qrRefreshInterval: 30000, // 30 seconds
+  apiUrl: (window as any).__env?.apiUrl || 'http://localhost:5033',
+  signalRUrl: (window as any).__env?.signalRUrl || 'http://localhost:5033/chathub',
+  qrRefreshInterval: 5000, // 5 seconds
   defaultLanguage: 'ar',
-  supportedLanguages: ['ar', 'en']
+  supportedLanguages: ['ar', 'en'],
+  paymentGateway: {
+    demoMode: true,
+    vodafoneCashNumber: (window as any).__env?.vodafoneCashNumber || '0100',
+    supportPhone: (window as any).__env?.supportPhone || (window as any).__env?.vodafoneCashNumber || '0100'
+  }
 };

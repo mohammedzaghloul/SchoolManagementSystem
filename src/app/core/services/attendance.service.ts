@@ -21,7 +21,9 @@ export class AttendanceService {
   }
 
   async markFace(sessionId: number, image: File): Promise<any> {
-    return this.api.upload(`/api/Attendance/face/${sessionId}`, image);
+    const formData = new FormData();
+    formData.append('image', image);
+    return this.api.postMultipart(`/api/Attendance/face/${sessionId}`, formData);
   }
 
   async getSessionAttendance(sessionId: number): Promise<any> {
