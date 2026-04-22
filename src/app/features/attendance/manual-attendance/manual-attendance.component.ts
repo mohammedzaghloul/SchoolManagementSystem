@@ -274,17 +274,19 @@ export class ManualAttendanceComponent implements OnInit {
     this.saving = true;
 
     try {
+      const payloadRecords = this.buildManualRecordsPayload();
+
+      if (payloadRecords.length === 0) {
+        this.lastSavedAt = new Date();
+        this.notify.info('لا توجد تغييرات جديدة تحتاج إلى حفظ.');
+        return;
+      }
+
       await this.attendanceService.markManual({
         sessionId: String(this.selectedSessionId),
         classId: String(this.selectedSessionId),
         subjectId: '0',
-        records: this.students.map(student => ({
-          id: String(student.id),
-          name: student.fullName,
-          isPresent: student.status === 'Present' || student.status === 'Late',
-          status: student.status,
-          notes: student.notes
-        }))
+        records: payloadRecords
       });
 
       this.lastSavedAt = new Date();
@@ -332,6 +334,32 @@ export class ManualAttendanceComponent implements OnInit {
 
   trackByStudent(_: number, student: RosterStudent): number {
     return student.id;
+  }
+
+  private buildManualRecordsPayload(): Array<{
+    id: string;
+    name: string;
+    isPresent: boolean;
+    status: AttendanceStatus;
+    notes: string;
+  }> {
+    return this.students
+      .filter(student => this.shouldPersistStudentRecord(student))
+      .map(student => ({
+        id: String(student.id),
+        name: student.fullName,
+        isPresent: student.status === 'Present' || student.status === 'Late',
+        status: student.status,
+        notes: student.notes || ''
+      }));
+  }
+
+  private shouldPersistStudentRecord(student: RosterStudent): boolean {
+    if (student.status !== 'Unrecorded') {
+      return true;
+    }
+
+    return !!student.method || !!student.recordedAt;
   }
 
   private normalizeStatus(status?: string): AttendanceStatus {

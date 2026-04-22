@@ -30,6 +30,7 @@ export class ApiService {
     console.error('API Error:', error);
 
     let errorMessage = 'حدث خطأ في الاتصال بالخادم';
+    const serverMessage = this.extractServerErrorMessage(error?.error);
 
     if (error.error instanceof ErrorEvent) {
       // Client-side error
@@ -38,22 +39,22 @@ export class ApiService {
       // Server-side error
       switch (error.status) {
         case 400:
-          errorMessage = error.error?.message || 'طلب غير صحيح';
+          errorMessage = serverMessage || 'طلب غير صحيح';
           break;
         case 401:
-          errorMessage = error.error?.message || 'غير مصرح به. الرجاء تسجيل الدخول مرة أخرى';
+          errorMessage = serverMessage || 'غير مصرح به. الرجاء تسجيل الدخول مرة أخرى';
           break;
         case 403:
-          errorMessage = error.error?.message || 'ليس لديك صلاحية للوصول إلى هذا المورد';
+          errorMessage = serverMessage || 'ليس لديك صلاحية للوصول إلى هذا المورد';
           break;
         case 404:
-          errorMessage = 'المورد المطلوب غير موجود';
+          errorMessage = serverMessage || 'المورد المطلوب غير موجود';
           break;
         case 500:
-          errorMessage = 'خطأ داخلي في الخادم';
+          errorMessage = serverMessage || 'خطأ داخلي في الخادم';
           break;
         default:
-          errorMessage = error.error?.message || errorMessage;
+          errorMessage = serverMessage || errorMessage;
       }
     }
 
@@ -62,6 +63,34 @@ export class ApiService {
       message: errorMessage,
       error: error.error
     }));
+  }
+
+  private extractServerErrorMessage(errorBody: any): string | null {
+    if (!errorBody) {
+      return null;
+    }
+
+    if (typeof errorBody === 'string') {
+      const trimmed = errorBody.trim();
+      return trimmed ? trimmed : null;
+    }
+
+    if (typeof errorBody?.message === 'string' && errorBody.message.trim()) {
+      return errorBody.message.trim();
+    }
+
+    const validationErrors = errorBody?.errors;
+    if (validationErrors && typeof validationErrors === 'object') {
+      const firstValidationMessage = Object.values(validationErrors)
+        .flatMap(value => Array.isArray(value) ? value : [value])
+        .find(value => typeof value === 'string' && value.trim());
+
+      if (typeof firstValidationMessage === 'string') {
+        return firstValidationMessage.trim();
+      }
+    }
+
+    return null;
   }
 
   get<T>(url: string, params?: any, options: any = {}): Promise<T> {

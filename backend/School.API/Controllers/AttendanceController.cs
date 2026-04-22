@@ -571,7 +571,13 @@ public class AttendanceController : BaseApiController
     {
         if (dto.Records == null || dto.Records.Count == 0)
         {
-            return BadRequest(new { success = false, message = "لا توجد سجلات للحفظ." });
+            return Ok(new
+            {
+                success = true,
+                savedCount = 0,
+                resetCount = 0,
+                message = "لا توجد تغييرات جديدة للحفظ."
+            });
         }
 
         var rawSessionId = string.IsNullOrWhiteSpace(dto.SessionId) ? dto.ClassId : dto.SessionId;
@@ -602,6 +608,17 @@ public class AttendanceController : BaseApiController
             .Where(studentId => studentId > 0)
             .Distinct()
             .ToList();
+
+        if (requestedStudentIds.Count == 0)
+        {
+            return Ok(new
+            {
+                success = true,
+                savedCount = 0,
+                resetCount = 0,
+                message = "لا توجد سجلات صالحة للحفظ."
+            });
+        }
 
         if (requestedStudentIds.Any(studentId => !allowedStudentIds.Contains(studentId)))
         {
