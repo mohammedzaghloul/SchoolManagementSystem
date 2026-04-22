@@ -17,15 +17,25 @@ public class ScanQrCommandHandler : IRequestHandler<ScanQrCommand, bool>
 {
     private readonly IQrCodeService _qrCodeService;
     private readonly ICacheService _cacheService;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly IRepository<Session> _sessionRepo;
     private readonly IRepository<Student> _studentRepo;
+    private readonly IRepository<School.Domain.Entities.Attendance> _attendanceRepo;
 
-    public ScanQrCommandHandler(IQrCodeService qrCodeService, ICacheService cacheService, IRepository<Session> sessionRepo, IRepository<Student> studentRepo)
+    public ScanQrCommandHandler(
+        IQrCodeService qrCodeService,
+        ICacheService cacheService,
+        IUnitOfWork unitOfWork,
+        IRepository<Session> sessionRepo,
+        IRepository<Student> studentRepo,
+        IRepository<School.Domain.Entities.Attendance> attendanceRepo)
     {
         _qrCodeService = qrCodeService;
         _cacheService = cacheService;
+        _unitOfWork = unitOfWork;
         _sessionRepo = sessionRepo;
         _studentRepo = studentRepo;
+        _attendanceRepo = attendanceRepo;
     }
 
     public async Task<bool> Handle(ScanQrCommand request, CancellationToken cancellationToken)
@@ -59,8 +69,31 @@ public class ScanQrCommandHandler : IRequestHandler<ScanQrCommand, bool>
         studentRecord.IsPresent = true;
         studentRecord.Time = DateTime.UtcNow;
 
+        var attendanceSpec = new BaseSpecification<School.Domain.Entities.Attendance>(
+            attendance => attendance.SessionId == request.SessionId && attendance.StudentId == request.StudentId);
+        var existingAttendance = await _attendanceRepo.GetEntityWithSpec(attendanceSpec);
+
+        if (existingAttendance == null)
+        {
+            existingAttendance = new School.Domain.Entities.Attendance
+            {
+                SessionId = request.SessionId,
+                StudentId = request.StudentId
+            };
+
+            await _attendanceRepo.AddAsync(existingAttendance);
+        }
+
+        existingAttendance.IsPresent = true;
+        existingAttendance.Status = "Present";
+        existingAttendance.Method = "QR";
+        existingAttendance.RecordedAt = DateTime.UtcNow;
+        existingAttendance.Time = DateTime.UtcNow;
+        existingAttendance.Notes = string.Empty;
+
         // 4. Save back to Cache
         await _cacheService.SetAsync(attendanceKey, attendanceRecords, TimeSpan.FromHours(4));
+        await _unitOfWork.CompleteAsync();
 
         return true;
     }
