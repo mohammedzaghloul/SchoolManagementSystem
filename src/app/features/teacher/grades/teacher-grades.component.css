@@ -1,0 +1,328 @@
+.grades-page {
+  min-height: 100vh;
+  padding: 1.5rem;
+  background:
+    radial-gradient(circle at top right, rgba(59, 130, 246, 0.12), transparent 24%),
+    radial-gradient(circle at bottom left, rgba(16, 185, 129, 0.1), transparent 22%),
+    linear-gradient(180deg, #f8fbff 0%, #f1f5f9 100%);
+}
+
+.grades-hero,
+.toolbar-card,
+.summary-card,
+.table-card {
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
+  backdrop-filter: blur(14px);
+}
+
+.grades-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1.5rem;
+  padding: 1.75rem;
+  border-radius: 30px;
+}
+
+.hero-badge {
+  display: inline-flex;
+  padding: 0.35rem 0.8rem;
+  border-radius: 999px;
+  background: rgba(37, 99, 235, 0.1);
+  color: #1d4ed8;
+  font-size: 0.82rem;
+  font-weight: 800;
+  margin-bottom: 0.8rem;
+}
+
+.grades-hero h1,
+.table-head h2,
+.empty-state h2,
+.error-state h2 {
+  margin: 0;
+  color: #0f172a;
+  font-weight: 900;
+}
+
+.grades-hero h1 {
+  font-size: clamp(1.8rem, 4vw, 2.7rem);
+}
+
+.grades-hero p,
+.table-head p,
+.loading-state p,
+.empty-state p,
+.error-state p {
+  color: #64748b;
+  line-height: 1.8;
+}
+
+.toolbar-card,
+.table-card {
+  margin-top: 1rem;
+  padding: 1.25rem;
+  border-radius: 28px;
+}
+
+.toolbar-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.field span {
+  color: #475569;
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.field select,
+.field input,
+.score-input,
+.notes-input {
+  min-height: 3rem;
+  padding: 0.72rem 0.95rem;
+  border-radius: 16px;
+  border: 1px solid #dbe4f0;
+  background: #fff;
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.field select:focus,
+.field input:focus,
+.score-input:focus,
+.notes-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 0.25rem rgba(59, 130, 246, 0.12);
+}
+
+.subject-meta {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+.subject-meta span,
+.compat-banner {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.6rem 0.9rem;
+  border-radius: 999px;
+  font-weight: 800;
+}
+
+.subject-meta span {
+  background: #eff6ff;
+  color: #1e3a8a;
+}
+
+.compat-banner {
+  margin-top: 1rem;
+  background: rgba(254, 243, 199, 0.92);
+  color: #92400e;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.summary-card {
+  padding: 1.15rem;
+  border-radius: 24px;
+}
+
+.summary-card span {
+  display: block;
+  margin-bottom: 0.4rem;
+  color: #64748b;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.summary-card strong {
+  color: #0f172a;
+  font-size: 2rem;
+}
+
+.summary-card.success {
+  background: linear-gradient(135deg, rgba(220, 252, 231, 0.9), #fff);
+}
+
+.summary-card.warning {
+  background: linear-gradient(135deg, rgba(254, 243, 199, 0.92), #fff);
+}
+
+.summary-card.info {
+  background: linear-gradient(135deg, rgba(219, 234, 254, 0.95), #fff);
+}
+
+.table-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.grades-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.grades-table th,
+.grades-table td {
+  padding: 1rem;
+  border-bottom: 1px solid #e5edf6;
+  vertical-align: middle;
+  text-align: right;
+}
+
+.grades-table th {
+  color: #475569;
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.grades-table tbody tr:hover {
+  background: rgba(248, 250, 252, 0.9);
+}
+
+.student-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.student-cell strong,
+.student-cell small {
+  display: block;
+}
+
+.student-cell small {
+  color: #64748b;
+  margin-top: 0.2rem;
+}
+
+.avatar {
+  width: 2.8rem;
+  height: 2.8rem;
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+  color: #1d4ed8;
+  font-weight: 900;
+}
+
+.score-input {
+  width: 7rem;
+}
+
+.notes-input {
+  width: 100%;
+}
+
+.save-btn,
+.ghost-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  min-height: 3.2rem;
+  padding: 0.85rem 1.4rem;
+  border-radius: 18px;
+  font-weight: 800;
+}
+
+.save-btn {
+  border: none;
+  background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
+  color: #fff;
+  box-shadow: 0 16px 30px rgba(37, 99, 235, 0.22);
+}
+
+.save-btn.secondary {
+  min-height: 2.85rem;
+  padding-inline: 1.2rem;
+}
+
+.save-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.ghost-btn {
+  border: 1px solid rgba(59, 130, 246, 0.24);
+  background: rgba(239, 246, 255, 0.8);
+  color: #1d4ed8;
+}
+
+.loading-state,
+.empty-state,
+.error-state {
+  display: grid;
+  place-items: center;
+  text-align: center;
+  gap: 0.8rem;
+  padding: 3rem 1rem;
+}
+
+.empty-state i {
+  font-size: 2.5rem;
+  color: #3b82f6;
+}
+
+.error-state i {
+  font-size: 2.5rem;
+  color: #ef4444;
+}
+
+@media (max-width: 1100px) {
+  .toolbar-grid,
+  .summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 820px) {
+  .grades-hero,
+  .table-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .save-btn,
+  .ghost-btn {
+    width: 100%;
+  }
+}
+
+@media (max-width: 680px) {
+  .grades-page {
+    padding: 1rem;
+  }
+
+  .toolbar-grid,
+  .summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .grades-table {
+    min-width: 760px;
+  }
+}

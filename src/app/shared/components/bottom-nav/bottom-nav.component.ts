@@ -53,8 +53,8 @@ export class BottomNavComponent implements OnInit, OnDestroy {
     switch (role) {
       case 'Admin':
         this.dashboardRoute = '/admin/dashboard';
-        this.attendanceRoute = '/admin/teachers';
-        this.attendanceLabel = 'المدرسين';
+        this.attendanceRoute = '/admin/sessions';
+        this.attendanceLabel = 'الحصص';
         this.classesRoute = '/admin/students';
         this.classesLabel = 'الطلاب';
         this.classesIcon = 'fa-user-graduate';

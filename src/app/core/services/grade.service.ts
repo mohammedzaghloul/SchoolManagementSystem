@@ -3,6 +3,38 @@ import { Injectable } from '@angular/core';
 import { ApiService } from './api.service';
 import { Grade, GradeLevel } from '../models/grade.model';
 
+export interface TeacherGradebookStudent {
+  id: number;
+  fullName: string;
+  email?: string;
+  existingGradeId?: number | null;
+  score?: number | null;
+  notes?: string | null;
+  lastUpdatedAt?: string | null;
+}
+
+export interface TeacherGradebookResponse {
+  subjectId: number;
+  subjectName: string;
+  classRoomId?: number;
+  classRoomName: string;
+  gradeType: string;
+  date: string;
+  students: TeacherGradebookStudent[];
+}
+
+export interface TeacherGradebookSaveRequest {
+  subjectId: number;
+  gradeType: string;
+  date: string;
+  grades: Array<{
+    id?: number | null;
+    studentId: number;
+    score: number;
+    notes?: string | null;
+  }>;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -37,5 +69,17 @@ export class GradeService {
 
   async addGrade(data: any): Promise<Grade> {
     return this.api.post<Grade>('/api/Grade', data);
+  }
+
+  async getTeacherGradebook(subjectId: number, gradeType: string, date: string): Promise<TeacherGradebookResponse> {
+    return this.api.get<TeacherGradebookResponse>('/api/Grade/teacher/gradebook', {
+      subjectId,
+      gradeType,
+      date
+    });
+  }
+
+  async saveTeacherGradebook(data: TeacherGradebookSaveRequest): Promise<{ success: boolean; savedCount: number; message: string }> {
+    return this.api.post<{ success: boolean; savedCount: number; message: string }>('/api/Grade/teacher/gradebook', data);
   }
 }

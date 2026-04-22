@@ -168,3 +168,114 @@
     background-color: #4338ca;
     border-color: #4338ca;
 }
+
+.info-tile,
+.mini-stat,
+.rate-box,
+.empty-panel {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(148, 163, 184, 0.14);
+    border-radius: 16px;
+    padding: 1rem;
+}
+
+.tile-label {
+    display: block;
+    font-size: 0.78rem;
+    color: #8f95b2;
+    margin-bottom: 0.4rem;
+    font-weight: 700;
+}
+
+.tile-value {
+    display: block;
+    color: #f8fafc;
+    font-size: 1.05rem;
+    font-weight: 800;
+}
+
+.scanner-panel {
+    background: rgba(79, 70, 229, 0.08);
+    border: 1px solid rgba(99, 102, 241, 0.22);
+    border-radius: 20px;
+    padding: 1.25rem;
+}
+
+.reader-surface {
+    min-height: 230px;
+}
+
+.reader-surface video {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover;
+    border-radius: 12px;
+}
+
+.scanner-placeholder {
+    position: relative;
+    z-index: 1;
+}
+
+.stats-mini-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.9rem;
+}
+
+.mini-stat strong,
+.rate-box strong {
+    color: #f8fafc;
+    font-size: 1.35rem;
+    font-weight: 800;
+}
+
+.mini-stat.success strong {
+    color: #6ee7b7;
+}
+
+.mini-stat.danger strong {
+    color: #fda4af;
+}
+
+.mini-stat.warning strong {
+    color: #fde68a;
+}
+
+.guidelines-list {
+    padding-right: 1.1rem;
+    color: #cbd5e1;
+    line-height: 1.9;
+}
+
+.guidelines-list li + li {
+    margin-top: 0.45rem;
+}
+
+.empty-panel {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: #cbd5e1;
+}
+
+.empty-panel i {
+    color: #fbbf24;
+    font-size: 1.1rem;
+}
+
+@media (max-width: 767px) {
+    .scan-container.dark-theme {
+        padding: 16px;
+    }
+
+    .stats-mini-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .scanner-wrapper {
+        width: 100%;
+        max-width: 260px;
+        height: 260px;
+    }
+}

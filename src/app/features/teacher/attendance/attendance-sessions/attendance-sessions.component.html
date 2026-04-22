@@ -1,97 +1,190 @@
-<div class="page-container" dir="rtl">
-    <!-- Header -->
-    <div class="header-section text-center mb-5 mt-4">
-        <h2 class="fw-bold head-title mb-2">نظام رصد غياب الحصص اليومية</h2>
-        <div class="text-muted fs-6">
-            <a routerLink="/" class="text-decoration-none text-muted"><i class="fas fa-home me-1"></i>الرئيسية</a> 
-            - كشف حصص المعلم لرصد الحضور والغياب
+<div class="attendance-shell" dir="rtl">
+  <div class="shell-glow shell-glow-a"></div>
+  <div class="shell-glow shell-glow-b"></div>
+
+  <div class="shell-content">
+    <section class="hero-panel">
+      <div class="hero-copy">
+        <span class="eyebrow">Teacher Attendance Desk</span>
+        <h1>نظام رصد غياب الحصص اليومية</h1>
+        <p>
+          كل حصصك المجدولة لليوم في شاشة واحدة، مع مؤشرات سريعة للحصص التي تحتاج رصد،
+          وحالة نافذة الرصد، ووصول سريع إلى المسارات اليدوية وFace ID وQR.
+        </p>
+      </div>
+
+      <div class="hero-actions">
+        <div class="date-toolbar">
+          <button class="date-shift-btn" type="button" (click)="shiftSelectedDate(-1)" [disabled]="loading">
+            <i class="fas fa-chevron-right"></i>
+          </button>
+
+          <label class="date-picker-field">
+            <span>تاريخ التجربة</span>
+            <input type="date" [(ngModel)]="selectedDate" (change)="onDateChanged()" [disabled]="loading">
+          </label>
+
+          <button class="date-shift-btn" type="button" (click)="shiftSelectedDate(1)" [disabled]="loading">
+            <i class="fas fa-chevron-left"></i>
+          </button>
         </div>
+
+        <div class="selected-date">{{ selectedDateLabel }}</div>
+
+        <button class="refresh-btn" (click)="loadSessions()" [disabled]="loading">
+          <i class="fas fa-rotate-left"></i>
+          {{ loading ? 'جارٍ التحديث...' : 'تحديث الحصص' }}
+        </button>
+
+        <div class="last-updated" *ngIf="lastUpdated">
+          آخر تحديث: {{ lastUpdated | date:'shortTime' }}
+        </div>
+      </div>
+    </section>
+
+    <section class="filter-panel" *ngIf="!loading">
+      <div class="filter-row">
+        <label class="search-field">
+          <i class="fas fa-magnifying-glass"></i>
+          <input
+            type="search"
+            [(ngModel)]="searchTerm"
+            placeholder="بحث عن مادة أو فصل أو صف..."
+          >
+        </label>
+
+        <label class="select-field">
+          <span>الفصل</span>
+          <select [(ngModel)]="classFilter">
+            <option value="all">كل الفصول</option>
+            <option *ngFor="let option of classOptions" [value]="option">{{ option }}</option>
+          </select>
+        </label>
+
+        <label class="select-field">
+          <span>الحالة</span>
+          <select [(ngModel)]="statusFilter">
+            <option value="all">كل الحالات</option>
+            <option value="needs-attention">تحتاج رصد</option>
+            <option value="recorded">تم رصدها</option>
+            <option value="open">نافذة مفتوحة</option>
+            <option value="upcoming">قادمة</option>
+            <option value="closed">مغلقة</option>
+          </select>
+        </label>
+      </div>
+    </section>
+
+    <section class="stats-grid" *ngIf="!loading">
+      <article class="stat-card">
+        <span>إجمالي الحصص المعروضة</span>
+        <strong>{{ totalSessions }}</strong>
+      </article>
+      <article class="stat-card mint">
+        <span>تم رصدها</span>
+        <strong>{{ recordedSessionsCount }}</strong>
+      </article>
+      <article class="stat-card amber">
+        <span>تحتاج رصد</span>
+        <strong>{{ pendingSessionsCount }}</strong>
+      </article>
+      <article class="stat-card slate">
+        <span>طلاب تم رصدهم</span>
+        <strong>{{ totalRecordedStudents }}</strong>
+      </article>
+    </section>
+
+    <div class="coverage-banner" *ngIf="!loading && totalSessions > 0">
+      <div>
+        <strong>{{ completionRate }}%</strong>
+        <span>نسبة الحصص المرصودة من النتائج الحالية</span>
+      </div>
+      <small>إجمالي الطلاب عبر الحصص المعروضة: {{ totalStudentsAcrossSessions }}</small>
     </div>
 
-    <!-- Info Banner -->
-    <div class="info-banner mb-4 p-3 rounded-not-bottom d-flex align-items-center gap-2">
-        <i class="fas fa-info-circle"></i>
-        <span>الحالة: الحصص المجدولة لليوم من قاعدة البيانات</span>
-    </div>
-    
-    <!-- Error Alert -->
-    <div class="alert alert-danger d-flex align-items-center gap-2 mb-4" *ngIf="errorMessage">
-        <i class="fas fa-exclamation-circle"></i>
-        {{ errorMessage }}
+    <div class="alert-card error-card" *ngIf="errorMessage">
+      <i class="fas fa-triangle-exclamation"></i>
+      <span>{{ errorMessage }}</span>
     </div>
 
-    <div class="alert alert-success d-flex align-items-center gap-2 rounded-not-top mb-4" *ngIf="showSuccess">
-        تم تسجيل الحضور بنجاح
-    </div>
+    <section *ngIf="loading" class="loading-panel">
+      <div class="spinner-border text-primary" role="status"></div>
+      <p>جارٍ تحميل حصص المعلم من قاعدة البيانات...</p>
+    </section>
 
-    <!-- Loading -->
-    <div *ngIf="loading" class="text-center py-5">
-        <div class="spinner-border text-primary" role="status"></div>
-        <p class="mt-3 text-muted">جاري تحميل الحصص من قاعدة البيانات...</p>
-    </div>
+    <section class="session-grid" *ngIf="!loading && filteredSessions.length > 0">
+      <article class="session-card" *ngFor="let session of filteredSessions; trackBy: trackBySession">
+        <div class="card-head">
+          <div>
+            <h2>{{ session.subjectName }}</h2>
+            <p>{{ session.gradeName || 'الصف غير محدد' }} - {{ session.classRoomName }}</p>
+          </div>
+          <span class="status-pill" [ngClass]="getSessionStatusClass(session)">
+            {{ getSessionStatusLabel(session) }}
+          </span>
+        </div>
 
-    <!-- Table Container -->
-    <div *ngIf="!loading" class="table-responsive rounded-3 shadow-sm bg-white overflow-hidden">
-        <table class="table table-bordered table-hover align-middle text-center mb-0 custom-table">
-            <thead class="table-light text-secondary fs-6 fw-semibold">
-                <tr>
-                    <th class="py-3">اسم المادة</th>
-                    <th class="py-3">الصف</th>
-                    <th class="py-3">الفصل</th>
-                    <th class="py-3">موعد الحصة</th>
-                    <th class="py-3">عدد الطلاب</th>
-                    <th class="py-3">حالة الرصد</th>
-                    <th class="py-3">مؤشر الحضور</th>
-                    <th class="py-3">إجراءات</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr *ngFor="let session of sessions">
-                    <td class="fw-bold text-dark">{{ session.subjectName }}</td>
-                    <td class="text-muted">{{ session.gradeName || '—' }}</td>
-                    <td class="text-muted">{{ session.classRoomName }}</td>
-                    <td class="text-muted">{{ formatTime(session.startTime) }}</td>
-                    <td class="text-muted">{{ session.studentCount || 0 }}</td>
-                    
-                    <!-- Status Badge -->
-                    <td>
-                        <span class="badge" [ngClass]="session.isRecorded ? 'badge-success' : 'bg-warning text-dark'">
-                            {{ session.isRecorded ? 'تم الرصد' : 'مطلوب الرصد' }}
-                        </span>
-                    </td>
-                    
-                    <!-- Indicator Badge -->
-                    <td>
-                        <span class="badge indicator-green px-3 py-2 rounded-1" *ngIf="session.attendanceCount > 0">
-                            <i class="fas fa-arrow-up me-1"></i> {{ session.attendanceCount }} حاضر
-                        </span>
-                        <span class="badge indicator-blue px-3 py-2 rounded-1" *ngIf="!session.attendanceCount || session.attendanceCount === 0">
-                            لم يبدأ بعد
-                        </span>
-                    </td>
-                    
-                    <!-- Actions -->
-                    <td>
-                        <div class="action-buttons d-flex flex-wrap gap-2 justify-content-center">
-                            <button class="btn btn-sm btn-manual rounded-1 py-1 px-3 d-flex align-items-center gap-1" [routerLink]="['/teacher/attendance/manual']" [queryParams]="{sessionId: session.id}">
-                                <i class="fas fa-edit"></i> رصد يدوي
-                            </button>
-                            <button class="btn btn-sm btn-scan rounded-1 py-1 px-3 d-flex align-items-center gap-1" [routerLink]="['/teacher/attendance/face']" [queryParams]="{sessionId: session.id}">
-                                <i class="fas fa-camera"></i> بصمة الوجه
-                            </button>
-                            <button class="btn btn-sm btn-qr rounded-1 py-1 px-3 fw-bold d-flex align-items-center gap-1" [routerLink]="['/teacher/attendance/qr']" [queryParams]="{sessionId: session.id}">
-                                <i class="fas fa-qrcode"></i> رصد بـ QR
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-                <tr *ngIf="sessions.length === 0 && !errorMessage">
-                    <td colspan="8" class="text-center py-5 text-muted">
-                        <i class="fas fa-calendar-times fs-1 mb-3 d-block opacity-50"></i>
-                        لا توجد حصص مجدولة لليوم في قاعدة البيانات
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
+        <div class="meta-row">
+          <span><i class="fas fa-clock"></i>{{ formatTime(session.startTime) }}<ng-container *ngIf="session.endTime"> - {{ formatTime(session.endTime) }}</ng-container></span>
+          <span><i class="fas fa-users"></i>{{ session.studentCount || 0 }} طالب</span>
+          <span><i class="fas fa-list-check"></i>{{ session.attendanceCount || 0 }} تم رصدهم</span>
+          <span><i class="fas fa-bolt"></i>{{ getAttendanceTypeLabel(session) }}</span>
+        </div>
+
+        <div class="window-chip" [ngClass]="getWindowBadgeClass(session)">
+          <i class="fas fa-hourglass-half"></i>
+          <span>{{ session.attendanceWindowLabel || 'لا توجد تفاصيل متاحة لنافذة الرصد' }}</span>
+        </div>
+
+        <div class="progress-block">
+          <div class="progress-head">
+            <strong>مؤشر الرصد</strong>
+            <span>{{ getAttendanceSummary(session) }}</span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-fill" [style.width.%]="getAttendanceProgress(session)"></div>
+          </div>
+        </div>
+
+        <div class="action-grid">
+          <a
+            class="action-btn manual"
+            [class.action-disabled]="getActionDisabled(session)"
+            [routerLink]="['/teacher/attendance/manual']"
+            [queryParams]="{ sessionId: session.id, date: selectedDate }">
+            <i class="fas fa-clipboard-check"></i>
+            <span>رصد يدوي</span>
+          </a>
+          <a
+            class="action-btn face"
+            [class.action-disabled]="getActionDisabled(session)"
+            [routerLink]="['/teacher/attendance/face']"
+            [queryParams]="{ sessionId: session.id, date: selectedDate }">
+            <i class="fas fa-camera"></i>
+            <span>Face ID</span>
+          </a>
+          <a
+            class="action-btn qr"
+            [class.action-disabled]="getActionDisabled(session)"
+            [routerLink]="['/teacher/attendance/qr']"
+            [queryParams]="{ sessionId: session.id, date: selectedDate }">
+            <i class="fas fa-qrcode"></i>
+            <span>QR</span>
+          </a>
+        </div>
+      </article>
+    </section>
+
+    <section class="empty-state" *ngIf="!loading && filteredSessions.length === 0 && !errorMessage">
+      <div class="empty-icon">
+        <i class="fas fa-calendar-xmark"></i>
+      </div>
+      <h2>{{ sessions.length === 0 ? 'لا توجد حصص مجدولة لهذا اليوم' : 'لا توجد نتائج مطابقة للفلاتر الحالية' }}</h2>
+      <p>
+        {{ sessions.length === 0
+          ? 'إذا كنت تتوقع وجود حصص هنا، فتأكد أن الأدمن جهز جدول الحصص للترم قبل بداية الدراسة.'
+          : 'جرّب مسح البحث أو تغيير الفلاتر لعرض حصص أكثر.' }}
+      </p>
+    </section>
+  </div>
 </div>

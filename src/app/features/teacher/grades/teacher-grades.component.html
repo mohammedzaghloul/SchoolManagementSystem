@@ -1,0 +1,159 @@
+<div class="grades-page" dir="rtl">
+  <section class="grades-hero">
+    <div>
+      <span class="hero-badge">Teacher Gradebook</span>
+      <h1>رصد درجات الطلاب بواسطة المدرس</h1>
+      <p>
+        هذه الشاشة مخصصة للمدرس فقط لإدخال درجات طلاب مادته حسب نوع التقييم والتاريخ،
+        بينما صفحة الأدمن الخاصة بالمستويات الدراسية تظل كما هي.
+      </p>
+    </div>
+
+    <button class="save-btn" type="button" (click)="saveGrades()" [disabled]="saving || loadingGradebook || !students.length">
+      <i class="fas fa-floppy-disk"></i>
+      {{ saving ? 'جارٍ حفظ الدرجات...' : 'حفظ الدرجات' }}
+    </button>
+  </section>
+
+  <section class="toolbar-card">
+    <div class="toolbar-grid">
+      <label class="field">
+        <span>المادة</span>
+        <select [(ngModel)]="selectedSubjectId" (change)="onSelectionChanged()" [disabled]="loadingSubjects || saving">
+          <option [ngValue]="null">اختر المادة</option>
+          <option *ngFor="let subject of subjects" [ngValue]="subject.id">
+            {{ subject.name }}
+          </option>
+        </select>
+      </label>
+
+      <label class="field">
+        <span>نوع الدرجة</span>
+        <select [(ngModel)]="selectedGradeType" (change)="onSelectionChanged()" [disabled]="loadingGradebook || saving">
+          <option *ngFor="let type of gradeTypes" [value]="type">{{ type }}</option>
+        </select>
+      </label>
+
+      <label class="field">
+        <span>تاريخ التقييم</span>
+        <input type="date" [(ngModel)]="selectedDate" (change)="onSelectionChanged()" [disabled]="loadingGradebook || saving">
+      </label>
+
+      <label class="field search-field">
+        <span>بحث سريع</span>
+        <input type="search" [(ngModel)]="searchTerm" placeholder="ابحث عن طالب بالاسم أو البريد">
+      </label>
+    </div>
+
+    <div class="subject-meta" *ngIf="gradebook">
+      <span><i class="fas fa-book-open"></i>{{ gradebook.subjectName }}</span>
+      <span><i class="fas fa-users"></i>{{ gradebook.classRoomName }}</span>
+      <span><i class="fas fa-clipboard-list"></i>{{ gradebook.gradeType }}</span>
+    </div>
+
+    <div class="compat-banner" *ngIf="usingFallbackData">
+      <i class="fas fa-circle-info"></i>
+      <span>تم تحميل الطلاب من الفصل مباشرة لأن خدمة كشف الدرجات غير متاحة في الخادم الحالي.</span>
+    </div>
+  </section>
+
+  <section class="summary-grid" *ngIf="selectedSubjectId && !loadErrorMessage">
+    <article class="summary-card">
+      <span>إجمالي الطلاب</span>
+      <strong>{{ totalStudents }}</strong>
+    </article>
+    <article class="summary-card success">
+      <span>تم إدخال درجات</span>
+      <strong>{{ enteredGradesCount }}</strong>
+    </article>
+    <article class="summary-card warning">
+      <span>بانتظار الإدخال</span>
+      <strong>{{ pendingGradesCount }}</strong>
+    </article>
+    <article class="summary-card info">
+      <span>متوسط الدرجات</span>
+      <strong>{{ averageScore }}</strong>
+    </article>
+  </section>
+
+  <section class="table-card" *ngIf="selectedSubjectId">
+    <div class="loading-state" *ngIf="loadingGradebook">
+      <div class="spinner-border text-primary" role="status"></div>
+      <p>جارٍ تحميل كشف الطلاب والدرجات الحالية...</p>
+    </div>
+
+    <div class="error-state" *ngIf="!loadingGradebook && loadErrorMessage">
+      <i class="fas fa-triangle-exclamation"></i>
+      <h2>تعذر تحميل كشف الدرجات</h2>
+      <p>{{ loadErrorMessage }}</p>
+      <button class="ghost-btn" type="button" (click)="loadGradebook()">إعادة المحاولة</button>
+    </div>
+
+    <div class="empty-state" *ngIf="!loadingGradebook && !loadErrorMessage && students.length === 0">
+      <i class="fas fa-pen-to-square"></i>
+      <h2>لا توجد بيانات درجات لهذه المادة الآن</h2>
+      <p>اختر مادة أخرى أو تأكد أن المادة مرتبطة بفصل يحتوي على طلاب.</p>
+    </div>
+
+    <ng-container *ngIf="!loadingGradebook && !loadErrorMessage && students.length > 0">
+      <div class="table-head">
+        <div>
+          <h2>كشف إدخال الدرجات</h2>
+          <p>المعروض الآن {{ filteredStudents.length }} من {{ totalStudents }} طالب</p>
+        </div>
+        <button class="save-btn secondary" type="button" (click)="saveGrades()" [disabled]="saving">
+          <i class="fas fa-cloud-arrow-up"></i>
+          {{ saving ? 'جارٍ الحفظ...' : 'حفظ الآن' }}
+        </button>
+      </div>
+
+      <div class="table-responsive">
+        <table class="grades-table">
+          <thead>
+            <tr>
+              <th>الطالب</th>
+              <th>البريد</th>
+              <th>الدرجة</th>
+              <th>ملاحظات</th>
+              <th>آخر تحديث</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let student of filteredStudents; trackBy: trackByStudent">
+              <td>
+                <div class="student-cell">
+                  <div class="avatar">{{ student.fullName.charAt(0) }}</div>
+                  <div>
+                    <strong>{{ student.fullName }}</strong>
+                    <small>#{{ student.id }}</small>
+                  </div>
+                </div>
+              </td>
+              <td>{{ student.email || 'لا يوجد بريد' }}</td>
+              <td>
+                <input
+                  type="number"
+                  class="score-input"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  [ngModel]="student.score"
+                  (ngModelChange)="updateScore(student, $event)"
+                  [disabled]="saving">
+              </td>
+              <td>
+                <input
+                  type="text"
+                  class="notes-input"
+                  [(ngModel)]="student.notes"
+                  placeholder="ملاحظة مختصرة"
+                  [disabled]="saving">
+              </td>
+              <td>{{ student.lastUpdatedAt ? (student.lastUpdatedAt | date:'short') : 'جديد' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </ng-container>
+  </section>
+</div>

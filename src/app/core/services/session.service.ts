@@ -19,6 +19,48 @@ interface LegacyStudentDashboard {
   nextSession?: any;
 }
 
+export interface AdminScheduleSessionItem {
+  id: number;
+  sessionDate: string;
+  term?: string;
+  subjectName: string;
+  teacherName: string;
+  classRoomName: string;
+  gradeName: string;
+  startTime: string;
+  endTime: string;
+  attendanceType: string;
+  studentCount: number;
+  attendanceCount: number;
+}
+
+export interface AdminScheduleOverview {
+  startDate: string;
+  endDate: string;
+  term: string;
+  totalSessions: number;
+  totalTeachers: number;
+  totalClasses: number;
+  scheduledToday: number;
+  items: AdminScheduleSessionItem[];
+}
+
+export interface GenerateTermSchedulePayload {
+  startDate: string;
+  endDate: string;
+  term: string;
+}
+
+export interface GenerateTermScheduleResult {
+  startDate: string;
+  endDate: string;
+  term: string;
+  plannedSlots: number;
+  createdCount: number;
+  existingCount: number;
+  message: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -45,9 +87,10 @@ export class SessionService {
     return this.api.get<Session[]>('/api/Sessions');
   }
 
-  async getTeacherSessions(teacherId?: string | number): Promise<Session[]> {
+  async getTeacherSessions(teacherId?: string | number, date?: string): Promise<Session[]> {
     const url = teacherId ? `/api/Sessions/teacher/${teacherId}` : '/api/Sessions/active';
-    return this.api.get<Session[]>(url);
+    const params = date && teacherId ? { date } : undefined;
+    return this.api.get<Session[]>(url, params);
   }
 
   async getSessionById(id: number): Promise<Session> {
@@ -56,6 +99,18 @@ export class SessionService {
 
   async createSession(data: any): Promise<Session> {
     return this.api.post<Session>('/api/Sessions', data);
+  }
+
+  async getAdminScheduleOverview(startDate: string, endDate: string, term: string = 'all'): Promise<AdminScheduleOverview> {
+    return this.api.get<AdminScheduleOverview>('/api/Sessions/admin/schedule-overview', {
+      startDate,
+      endDate,
+      term
+    });
+  }
+
+  async generateTermSchedule(payload: GenerateTermSchedulePayload): Promise<GenerateTermScheduleResult> {
+    return this.api.post<GenerateTermScheduleResult>('/api/Sessions/admin/generate-term-schedule', payload);
   }
 
   async getQRCode(sessionId: number): Promise<{ qrCode: string }> {

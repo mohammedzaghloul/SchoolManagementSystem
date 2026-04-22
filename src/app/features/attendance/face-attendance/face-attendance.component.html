@@ -1,0 +1,205 @@
+<div class="face-page" dir="rtl">
+  <div class="ambient ambient-one"></div>
+  <div class="ambient ambient-two"></div>
+
+  <div class="page-shell">
+    <section class="hero-card">
+      <div class="hero-copy">
+        <span class="eyebrow">Face ID Attendance</span>
+        <h1>رصد الحضور ببصمة الوجه</h1>
+        <p>
+          شاشة سريعة وآمنة لرصد حضور الطلاب داخل الحصة، مع متابعة حالة الكاميرا وسجل آخر عمليات التعرف في نفس اللحظة.
+        </p>
+      </div>
+
+      <div class="hero-summary">
+        <div class="summary-chip" [ngClass]="statusToneClass">
+          <span class="chip-dot"></span>
+          {{ statusMessage }}
+        </div>
+        <div class="summary-grid">
+          <div class="summary-card">
+            <strong>{{ sessions.length }}</strong>
+            <span>حصص اليوم</span>
+          </div>
+          <div class="summary-card">
+            <strong>{{ attendanceLog.length }}</strong>
+            <span>آخر عمليات الرصد</span>
+          </div>
+          <div class="summary-card">
+            <strong>{{ isCameraOn ? 'نشطة' : 'متوقفة' }}</strong>
+            <span>حالة الكاميرا</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="content-grid">
+      <section class="panel-surface camera-panel">
+        <div class="panel-header">
+          <div>
+            <h2>معاينة الكاميرا</h2>
+            <p>{{ selectedSessionLabel }}</p>
+          </div>
+          <div class="live-pill" [class.live]="isCameraOn">
+            <span></span>
+            {{ isCameraOn ? 'الكاميرا تعمل' : 'الكاميرا متوقفة' }}
+          </div>
+        </div>
+
+        <div class="camera-stage" [class.camera-stage-active]="isCameraOn">
+          <video #videoElement [hidden]="!isCameraOn" autoplay playsinline class="camera-video"></video>
+          <canvas #canvasElement class="d-none"></canvas>
+
+          <div *ngIf="!isCameraOn" class="camera-placeholder">
+            <div class="placeholder-icon">
+              <i class="fas fa-camera"></i>
+            </div>
+            <h3>افتح الكاميرا لبدء التعرف</h3>
+            <p>اختر الحصة أولًا ثم فعّل الكاميرا لبدء رصد الطلاب ببصمة الوجه.</p>
+          </div>
+
+          <div *ngIf="isCameraOn" class="face-frame"></div>
+          <div *ngIf="isScanning" class="scan-line"></div>
+
+          <div *ngIf="selectedSession" class="stage-meta">
+            <span><i class="fas fa-book-open"></i>{{ selectedSession.subjectName }}</span>
+            <span><i class="fas fa-users"></i>{{ selectedSession.classRoomName }}</span>
+            <span><i class="fas fa-clock"></i>{{ selectedSessionTimeLabel }}</span>
+          </div>
+        </div>
+
+        <div class="controls-grid">
+          <label class="field-block">
+            <span>اختر الحصة</span>
+            <select class="form-select control-select" [(ngModel)]="selectedSessionId">
+              <option [ngValue]="null">اختر الحصة المراد رصدها</option>
+              <option *ngFor="let session of sessions; trackBy: trackBySession" [ngValue]="session.id">
+                {{ session.subjectName }} - {{ session.classRoomName }}
+              </option>
+            </select>
+          </label>
+
+          <div class="session-highlights" *ngIf="selectedSession">
+            <div class="mini-chip">
+              <span>الصف</span>
+              <strong>{{ selectedSession.gradeName || 'غير محدد' }}</strong>
+            </div>
+            <div class="mini-chip">
+              <span>عدد الطلاب</span>
+              <strong>{{ selectedSession.studentCount || 0 }}</strong>
+            </div>
+            <div class="mini-chip">
+              <span>الحضور الحالي</span>
+              <strong>{{ selectedSession.attendanceCount || 0 }}</strong>
+            </div>
+          </div>
+
+          <div class="action-row">
+            <button class="btn btn-outline action-btn" (click)="toggleCamera()">
+              <i class="fas" [ngClass]="isCameraOn ? 'fa-video-slash' : 'fa-video'"></i>
+              {{ cameraButtonLabel }}
+            </button>
+
+            <button class="btn btn-primary action-btn primary-btn" [disabled]="!canScan" (click)="captureAndScan('manual')">
+              <i class="fas fa-face-viewfinder"></i>
+              {{ isScanning ? 'جارٍ التحليل...' : 'التقاط ورصد الآن' }}
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <aside class="side-stack">
+        <section class="panel-surface status-panel" [ngClass]="statusToneClass">
+          <div class="panel-header compact">
+            <div>
+              <h2>نتيجة آخر محاولة</h2>
+              <p>يتم تحديث البطاقة فور نجاح التعرف أو عند وجود مشكلة.</p>
+            </div>
+          </div>
+
+          <div *ngIf="recognizedStudent; else neutralState" class="student-card">
+            <div class="student-avatar">
+              {{ recognizedStudent.name.charAt(0) }}
+            </div>
+            <div class="student-copy">
+              <strong>{{ recognizedStudent.name }}</strong>
+              <span>{{ recognizedStudent.alreadyPresent ? 'مسجل مسبقًا في الحصة' : 'تم رصده ببصمة الوجه' }}</span>
+            </div>
+          </div>
+
+          <ng-template #neutralState>
+            <div class="neutral-state">
+              <i class="fas fa-sparkles"></i>
+              <span>بانتظار أول عملية رصد ناجحة</span>
+            </div>
+          </ng-template>
+
+          <div class="confidence-box" *ngIf="recognizedStudent?.confidence">
+            <div class="confidence-head">
+              <span>دقة المطابقة</span>
+              <strong>{{ confidencePercent }}%</strong>
+            </div>
+            <div class="confidence-track">
+              <div class="confidence-fill" [style.width.%]="confidencePercent"></div>
+            </div>
+          </div>
+
+          <p class="status-copy">{{ statusMessage }}</p>
+        </section>
+
+        <section class="panel-surface">
+          <div class="panel-header compact">
+            <div>
+              <h2>سجل الرصد المباشر</h2>
+              <p>آخر 8 عمليات للتعرف خلال هذه الجلسة.</p>
+            </div>
+          </div>
+
+          <div *ngIf="attendanceLog.length === 0" class="empty-log">
+            <i class="fas fa-waveform-lines"></i>
+            <span>لا توجد سجلات بعد. ابدأ بأول عملية رصد من الكاميرا.</span>
+          </div>
+
+          <div class="log-list" *ngIf="attendanceLog.length > 0">
+            <div class="log-entry" *ngFor="let log of attendanceLog; trackBy: trackByLog" [ngClass]="'log-' + log.tone">
+              <div class="log-avatar">{{ log.name.charAt(0) }}</div>
+              <div class="log-copy">
+                <strong>{{ log.name }}</strong>
+                <span>{{ log.note }}</span>
+              </div>
+              <time>{{ log.time | date:'shortTime' }}</time>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel-surface fallback-panel">
+          <div class="panel-header compact">
+            <div>
+              <h2>بدائل سريعة</h2>
+              <p>لو بصمة الوجه لم تتعرف على الطالب، يمكنك التحويل مباشرة إلى مسار آخر.</p>
+            </div>
+          </div>
+
+          <div class="fallback-actions">
+            <a class="fallback-link manual" [routerLink]="['/teacher/attendance/manual']" [queryParams]="{ sessionId: selectedSessionId, date: selectedDate }">
+              <i class="fas fa-clipboard-check"></i>
+              <div>
+                <strong>رصد يدوي</strong>
+                <span>تسجيل الغياب والحضور يدويًا</span>
+              </div>
+            </a>
+
+            <a class="fallback-link qr" [routerLink]="['/teacher/attendance/qr']" [queryParams]="{ sessionId: selectedSessionId, date: selectedDate }">
+              <i class="fas fa-qrcode"></i>
+              <div>
+                <strong>رصد عبر QR</strong>
+                <span>إنشاء رمز حضور سريع للطلاب</span>
+              </div>
+            </a>
+          </div>
+        </section>
+      </aside>
+    </div>
+  </div>
+</div>

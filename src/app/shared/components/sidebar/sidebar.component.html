@@ -5,10 +5,9 @@
                 <path d="M30 15L55 27L30 39L5 27L30 15Z" fill="#A855F7" />
                 <path d="M30 15L55 27L30 39L5 27L30 15Z" fill="url(#logoGrad)" />
                 <path d="M15 32V42C15 42 22 49 30 49C38 49 45 42 45 42V32" stroke="white" stroke-width="2" opacity="0.3" fill="none" />
-                <path d="M30 15L55 27L30 39L5 27L30 15Z" stroke="white" stroke-width="0.5" opacity="0.2" fill="none"/>
-                <!-- Tassel -->
-                <path d="M55 27V40" stroke="#3B82F6" stroke-width="2" stroke-linecap="round"/>
-                <circle cx="55" cy="42" r="3" fill="#3B82F6"/>
+                <path d="M30 15L55 27L30 39L5 27L30 15Z" stroke="white" stroke-width="0.5" opacity="0.2" fill="none" />
+                <path d="M55 27V40" stroke="#3B82F6" stroke-width="2" stroke-linecap="round" />
+                <circle cx="55" cy="42" r="3" fill="#3B82F6" />
                 <defs>
                     <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
                         <stop offset="0%" stop-color="#A855F7" />
@@ -56,6 +55,10 @@
                 <i class="fas fa-building"></i>
                 <span>الفصول الدراسية</span>
             </a>
+            <a routerLink="/admin/sessions" routerLinkActive="active" class="nav-item">
+                <i class="fas fa-calendar-days"></i>
+                <span>جدول الحصص</span>
+            </a>
             <a routerLink="/admin/subjects" routerLinkActive="active" class="nav-item">
                 <i class="fas fa-book-open"></i>
                 <span>إدارة المواد</span>
@@ -75,6 +78,10 @@
             <a routerLink="/teacher/attendance" routerLinkActive="active" class="nav-item">
                 <i class="far fa-check-square"></i>
                 <span>الحضور</span>
+            </a>
+            <a routerLink="/teacher/grades" routerLinkActive="active" class="nav-item">
+                <i class="fas fa-pen"></i>
+                <span>درجات الطلاب</span>
             </a>
             <a routerLink="/teacher/videos" routerLinkActive="active" class="nav-item">
                 <i class="far fa-play-circle"></i>

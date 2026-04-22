@@ -7,6 +7,33 @@ namespace School.Infrastructure.Data;
 
 public class SchoolDbContextSeed
 {
+    private const int MinimumTeacherCount = 10;
+    private const int MinimumClassRoomCount = 24;
+    private const int MinimumStudentCount = 1000;
+    private const int TargetStudentsPerClass = 42;
+    private static readonly (string Name, string Code, string Term)[] DemoSubjectCatalog =
+    [
+        ("اللغة العربية", "ARB", "الترم الأول"),
+        ("الرياضيات", "MTH", "الترم الأول"),
+        ("العلوم", "SCI", "الترم الأول"),
+        ("اللغة الإنجليزية", "ENG", "الترم الثاني"),
+        ("الدراسات الاجتماعية", "SOC", "الترم الثاني"),
+        ("الحاسب الآلي", "ICT", "الترم الثاني")
+    ];
+    private static readonly string[] DemoTeacherNames =
+    [
+        "محمود عبدالله",
+        "نهى شريف",
+        "يوسف عادل",
+        "هبة سمير",
+        "طارق فؤاد",
+        "ريم حسن",
+        "عمرو نبيل",
+        "سلمى سامح",
+        "كريم ممدوح",
+        "دينا خالد"
+    ];
+
     public static async Task SeedAsync(SchoolDbContext context, UserManager<ApplicationUser> userManager, RoleManager<IdentityRole> roleManager)
     {
         // 0. Ensure schema is updated (Safeguard for new columns)
@@ -260,6 +287,10 @@ public class SchoolDbContextSeed
             }
         }
 
+        await EnsureScaledAttendanceDemoDataAsync(context);
+        await EnsureScheduledSessionsAsync(context);
+        await EnsureCriticalWednesdaySessionsAsync(context);
+
         // 9. Seed Sessions (Last 14 days + Today + Upcoming)
         if (!context.Sessions.Any())
         {
@@ -291,6 +322,8 @@ public class SchoolDbContextSeed
             context.Sessions.AddRange(sessions);
             await context.SaveChangesAsync();
         }
+
+        await EnsureAttendanceRecordsAsync(context);
 
         // 10. Seed Attendance Records
         if (!context.Attendances.Any())
@@ -724,6 +757,455 @@ public class SchoolDbContextSeed
         await BackfillStudentAccountsAsync(context, userManager);
     }
 
+    private static async Task EnsureScaledAttendanceDemoDataAsync(SchoolDbContext context)
+    {
+        var gradeLevels = await context.GradeLevels
+            .OrderBy(level => level.Id)
+            .ToListAsync();
+
+        if (gradeLevels.Count == 0)
+        {
+            return;
+        }
+
+        var teachers = await EnsureScaledTeacherPoolAsync(context);
+        var classRooms = await EnsureScaledClassRoomsAsync(context, gradeLevels, teachers);
+        await EnsureScaledSubjectsAsync(context, classRooms, teachers);
+        await EnsureScaledStudentsAsync(context, classRooms);
+    }
+
+    private static async Task<List<Teacher>> EnsureScaledTeacherPoolAsync(SchoolDbContext context)
+    {
+        var teachers = await context.Teachers
+            .OrderBy(teacher => teacher.Id)
+            .ToListAsync();
+
+        if (teachers.Count >= MinimumTeacherCount)
+        {
+            return teachers;
+        }
+
+        var existingEmails = teachers
+            .Select(teacher => NormalizeEmail(teacher.Email))
+            .Where(email => !string.IsNullOrWhiteSpace(email))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var newTeachers = new List<Teacher>();
+        var index = 0;
+
+        while (teachers.Count + newTeachers.Count < MinimumTeacherCount)
+        {
+            var sequence = teachers.Count + newTeachers.Count + 1;
+            var email = $"demo.teacher{sequence:00}@school.com";
+            if (!existingEmails.Add(email))
+            {
+                continue;
+            }
+
+            var fullName = index < DemoTeacherNames.Length
+                ? DemoTeacherNames[index]
+                : $"مدرس تجريبي {sequence:00}";
+
+            newTeachers.Add(new Teacher
+            {
+                FullName = fullName,
+                Email = email,
+                Phone = $"0107{sequence:000000}",
+                IsActive = true
+            });
+
+            index++;
+        }
+
+        if (newTeachers.Count > 0)
+        {
+            context.Teachers.AddRange(newTeachers);
+            await context.SaveChangesAsync();
+        }
+
+        return await context.Teachers
+            .OrderBy(teacher => teacher.Id)
+            .ToListAsync();
+    }
+
+    private static async Task<List<ClassRoom>> EnsureScaledClassRoomsAsync(
+        SchoolDbContext context,
+        IReadOnlyList<GradeLevel> gradeLevels,
+        IReadOnlyList<Teacher> teachers)
+    {
+        var classRooms = await context.ClassRooms
+            .OrderBy(classRoom => classRoom.Id)
+            .ToListAsync();
+
+        if (classRooms.Count >= MinimumClassRoomCount || teachers.Count == 0)
+        {
+            return classRooms;
+        }
+
+        var existingNames = classRooms
+            .Select(classRoom => classRoom.Name ?? string.Empty)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var newClassRooms = new List<ClassRoom>();
+        var sequence = classRooms.Count;
+
+        while (classRooms.Count + newClassRooms.Count < MinimumClassRoomCount)
+        {
+            var teacherIndex = (sequence + newClassRooms.Count) % teachers.Count;
+            var gradeIndex = (sequence + newClassRooms.Count) % gradeLevels.Count;
+            var sectionNumber = ((sequence + newClassRooms.Count) / gradeLevels.Count) + 1;
+            var name = $"فصل {gradeIndex + 1}/{sectionNumber:00}";
+
+            if (!existingNames.Add(name))
+            {
+                sequence++;
+                continue;
+            }
+
+            newClassRooms.Add(new ClassRoom
+            {
+                Name = name,
+                Capacity = TargetStudentsPerClass,
+                Location = $"الدور {(gradeIndex % 3) + 1}",
+                AcademicYear = "2025/2026",
+                GradeLevelId = gradeLevels[gradeIndex].Id,
+                TeacherId = teachers[teacherIndex].Id
+            });
+        }
+
+        if (newClassRooms.Count > 0)
+        {
+            context.ClassRooms.AddRange(newClassRooms);
+            await context.SaveChangesAsync();
+        }
+
+        return await context.ClassRooms
+            .OrderBy(classRoom => classRoom.Id)
+            .ToListAsync();
+    }
+
+    private static async Task EnsureScaledSubjectsAsync(
+        SchoolDbContext context,
+        IReadOnlyList<ClassRoom> classRooms,
+        IReadOnlyList<Teacher> teachers)
+    {
+        if (classRooms.Count == 0 || teachers.Count == 0)
+        {
+            return;
+        }
+
+        var existingSubjects = await context.Subjects
+            .Where(subject => subject.ClassRoomId.HasValue)
+            .ToListAsync();
+
+        var existingKeys = existingSubjects
+            .Select(subject => $"{subject.ClassRoomId}:{NormalizeValue(subject.Name)}")
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var newSubjects = new List<Subject>();
+
+        for (var classIndex = 0; classIndex < classRooms.Count; classIndex++)
+        {
+            var classRoom = classRooms[classIndex];
+
+            for (var subjectIndex = 0; subjectIndex < DemoSubjectCatalog.Length; subjectIndex++)
+            {
+                var subjectTemplate = DemoSubjectCatalog[subjectIndex];
+                var key = $"{classRoom.Id}:{NormalizeValue(subjectTemplate.Name)}";
+                if (!existingKeys.Add(key))
+                {
+                    continue;
+                }
+
+                var teacher = teachers[(classIndex + subjectIndex) % teachers.Count];
+                if (classIndex < 6 && subjectIndex < 2)
+                {
+                    teacher = teachers[0];
+                }
+
+                newSubjects.Add(new Subject
+                {
+                    Name = subjectTemplate.Name,
+                    Code = $"{subjectTemplate.Code}-{classRoom.Id:000}",
+                    Description = $"مقرر {subjectTemplate.Name} للفصل {classRoom.Name}",
+                    TeacherId = teacher.Id,
+                    ClassRoomId = classRoom.Id,
+                    Term = subjectTemplate.Term,
+                    IsActive = true
+                });
+            }
+        }
+
+        if (newSubjects.Count == 0)
+        {
+            return;
+        }
+
+        context.Subjects.AddRange(newSubjects);
+        await context.SaveChangesAsync();
+    }
+
+    private static async Task EnsureScaledStudentsAsync(
+        SchoolDbContext context,
+        IReadOnlyList<ClassRoom> classRooms)
+    {
+        if (classRooms.Count == 0)
+        {
+            return;
+        }
+
+        var currentStudentCount = await context.Students.CountAsync();
+        if (currentStudentCount >= MinimumStudentCount)
+        {
+            return;
+        }
+
+        var studentCountsByClass = await context.Students
+            .Where(student => student.ClassRoomId.HasValue)
+            .GroupBy(student => student.ClassRoomId!.Value)
+            .Select(group => new { ClassRoomId = group.Key, Count = group.Count() })
+            .ToDictionaryAsync(item => item.ClassRoomId, item => item.Count);
+
+        var newStudents = new List<Student>();
+        var guard = 0;
+
+        while (currentStudentCount + newStudents.Count < MinimumStudentCount && guard < MinimumStudentCount * 3)
+        {
+            foreach (var classRoom in classRooms)
+            {
+                guard++;
+
+                if (currentStudentCount + newStudents.Count >= MinimumStudentCount)
+                {
+                    break;
+                }
+
+                var currentCount = studentCountsByClass.TryGetValue(classRoom.Id, out var count)
+                    ? count
+                    : 0;
+
+                if (currentCount >= TargetStudentsPerClass)
+                {
+                    continue;
+                }
+
+                var index = currentStudentCount + newStudents.Count + 1;
+                newStudents.Add(new Student
+                {
+                    FullName = $"طالب تجريبي {index:0000}",
+                    Phone = $"0105{index:000000}",
+                    BirthDate = DateTime.Today.AddYears(-(9 + (index % 5))).AddDays(-(index % 240)),
+                    QrCodeValue = $"DEMO-QR-{index:0000}-{Guid.NewGuid():N}",
+                    ClassRoomId = classRoom.Id,
+                    IsActive = true
+                });
+
+                studentCountsByClass[classRoom.Id] = currentCount + 1;
+            }
+        }
+
+        if (newStudents.Count == 0)
+        {
+            return;
+        }
+
+        context.Students.AddRange(newStudents);
+        await context.SaveChangesAsync();
+    }
+
+    private static async Task EnsureCriticalWednesdaySessionsAsync(SchoolDbContext context)
+    {
+        var teacher = await context.Teachers
+            .OrderBy(currentTeacher => currentTeacher.Id)
+            .FirstOrDefaultAsync(currentTeacher => currentTeacher.Email == "ahmed@school.com");
+
+        teacher ??= await context.Teachers
+            .OrderBy(currentTeacher => currentTeacher.Id)
+            .FirstOrDefaultAsync();
+
+        if (teacher == null)
+        {
+            return;
+        }
+
+        var teacherSubjects = await context.Subjects
+            .Where(subject => subject.TeacherId == teacher.Id && subject.ClassRoomId.HasValue)
+            .OrderBy(subject => subject.ClassRoomId)
+            .ThenBy(subject => subject.Name)
+            .ToListAsync();
+
+        if (teacherSubjects.Count == 0)
+        {
+            return;
+        }
+
+        var targetDate = GetReferenceWednesday();
+        var existingSessions = await context.Sessions
+            .Where(session => session.SessionDate == targetDate)
+            .ToListAsync();
+
+        var slots = new[]
+        {
+            (Start: new TimeSpan(11, 15, 0), End: new TimeSpan(12, 0, 0), AttendanceType: "Face"),
+            (Start: new TimeSpan(12, 15, 0), End: new TimeSpan(13, 0, 0), AttendanceType: "QR"),
+            (Start: new TimeSpan(13, 15, 0), End: new TimeSpan(14, 0, 0), AttendanceType: "Manual")
+        };
+
+        var guaranteedSessions = new List<Session>();
+
+        for (var index = 0; index < slots.Length; index++)
+        {
+            var subject = teacherSubjects[index % teacherSubjects.Count];
+            var slot = slots[index];
+            var classRoomId = subject.ClassRoomId!.Value;
+
+            var exists = existingSessions.Any(session =>
+                session.ClassRoomId == classRoomId &&
+                session.SessionDate == targetDate &&
+                session.StartTime == slot.Start);
+
+            if (exists)
+            {
+                continue;
+            }
+
+            guaranteedSessions.Add(new Session
+            {
+                Title = $"حصة {subject.Name}",
+                SessionDate = targetDate,
+                StartTime = slot.Start,
+                EndTime = slot.End,
+                AttendanceType = slot.AttendanceType,
+                TeacherId = teacher.Id,
+                ClassRoomId = classRoomId,
+                SubjectId = subject.Id
+            });
+        }
+
+        if (guaranteedSessions.Count == 0)
+        {
+            return;
+        }
+
+        context.Sessions.AddRange(guaranteedSessions);
+        await context.SaveChangesAsync();
+    }
+
+    private static async Task EnsureScheduledSessionsAsync(SchoolDbContext context)
+    {
+        var subjects = await context.Subjects
+            .Where(subject => subject.IsActive && subject.TeacherId.HasValue && subject.ClassRoomId.HasValue)
+            .ToListAsync();
+
+        if (subjects.Count == 0)
+        {
+            return;
+        }
+
+        var referenceWednesday = GetReferenceWednesday();
+        var startDate = DateTime.Today.AddDays(-7) <= referenceWednesday.AddDays(-3)
+            ? DateTime.Today.AddDays(-7)
+            : referenceWednesday.AddDays(-3);
+        var endDate = DateTime.Today.AddDays(42) >= referenceWednesday.AddDays(2)
+            ? DateTime.Today.AddDays(42)
+            : referenceWednesday.AddDays(2);
+        var existingSessions = await context.Sessions
+            .Where(session => session.SessionDate >= startDate && session.SessionDate <= endDate)
+            .ToListAsync();
+
+        var generatedSessions = SessionScheduleGenerator.BuildMissingSessions(
+            subjects,
+            existingSessions,
+            startDate,
+            endDate);
+
+        if (generatedSessions.Count == 0)
+        {
+            return;
+        }
+
+        context.Sessions.AddRange(generatedSessions);
+        await context.SaveChangesAsync();
+    }
+
+    private static async Task EnsureAttendanceRecordsAsync(SchoolDbContext context)
+    {
+        var referenceWednesday = GetReferenceWednesday();
+        var today = DateTime.Today >= referenceWednesday.Date
+            ? DateTime.Today
+            : referenceWednesday.Date;
+        var students = await context.Students.ToListAsync();
+        var sessions = await context.Sessions
+            .Where(session => session.SessionDate <= today)
+            .ToListAsync();
+
+        if (students.Count == 0 || sessions.Count == 0)
+        {
+            return;
+        }
+
+        var existingKeys = await context.Attendances
+            .Select(attendance => new { attendance.StudentId, attendance.SessionId })
+            .ToListAsync();
+
+        var attendanceKeySet = existingKeys
+            .Select(item => $"{item.StudentId}:{item.SessionId}")
+            .ToHashSet();
+
+        var newAttendances = new List<Attendance>();
+
+        foreach (var session in sessions)
+        {
+            var classStudents = students.Where(student => student.ClassRoomId == session.ClassRoomId).ToList();
+            foreach (var student in classStudents)
+            {
+                var key = $"{student.Id}:{session.Id}";
+                if (attendanceKeySet.Contains(key))
+                {
+                    continue;
+                }
+
+                var attendanceRoll = new Random((student.Id * 31) + (session.Id * 17)).Next(100);
+                var status = attendanceRoll switch
+                {
+                    > 19 => "Present",
+                    > 12 => "Late",
+                    _ => "Absent"
+                };
+
+                var isPresent = status != "Absent";
+                var minutesAfterStart = status switch
+                {
+                    "Late" => 12,
+                    "Present" => 2,
+                    _ => 0
+                };
+
+                newAttendances.Add(new Attendance
+                {
+                    StudentId = student.Id,
+                    SessionId = session.Id,
+                    IsPresent = isPresent,
+                    Status = status,
+                    Notes = status == "Late" ? "وصل بعد بداية الحصة بدقائق." : string.Empty,
+                    Time = session.SessionDate.Add(session.StartTime).AddMinutes(minutesAfterStart),
+                    RecordedAt = session.SessionDate.Add(session.StartTime),
+                    Method = status == "Late" ? "Manual" : session.AttendanceType
+                });
+
+                attendanceKeySet.Add(key);
+            }
+        }
+
+        if (newAttendances.Count == 0)
+        {
+            return;
+        }
+
+        context.Attendances.AddRange(newAttendances);
+        await context.SaveChangesAsync();
+    }
+
     private static async Task BackfillTeacherAccountsAsync(SchoolDbContext context, UserManager<ApplicationUser> userManager)
     {
         var teachers = await context.Teachers.ToListAsync();
@@ -848,6 +1330,18 @@ public class SchoolDbContextSeed
         }
 
         await context.SaveChangesAsync();
+    }
+
+    private static string NormalizeValue(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();
+    }
+
+    private static DateTime GetReferenceWednesday()
+    {
+        var today = DateTime.Today.Date;
+        var offset = ((int)DayOfWeek.Wednesday - (int)today.DayOfWeek + 7) % 7;
+        return today.AddDays(offset);
     }
 
     private static string? NormalizeEmail(string? email)

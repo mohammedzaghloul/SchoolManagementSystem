@@ -14,4 +14,10 @@ export interface Session {
     studentCount?: number;
     attendanceCount?: number;
     classRoomId?: number;
+    sessionDate?: string;
+    attendanceType?: string;
+    attendanceWindowStatus?: string;
+    attendanceWindowLabel?: string;
+    canRecordAttendance?: boolean;
+    needsAttention?: boolean;
 }

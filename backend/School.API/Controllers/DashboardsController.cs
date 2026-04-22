@@ -94,7 +94,9 @@ public class DashboardsController : BaseApiController
 
         var todaySessions = await _context.Sessions
             .Include(s => s.ClassRoom)
+                .ThenInclude(c => c!.Students)
             .Include(s => s.Subject)
+            .Include(s => s.Attendances)
             .Where(s => s.TeacherId == teacher.Id && s.SessionDate >= today && s.SessionDate < tomorrow)
             .OrderBy(s => s.StartTime)
             .Select(s => new
@@ -106,7 +108,9 @@ public class DashboardsController : BaseApiController
                 StartTime = s.SessionDate.Add(s.StartTime),
                 EndTime = s.SessionDate.Add(s.EndTime),
                 Type = s.AttendanceType,
-                s.IsLive
+                s.IsLive,
+                StudentCount = s.ClassRoom != null ? s.ClassRoom.Students.Count : 0,
+                AttendanceCount = s.Attendances.Count
             })
             .ToListAsync();
 

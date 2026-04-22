@@ -1,1 +1,206 @@
-<p>manual-attendance works!</p>
+<div class="manual-shell" dir="rtl">
+  <div class="shell-glow shell-glow-a"></div>
+  <div class="shell-glow shell-glow-b"></div>
+
+  <div class="shell-content">
+    <section class="hero-panel">
+      <div class="hero-copy">
+        <span class="eyebrow">Manual Attendance Desk</span>
+        <h1>رصد الغياب والحضور لكل طلاب الحصة</h1>
+        <p>
+          كشف الحصة كاملًا في شاشة واحدة، مع فلاتر سريعة للبحث والحالة ورسالة واضحة تخبرك إذا كانت نافذة
+          الرصد مفتوحة الآن أم لا.
+        </p>
+      </div>
+
+      <div class="hero-tools">
+        <div class="date-toolbar">
+          <button class="date-shift-btn" type="button" (click)="shiftSelectedDate(-1)" [disabled]="loadingSessions || loadingRoster">
+            <i class="fas fa-chevron-right"></i>
+          </button>
+
+          <label class="date-picker-field">
+            <span>تاريخ الرصد</span>
+            <input type="date" [(ngModel)]="selectedDate" (change)="onDateChanged()" [disabled]="loadingSessions || loadingRoster">
+          </label>
+
+          <button class="date-shift-btn" type="button" (click)="shiftSelectedDate(1)" [disabled]="loadingSessions || loadingRoster">
+            <i class="fas fa-chevron-left"></i>
+          </button>
+        </div>
+
+        <label class="session-picker">
+          <span>الحصة الحالية</span>
+          <select [(ngModel)]="selectedSessionId" (change)="onSessionChanged()" [disabled]="loadingSessions">
+            <option [ngValue]="null">اختر الحصة من جدول اليوم</option>
+            <option *ngFor="let session of sessions" [ngValue]="session.id">
+              {{ session.subjectName }} - {{ session.classRoomName }}
+            </option>
+          </select>
+        </label>
+      </div>
+    </section>
+
+    <section class="summary-grid" *ngIf="selectedSessionId">
+      <article class="summary-card">
+        <span>إجمالي الطلاب</span>
+        <strong>{{ totalStudents }}</strong>
+      </article>
+      <article class="summary-card present">
+        <span>حاضر</span>
+        <strong>{{ presentCount }}</strong>
+      </article>
+      <article class="summary-card absent">
+        <span>غائب</span>
+        <strong>{{ absentCount }}</strong>
+      </article>
+      <article class="summary-card late">
+        <span>متأخر</span>
+        <strong>{{ lateCount }}</strong>
+      </article>
+      <article class="summary-card muted">
+        <span>لم يُرصد</span>
+        <strong>{{ unrecordedCount }}</strong>
+      </article>
+    </section>
+
+    <section class="window-banner" [ngClass]="getWindowToneClass()" *ngIf="selectedSessionId">
+      <div>
+        <strong>{{ selectedSessionLabel }}</strong>
+        <span>{{ attendanceWindowMessage }}</span>
+      </div>
+      <small>{{ selectedSessionTimeLabel }}</small>
+    </section>
+
+    <section class="filter-panel" *ngIf="selectedSessionId">
+      <div class="filters-row">
+        <label class="search-field">
+          <i class="fas fa-magnifying-glass"></i>
+          <input
+            type="search"
+            [(ngModel)]="searchTerm"
+            placeholder="بحث عن طالب بالاسم أو البريد..."
+          >
+        </label>
+
+        <label class="select-field">
+          <span>الحالة</span>
+          <select [(ngModel)]="statusFilter">
+            <option value="all">كل الحالات</option>
+            <option value="present">حاضر</option>
+            <option value="absent">غائب</option>
+            <option value="late">متأخر</option>
+            <option value="unrecorded">لم يُرصد</option>
+          </select>
+        </label>
+
+        <div class="bulk-actions">
+          <button type="button" class="bulk-btn present" (click)="applyBulkStatus('Present')" [disabled]="!canRecordAttendance || saving">
+            تعيين الكل حاضر
+          </button>
+          <button type="button" class="bulk-btn absent" (click)="applyBulkStatus('Absent')" [disabled]="!canRecordAttendance || saving">
+            تعيين الكل غائب
+          </button>
+          <button type="button" class="bulk-btn muted" (click)="applyBulkStatus('Unrecorded')" [disabled]="!canRecordAttendance || saving">
+            تصفير الحالي
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section class="table-panel" *ngIf="selectedSessionId">
+      <div class="loading-state" *ngIf="loadingRoster">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p>جارٍ تحميل كشف الطلاب من قاعدة البيانات...</p>
+      </div>
+
+      <div class="empty-state" *ngIf="!loadingRoster && students.length === 0">
+        <div class="empty-icon">
+          <i class="fas fa-users-slash"></i>
+        </div>
+        <h2>لا توجد بيانات طلاب لهذه الحصة</h2>
+        <p>اختر حصة أخرى أو تأكد من ربط الحصة بفصل دراسي يحتوي على طلاب.</p>
+      </div>
+
+      <ng-container *ngIf="!loadingRoster && students.length > 0">
+        <div class="panel-head">
+          <div>
+            <h2>كشف الطلاب</h2>
+            <p>المعروض الآن {{ filteredStudents.length }} من {{ totalStudents }} طالب</p>
+          </div>
+
+          <div class="panel-meta" *ngIf="lastSavedAt">
+            آخر حفظ: {{ lastSavedAt | date:'shortTime' }}
+          </div>
+        </div>
+
+        <div class="roster-list">
+          <article class="student-card" *ngFor="let student of filteredStudents; trackBy: trackByStudent">
+            <div class="student-main">
+              <div class="student-avatar">{{ student.fullName.charAt(0) }}</div>
+              <div>
+                <h3>{{ student.fullName }}</h3>
+                <p>{{ student.email || 'لا يوجد بريد مسجل' }}</p>
+              </div>
+            </div>
+
+            <div class="student-status">
+              <button
+                type="button"
+                class="status-btn"
+                [class.active]="student.status === 'Present'"
+                [disabled]="!canRecordAttendance || saving"
+                (click)="setStudentStatus(student, 'Present')">
+                حاضر
+              </button>
+              <button
+                type="button"
+                class="status-btn"
+                [class.active]="student.status === 'Absent'"
+                [disabled]="!canRecordAttendance || saving"
+                (click)="setStudentStatus(student, 'Absent')">
+                غائب
+              </button>
+              <button
+                type="button"
+                class="status-btn"
+                [class.active]="student.status === 'Late'"
+                [disabled]="!canRecordAttendance || saving"
+                (click)="setStudentStatus(student, 'Late')">
+                متأخر
+              </button>
+              <button
+                type="button"
+                class="status-btn"
+                [class.active]="student.status === 'Unrecorded'"
+                [disabled]="!canRecordAttendance || saving"
+                (click)="setStudentStatus(student, 'Unrecorded')">
+                لم يُرصد
+              </button>
+            </div>
+
+            <label class="notes-field">
+              <span>ملاحظات</span>
+              <input type="text" [(ngModel)]="student.notes" [disabled]="!canRecordAttendance || saving" placeholder="أضف ملاحظة مختصرة...">
+            </label>
+
+            <div class="student-meta">
+              <span class="status-chip" [ngClass]="getStatusChipClass(student.status)">
+                {{ student.status === 'Present' ? 'حاضر' : student.status === 'Absent' ? 'غائب' : student.status === 'Late' ? 'متأخر' : 'لم يُرصد' }}
+              </span>
+              <span *ngIf="student.method">آخر طريقة: {{ student.method }}</span>
+              <span *ngIf="student.recordedAt">آخر توقيت: {{ student.recordedAt | date:'shortTime' }}</span>
+            </div>
+          </article>
+        </div>
+      </ng-container>
+    </section>
+
+    <div class="footer-actions" *ngIf="selectedSessionId">
+      <button class="save-btn" type="button" (click)="saveAttendance()" [disabled]="saving || !selectedSessionId || !canRecordAttendance">
+        <i class="fas fa-floppy-disk"></i>
+        {{ saving ? 'جارٍ حفظ الرصد...' : 'حفظ الرصد اليدوي' }}
+      </button>
+    </div>
+  </div>
+</div>

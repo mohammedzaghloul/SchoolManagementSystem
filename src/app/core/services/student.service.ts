@@ -30,9 +30,9 @@ export class StudentService {
         );
       }
 
-      // Paginate locally
+      // Paginate locally only when pageSize is explicitly provided.
       const pageIndex = filter?.pageIndex || 1;
-      const pageSize = filter?.pageSize || 10;
+      const pageSize = filter?.pageSize ?? Math.max(filteredItems.length, 1);
       const startIndex = (pageIndex - 1) * pageSize;
       const paginatedItems = filteredItems.slice(startIndex, startIndex + pageSize);
 

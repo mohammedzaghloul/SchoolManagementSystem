@@ -22,12 +22,16 @@ export class AttendanceService {
 
   async markFace(sessionId: number, image: File): Promise<any> {
     const formData = new FormData();
-    formData.append('image', image);
+    formData.append('file', image);
     return this.api.postMultipart(`/api/Attendance/face/${sessionId}`, formData);
   }
 
   async getSessionAttendance(sessionId: number): Promise<any> {
     return this.api.get(`/api/Attendance/session/${sessionId}`);
+  }
+
+  async getSessionRoster(sessionId: number): Promise<any> {
+    return this.api.get(`/api/Attendance/session/${sessionId}/roster`);
   }
 
   async getStudentAttendance(studentId: number): Promise<any> {

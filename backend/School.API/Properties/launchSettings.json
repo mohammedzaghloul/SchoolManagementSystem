@@ -6,7 +6,7 @@
         "ASPNETCORE_ENVIRONMENT": "Development",
         "ConnectionStrings__DefaultConnection": "Server=.;Database=SchoolDb1;Trusted_Connection=True;TrustServerCertificate=True",
         "ConnectionStrings__Redis": "localhost:6379",
-        "Jwt__Secret": "change_this_local_dev_secret_to_a_long_random_value",
+        "Jwt__Secret": "local_dev_jwt_secret_for_school_api_must_be_at_least_sixty_four_bytes_long_2026",
         "FaceRecognition__BaseUrl": "http://localhost:8000",
         "Cloudinary__Enabled": "false",
         "Cloudinary__CloudName": "",

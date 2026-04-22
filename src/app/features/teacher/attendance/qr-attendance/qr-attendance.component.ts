@@ -19,6 +19,7 @@ export class QrAttendanceComponent implements OnInit, OnDestroy {
   sessions: any[] = [];
   selectedSessionId: number | null = null;
   selectedSessionData: any = null;
+  selectedDate = this.getDateInputValue(new Date());
   qrToken = '';
   countdown = 300;
   attendanceList: any[] = [];
@@ -41,6 +42,10 @@ export class QrAttendanceComponent implements OnInit, OnDestroy {
 
   async ngOnInit() {
     this.route.queryParams.subscribe(async params => {
+      if (params['date']) {
+        this.selectedDate = String(params['date']);
+      }
+
       if (params['sessionId']) {
         this.selectedSessionId = Number(params['sessionId']);
         await this.loadSessions();
@@ -59,7 +64,7 @@ export class QrAttendanceComponent implements OnInit, OnDestroy {
     try {
       const user = this.authService.getCurrentUser();
       const teacherId = user?.id;
-      const result = await this.sessionService.getTeacherSessions(teacherId);
+      const result = await this.sessionService.getTeacherSessions(teacherId, this.selectedDate);
       this.sessions = Array.isArray(result) ? result : (result as any)?.data || [];
 
       if (this.selectedSessionId) {
@@ -167,5 +172,12 @@ export class QrAttendanceComponent implements OnInit, OnDestroy {
   async saveAttendance() {
     this.showSuccess = true;
     setTimeout(() => this.showSuccess = false, 3000);
+  }
+
+  private getDateInputValue(value: Date): string {
+    const year = value.getFullYear();
+    const month = String(value.getMonth() + 1).padStart(2, '0');
+    const day = String(value.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 }

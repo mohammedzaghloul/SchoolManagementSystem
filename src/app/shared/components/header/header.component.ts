@@ -55,14 +55,12 @@ export class HeaderComponent implements OnInit, OnDestroy {
   }
 
   async ngOnInit() {
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme === 'dark') {
-      this.isDarkMode = true;
-      document.body.classList.add('dark-theme');
-    }
+    this.currentUser = this.authService.getCurrentUser();
+    this.syncTheme(this.currentUser);
 
     this.authSub = this.authService.currentUser$.subscribe(user => {
       this.currentUser = user;
+      this.syncTheme(user);
     });
 
     this.notificationStoreSub = this.notificationCenter.notifications$.subscribe(items => {
@@ -158,6 +156,13 @@ export class HeaderComponent implements OnInit, OnDestroy {
   }
 
   toggleTheme() {
+    if (this.currentUser?.role === 'Admin') {
+      this.isDarkMode = false;
+      document.body.classList.remove('dark-theme');
+      localStorage.setItem('theme', 'light');
+      return;
+    }
+
     this.isDarkMode = !this.isDarkMode;
     if (this.isDarkMode) {
       document.body.classList.add('dark-theme');
@@ -194,5 +199,17 @@ export class HeaderComponent implements OnInit, OnDestroy {
     this.unreadCountSub?.unsubscribe();
     this.notificationStoreSub?.unsubscribe();
     this.signalRNotificationSub?.unsubscribe();
+  }
+
+  private syncTheme(user: User | null): void {
+    const savedTheme = localStorage.getItem('theme');
+    const forceLightMode = user?.role === 'Admin';
+
+    this.isDarkMode = !forceLightMode && savedTheme === 'dark';
+    document.body.classList.toggle('dark-theme', this.isDarkMode);
+
+    if (forceLightMode && savedTheme !== 'light') {
+      localStorage.setItem('theme', 'light');
+    }
   }
 }

@@ -15,24 +15,26 @@ import { Grade } from '../../../core/models/grade.model';
 export class GradesComponent implements OnInit {
   allGrades: Grade[] = [];
   filteredGrades: Grade[] = [];
-  years: string[] = ['2023/2024', '2024/2025'];
-  terms: string[] = ['الكل', 'الترم الأول', 'الترم الثاني'];
-  selectedYear = 'الكل';
-  selectedTerm = 'الكل';
+  years: string[] = [];
+  terms: string[] = [];
+  selectedYear = 'all';
+  selectedTerm = 'all';
   loading = false;
   overallAverage = 0;
   highestSubject: Grade | null = null;
   lowestSubject: Grade | null = null;
+  isDarkMode = true;
 
   constructor(
     private gradeService: GradeService,
     private auth: AuthService
-  ) { }
+  ) {}
 
   async ngOnInit() {
     this.loading = true;
     try {
       this.allGrades = await this.gradeService.getMyGrades();
+      this.hydrateFilters();
       this.filterGrades();
     } catch (err) {
       console.error(err);
@@ -44,35 +46,63 @@ export class GradesComponent implements OnInit {
   }
 
   filterGrades() {
-    this.filteredGrades = this.allGrades.filter(g => {
-      const yearMatch = this.selectedYear === 'الكل' || g.academicYear === this.selectedYear;
-      const termMatch = this.selectedTerm === 'الكل' || g.term === this.selectedTerm;
+    this.filteredGrades = this.allGrades.filter(grade => {
+      const yearMatch = this.selectedYear === 'all' || grade.academicYear === this.selectedYear;
+      const termMatch = this.selectedTerm === 'all' || grade.term === this.selectedTerm;
       return yearMatch && termMatch;
     });
+
     this.calculateStats();
   }
 
   calculateStats() {
-    if (!this.filteredGrades || this.filteredGrades.length === 0) {
+    if (!this.filteredGrades.length) {
       this.overallAverage = 0;
       this.highestSubject = null;
       this.lowestSubject = null;
       return;
     }
 
-    let total = 0;
-    this.filteredGrades.forEach(g => total += g.value);
-
+    const total = this.filteredGrades.reduce((sum, grade) => sum + grade.value, 0);
     this.overallAverage = Math.round(total / this.filteredGrades.length);
+    this.highestSubject = [...this.filteredGrades].sort((first, second) => second.value - first.value)[0];
+    this.lowestSubject = [...this.filteredGrades].sort((first, second) => first.value - second.value)[0];
+  }
 
-    this.highestSubject = [...this.filteredGrades].sort((a, b) => b.value - a.value)[0];
-    this.lowestSubject = [...this.filteredGrades].sort((a, b) => a.value - b.value)[0];
+  toggleTheme() {
+    this.isDarkMode = !this.isDarkMode;
   }
 
   getEvaluation(value: number): { text: string, color: string } {
     if (value >= 90) return { text: 'ممتاز', color: 'success' };
-    if (value >= 80) return { text: 'جيد جداً', color: 'primary' };
+    if (value >= 80) return { text: 'جيد جدا', color: 'primary' };
     if (value >= 70) return { text: 'جيد', color: 'warning' };
     return { text: 'مقبول', color: 'danger' };
+  }
+
+  private hydrateFilters() {
+    this.years = Array.from(
+      new Set(
+        this.allGrades
+          .map(grade => grade.academicYear)
+          .filter((value): value is string => !!value)
+      )
+    );
+
+    this.terms = Array.from(
+      new Set(
+        this.allGrades
+          .map(grade => grade.term)
+          .filter((value): value is string => !!value)
+      )
+    );
+
+    if (this.selectedYear !== 'all' && !this.years.includes(this.selectedYear)) {
+      this.selectedYear = 'all';
+    }
+
+    if (this.selectedTerm !== 'all' && !this.terms.includes(this.selectedTerm)) {
+      this.selectedTerm = 'all';
+    }
   }
 }

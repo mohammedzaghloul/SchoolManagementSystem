@@ -73,6 +73,10 @@ const routes: Routes = [
                 loadComponent: () => import('./features/admin/classes/class-management/class-management.component').then(m => m.ClassManagementComponent)
             },
             {
+                path: 'sessions',
+                loadComponent: () => import('./features/admin/sessions/session-schedule-management/session-schedule-management.component').then(m => m.SessionScheduleManagementComponent)
+            },
+            {
                 path: 'subjects',
                 loadComponent: () => import('./features/admin/subjects/subject-management/subject-management.component').then(m => m.SubjectManagementComponent)
             },
@@ -111,6 +115,10 @@ const routes: Routes = [
                         loadComponent: () => import('./features/attendance/manual-attendance/manual-attendance.component').then(m => m.ManualAttendanceComponent)
                     }
                 ]
+            },
+            {
+                path: 'grades',
+                loadComponent: () => import('./features/teacher/grades/teacher-grades.component').then(m => m.TeacherGradesComponent)
             },
             {
                 path: 'classes',
