@@ -116,11 +116,16 @@
                         <div class="d-flex flex-column gap-3">
                             <div class="row g-3">
                                 <div class="col-md-6">
-                                    <a [routerLink]="['/teacher/attendance/qr']" [queryParams]="{sessionId: heroSession.id}"
-                                        class="btn btn-dashboard-action btn-qr-glow w-100 animate-fade-in d-flex align-items-center justify-content-center gap-3">
+                                    <button type="button"
+                                        class="btn btn-dashboard-action btn-qr-glow w-100 animate-fade-in d-flex align-items-center justify-content-center gap-3"
+                                        (click)="openQrBroadcast()"
+                                        [disabled]="!qrTargetSession">
                                         <i class="fas fa-qrcode fs-4"></i>
                                         بث رمز QR
-                                    </a>
+                                    </button>
+                                    <div class="action-helper-text" *ngIf="qrTargetHint">
+                                        {{ qrTargetHint }}
+                                    </div>
                                 </div>
                                 <div class="col-md-6">
                                     <a [routerLink]="['/teacher/attendance/face']" [queryParams]="{sessionId: heroSession.id}"

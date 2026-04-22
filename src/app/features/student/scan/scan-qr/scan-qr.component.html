@@ -7,7 +7,7 @@
           بوابة الحضور بالـ QR
         </span>
         <h1 class="page-title text-white fw-bold mb-2">سجل حضورك من الكاميرا</h1>
-        <p class="text-muted-dark mb-0">افتح الماسح ثم وجّه الكاميرا إلى رمز الحصة النشطة لتسجيل الحضور مباشرة.</p>
+        <p class="text-muted-dark mb-0">افتح الماسح ثم وجّه الكاميرا إلى رمز الحصة المتاحة للمسح لتسجيل الحضور مباشرة.</p>
       </div>
 
       <button
@@ -28,16 +28,17 @@
               <div>
                 <div class="d-flex align-items-center gap-2 mb-2">
                   <div class="status-icon">
-                    <i class="fas" [ngClass]="activeSession ? 'fa-bolt' : 'fa-clock'"></i>
+                    <i class="fas" [ngClass]="displayedSession ? 'fa-bolt' : 'fa-clock'"></i>
                   </div>
                   <div>
-                    <h2 class="text-white h4 mb-1">{{ activeSession ? 'الحصة النشطة الآن' : 'لا توجد حصة نشطة الآن' }}</h2>
+                    <h2 class="text-white h4 mb-1">{{ sessionHeadline }}</h2>
                     <p class="text-muted-dark mb-0">{{ statusMessageText }}</p>
+                    <small class="text-warning d-block mt-2" *ngIf="sessionAvailabilityNote">{{ sessionAvailabilityNote }}</small>
                   </div>
                 </div>
               </div>
 
-              <div class="text-md-end" *ngIf="activeSession">
+              <div class="text-md-end" *ngIf="scanSession?.canMarkWithQr">
                 <span class="badge badge-live rounded-pill px-3 py-2">
                   <i class="fas fa-circle blink me-1"></i>
                   متاحة للمسح
@@ -45,19 +46,20 @@
               </div>
             </div>
 
-            <div class="row g-3 mb-4" *ngIf="activeSession; else noActiveSession">
+            <div class="row g-3 mb-4" *ngIf="displayedSession; else noActiveSession">
               <div class="col-md-6">
                 <div class="info-tile h-100">
                   <span class="tile-label">المادة</span>
-                  <strong class="tile-value">{{ activeSession.subjectName || activeSession.title || 'حصة دراسية' }}</strong>
-                  <small class="text-muted-dark">{{ activeSession.classRoomName || 'الفصل غير محدد' }}</small>
+                  <strong class="tile-value">{{ displayedSession.subjectName || displayedSession.title || 'حصة دراسية' }}</strong>
+                  <small class="text-muted-dark">{{ displayedSession.classRoomName || 'الفصل غير محدد' }}</small>
                 </div>
               </div>
               <div class="col-md-6">
                 <div class="info-tile h-100">
                   <span class="tile-label">المعلم وطريقة الرصد</span>
-                  <strong class="tile-value">{{ activeSession.teacherName || 'غير محدد' }}</strong>
-                  <small class="text-muted-dark">{{ getAttendanceTypeLabel(activeSession.attendanceType) }}</small>
+                  <strong class="tile-value">{{ displayedSession.teacherName || 'غير محدد' }}</strong>
+                  <small class="text-muted-dark">{{ getAttendanceTypeLabel(displayedSession.attendanceType) }}</small>
+                  <small class="text-muted-dark d-block" *ngIf="displayedSession.attendanceWindowLabel">{{ displayedSession.attendanceWindowLabel }}</small>
                 </div>
               </div>
             </div>
@@ -162,10 +164,10 @@
             <div class="card-body p-4">
               <h3 class="text-white h5 mb-3">إرشادات سريعة</h3>
               <ul class="guidelines-list mb-0">
-                <li>افتح الكاميرا فقط أثناء وجود حصة نشطة تدعم `QR`.</li>
-                <li>وجّه الكاميرا إلى الرمز الذي يعرضه المعلم داخل نفس الحصة.</li>
+                <li>افتح الكاميرا فقط أثناء وجود حصة QR أو نافذة رصد QR ما زالت مفتوحة.</li>
+                <li>وجّه الكاميرا إلى الرمز الذي يعرضه المعلم داخل نفس الحصة أو ضمن نافذة الرصد المتاحة.</li>
                 <li>إذا تم تسجيل الحضور مسبقًا ستظهر لك رسالة توضيحية بدل التكرار.</li>
-                <li>لو لم توجد حصة نشطة ستجد وقت أقرب حصة قادمة هنا.</li>
+                <li>لو لم توجد حصة متاحة الآن ستجد وقت أقرب حصة قادمة هنا.</li>
               </ul>
             </div>
           </div>

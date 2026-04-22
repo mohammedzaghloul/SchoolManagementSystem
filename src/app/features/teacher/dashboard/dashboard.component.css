@@ -151,6 +151,22 @@
     filter: brightness(1.1) !important;
 }
 
+.btn-dashboard-action:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    transform: none !important;
+    filter: none !important;
+    box-shadow: none !important;
+}
+
+.action-helper-text {
+    margin-top: 0.6rem;
+    color: #64748b;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-align: center;
+}
+
 .status-note {
     color: #475569;
     font-weight: 600;

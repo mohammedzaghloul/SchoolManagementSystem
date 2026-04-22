@@ -1,12 +1,12 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule, ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { QRCodeModule } from 'angularx-qrcode';
+
 import { AttendanceService } from '../../../../core/services/attendance.service';
 import { SessionService } from '../../../../core/services/session.service';
 import { AuthService } from '../../../../core/services/auth.service';
-
-import { QRCodeModule } from 'angularx-qrcode';
 
 @Component({
   selector: 'app-qr-attendance',
@@ -26,8 +26,9 @@ export class QrAttendanceComponent implements OnInit, OnDestroy {
   stats = { present: 0, absent: 0, none: 0, total: 0 };
   loading = false;
   errorMessage = '';
+  warningMessage = '';
   showSuccess = false;
-  
+
   private timer: any;
   private autoRefreshTimer: any;
   private listRefreshTimer: any;
@@ -38,140 +39,280 @@ export class QrAttendanceComponent implements OnInit, OnDestroy {
     private authService: AuthService,
     private route: ActivatedRoute,
     private router: Router
-  ) { }
+  ) {}
 
-  async ngOnInit() {
+  get availableQrSessions(): any[] {
+    return this.sessions.filter(session => this.isQrSession(session));
+  }
+
+  async ngOnInit(): Promise<void> {
     this.route.queryParams.subscribe(async params => {
+      this.clearTimers();
+      this.warningMessage = '';
+      this.errorMessage = '';
+
       if (params['date']) {
         this.selectedDate = String(params['date']);
       }
 
-      if (params['sessionId']) {
-        this.selectedSessionId = Number(params['sessionId']);
-        await this.loadSessions();
-        this.confirmSession();
-      } else {
-        await this.loadSessions();
+      this.selectedSessionId = params['sessionId'] ? Number(params['sessionId']) : null;
+
+      await this.loadSessions();
+      this.resolveSelectedSession();
+
+      if (this.selectedSessionId) {
+        await this.confirmSession();
       }
     });
   }
 
-  ngOnDestroy() {
+  ngOnDestroy(): void {
     this.clearTimers();
   }
 
-  async loadSessions() {
+  async loadSessions(): Promise<void> {
     try {
       const user = this.authService.getCurrentUser();
       const teacherId = user?.id;
       const result = await this.sessionService.getTeacherSessions(teacherId, this.selectedDate);
       this.sessions = Array.isArray(result) ? result : (result as any)?.data || [];
-
-      if (this.selectedSessionId) {
-        this.selectedSessionData = this.sessions.find(s => s.id === this.selectedSessionId);
-      }
-      
-      console.log(`[QR] Loaded ${this.sessions.length} sessions from DB`);
-    } catch (err) {
-      console.error('[QR] Failed to load sessions:', err);
-      this.errorMessage = 'فشل في تحميل الحصص من قاعدة البيانات';
+      this.selectedSessionData = this.selectedSessionId
+        ? this.sessions.find(session => session.id === this.selectedSessionId) || null
+        : null;
+    } catch (error: any) {
+      console.error('[QR] Failed to load sessions:', error);
       this.sessions = [];
+      this.selectedSessionData = null;
+      this.errorMessage = error?.message || 'تعذر تحميل حصص اليوم من قاعدة البيانات.';
     }
   }
 
-  async confirmSession() {
-    if (!this.selectedSessionId) return;
+  async confirmSession(): Promise<void> {
+    if (!this.selectedSessionId) {
+      return;
+    }
+
     this.loading = true;
     this.errorMessage = '';
-    
-    try {
-      // 1. Generate QR token from the backend
-      const res: any = await this.attendanceService.generateQr(this.selectedSessionId);
-      this.qrToken = res?.token || res?.Token || '';
-      console.log('[QR] Token generated from DB:', this.qrToken ? 'Success' : 'Empty');
+    this.qrToken = '';
+    this.selectedSessionData = this.sessions.find(session => session.id === this.selectedSessionId) || this.selectedSessionData;
 
-      // 2. Fetch current attendance list from the backend
-      const attendance: any = await this.attendanceService.getSessionAttendance(this.selectedSessionId);
-      this.attendanceList = Array.isArray(attendance) ? attendance : attendance?.data || [];
-      console.log(`[QR] Loaded ${this.attendanceList.length} attendance records from DB`);
+    if (!this.selectedSessionData || !this.isQrSession(this.selectedSessionData)) {
+      this.attendanceList = [];
+      this.computeStats();
+      this.loading = false;
+      this.errorMessage = 'هذه الحصة ليست مضبوطة على QR. اختر حصة QR من القائمة.';
+      return;
+    }
+
+    try {
+      const qrResponse: any = await this.attendanceService.generateQr(this.selectedSessionId);
+      this.qrToken = qrResponse?.token || qrResponse?.Token || '';
+
+      const attendanceResponse: any = await this.attendanceService.getSessionAttendance(this.selectedSessionId);
+      this.attendanceList = Array.isArray(attendanceResponse) ? attendanceResponse : attendanceResponse?.data || [];
 
       this.computeStats();
       this.startQrCountdown();
-    } catch (err: any) {
-      console.error('[QR] Error:', err);
-      this.errorMessage = err?.message || 'فشل في الاتصال بقاعدة البيانات';
+    } catch (error: any) {
+      console.error('[QR] Error while preparing QR attendance:', error);
+      this.errorMessage = error?.message || 'تعذر تجهيز بث رمز QR الآن.';
+      this.attendanceList = [];
+      this.computeStats();
+      this.clearTimers();
     } finally {
       this.loading = false;
     }
   }
 
-  private startQrCountdown() {
+  async selectSession(session: any): Promise<void> {
+    this.selectedSessionId = Number(session?.id || 0) || null;
+    this.selectedSessionData = session || null;
+    this.warningMessage = '';
+    this.syncQueryParams();
+    await this.confirmSession();
+  }
+
+  async saveAttendance(): Promise<void> {
+    this.showSuccess = true;
+    setTimeout(() => this.showSuccess = false, 3000);
+  }
+
+  clearTimers(): void {
+    if (this.timer) {
+      clearInterval(this.timer);
+    }
+
+    if (this.autoRefreshTimer) {
+      clearInterval(this.autoRefreshTimer);
+    }
+
+    if (this.listRefreshTimer) {
+      clearInterval(this.listRefreshTimer);
+    }
+  }
+
+  private resolveSelectedSession(): void {
+    const requestedSession = this.selectedSessionId
+      ? this.sessions.find(session => session.id === this.selectedSessionId) || null
+      : null;
+
+    if (requestedSession && this.isQrSession(requestedSession)) {
+      this.selectedSessionData = requestedSession;
+      return;
+    }
+
+    const fallbackSession = this.pickPreferredQrSession();
+    if (fallbackSession) {
+      if (requestedSession && !this.isQrSession(requestedSession)) {
+        this.warningMessage = 'الحصة المطلوبة ليست QR، لذلك فتحنا أقرب حصة QR متاحة للرصد.';
+      }
+
+      this.selectedSessionId = fallbackSession.id;
+      this.selectedSessionData = fallbackSession;
+      this.syncQueryParams();
+      return;
+    }
+
+    this.selectedSessionData = requestedSession;
+
+    if (requestedSession) {
+      this.errorMessage = 'لا توجد حصة QR متاحة لهذا التاريخ. اختر يومًا آخر أو جهّز حصة QR من الجدول.';
+    }
+  }
+
+  private pickPreferredQrSession(): any | null {
+    if (!this.availableQrSessions.length) {
+      return null;
+    }
+
+    return [...this.availableQrSessions].sort((first, second) => {
+      const scoreDifference = this.getQrSessionScore(second) - this.getQrSessionScore(first);
+      if (scoreDifference !== 0) {
+        return scoreDifference;
+      }
+
+      return this.parseSessionTime(second.startTime).getTime() - this.parseSessionTime(first.startTime).getTime();
+    })[0] || null;
+  }
+
+  private getQrSessionScore(session: any): number {
+    let score = 0;
+
+    if (session?.canRecordAttendance) {
+      score += 100;
+    }
+
+    if (session?.needsAttention) {
+      score += 30;
+    }
+
+    const studentCount = Number(session?.studentCount || 0);
+    const attendanceCount = Number(session?.attendanceCount || 0);
+    score += Math.min(Math.max(studentCount - attendanceCount, 0), 10);
+
+    return score;
+  }
+
+  private isQrSession(session: any): boolean {
+    return String(session?.attendanceType || '').toLowerCase() === 'qr';
+  }
+
+  private syncQueryParams(): void {
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: {
+        sessionId: this.selectedSessionId,
+        date: this.selectedDate
+      },
+      queryParamsHandling: 'merge',
+      replaceUrl: true
+    });
+  }
+
+  private startQrCountdown(): void {
     this.clearTimers();
     this.countdown = 300;
 
-    // 1. Tick countdown every second
     this.timer = setInterval(() => {
       this.countdown--;
       if (this.countdown <= 0) {
-        this.regenerateQr();
+        void this.regenerateQr();
         this.countdown = 300;
       }
     }, 1000);
 
-    // 2. Refresh QR token from DB every 5 seconds (as requested)
-    this.autoRefreshTimer = setInterval(async () => {
-      await this.regenerateQr();
+    this.autoRefreshTimer = setInterval(() => {
+      void this.regenerateQr();
     }, 5000);
 
-    // 3. Detect scan and refresh QR immediately when presentCount changes
-    let lastPresentCount = 0;
+    let lastPresentCount = this.stats.present;
     this.listRefreshTimer = setInterval(async () => {
-      if (this.selectedSessionId) {
-        try {
-          const attendance: any = await this.attendanceService.getSessionAttendance(this.selectedSessionId);
-          this.attendanceList = Array.isArray(attendance) ? attendance : attendance?.data || [];
-          this.computeStats();
-          
-          if (this.stats.present > lastPresentCount) {
-            console.log('[QR] Student scan detected, refreshing QR token now.');
-            lastPresentCount = this.stats.present;
-            await this.regenerateQr();
-          }
-        } catch { }
+      if (!this.selectedSessionId) {
+        return;
+      }
+
+      try {
+        const attendanceResponse: any = await this.attendanceService.getSessionAttendance(this.selectedSessionId);
+        this.attendanceList = Array.isArray(attendanceResponse) ? attendanceResponse : attendanceResponse?.data || [];
+        this.computeStats();
+
+        if (this.stats.present > lastPresentCount) {
+          lastPresentCount = this.stats.present;
+          await this.regenerateQr();
+        }
+      } catch {
+        // Ignore transient refresh failures while the QR screen is open.
       }
     }, 2000);
   }
 
-  private async regenerateQr() {
-    if (!this.selectedSessionId) return;
+  private async regenerateQr(): Promise<void> {
+    if (!this.selectedSessionId || !this.selectedSessionData || !this.isQrSession(this.selectedSessionData)) {
+      return;
+    }
+
     try {
-      const res: any = await this.attendanceService.generateQr(this.selectedSessionId);
-      this.qrToken = res?.token || res?.Token || this.qrToken;
-    } catch { }
+      const response: any = await this.attendanceService.generateQr(this.selectedSessionId);
+      this.qrToken = response?.token || response?.Token || this.qrToken;
+    } catch {
+      // Ignore token refresh failures; the current token remains visible until the next successful refresh.
+    }
   }
 
-  private computeStats() {
-    this.stats.present = this.attendanceList.filter(a => 
-      a.status === 'Present' || a.status === 'حاضر' || a.isPresent === true
+  private computeStats(): void {
+    this.stats.present = this.attendanceList.filter(attendance =>
+      attendance.status === 'Present' || attendance.status === 'حاضر' || attendance.isPresent === true
     ).length;
-    this.stats.absent = this.attendanceList.filter(a => 
-      a.status === 'Absent' || a.status === 'غائب'
+
+    this.stats.absent = this.attendanceList.filter(attendance =>
+      attendance.status === 'Absent' || attendance.status === 'غائب'
     ).length;
-    this.stats.none = this.attendanceList.filter(a => 
-      a.status === 'None' || a.status === 'لم يرصد' || a.status === 'Late'
+
+    this.stats.none = this.attendanceList.filter(attendance =>
+      attendance.status === 'None' ||
+      attendance.status === 'Unrecorded' ||
+      attendance.status === 'لم يُرصد' ||
+      attendance.status === 'Late'
     ).length;
+
     this.stats.total = this.attendanceList.length;
   }
 
-  clearTimers() {
-    if (this.timer) clearInterval(this.timer);
-    if (this.autoRefreshTimer) clearInterval(this.autoRefreshTimer);
-    if (this.listRefreshTimer) clearInterval(this.listRefreshTimer);
-  }
+  private parseSessionTime(time?: string): Date {
+    if (!time) {
+      return new Date(0);
+    }
 
-  async saveAttendance() {
-    this.showSuccess = true;
-    setTimeout(() => this.showSuccess = false, 3000);
+    const parsed = new Date(time);
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed;
+    }
+
+    const [hours, minutes, seconds] = time.split(':').map(Number);
+    const reference = new Date(`${this.selectedDate}T00:00:00`);
+    reference.setHours(hours || 0, minutes || 0, seconds || 0, 0);
+    return reference;
   }
 
   private getDateInputValue(value: Date): string {

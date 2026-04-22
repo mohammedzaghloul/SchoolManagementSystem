@@ -1,9 +1,10 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
+import { Html5Qrcode } from 'html5-qrcode';
+
 import { AttendanceService } from '../../../../core/services/attendance.service';
 import { SessionService } from '../../../../core/services/session.service';
-import { Html5Qrcode } from 'html5-qrcode';
 import { NotificationService } from '../../../../core/services/notification.service';
 
 interface StudentAttendanceSession {
@@ -16,10 +17,13 @@ interface StudentAttendanceSession {
   endTime?: string;
   attendanceType?: string;
   isLive?: boolean;
+  isActive?: boolean;
   attendanceRecorded?: boolean;
   attendanceStatus?: string;
   attendanceMethod?: string;
   canMarkWithQr?: boolean;
+  attendanceWindowStatus?: string;
+  attendanceWindowLabel?: string;
 }
 
 @Component({
@@ -36,6 +40,7 @@ export class ScanQrComponent implements OnInit, OnDestroy {
   error = '';
   loading = true;
   activeSession: StudentAttendanceSession | null = null;
+  scanSession: StudentAttendanceSession | null = null;
   nextSession: StudentAttendanceSession | null = null;
   lastAttendance: any = null;
 
@@ -45,31 +50,33 @@ export class ScanQrComponent implements OnInit, OnDestroy {
     private attendanceService: AttendanceService,
     private sessionService: SessionService,
     private notify: NotificationService
-  ) { }
+  ) {}
 
-  async ngOnInit() {
+  async ngOnInit(): Promise<void> {
     await Promise.all([
       this.loadAttendanceContext(),
       this.loadLastAttendance()
     ]);
   }
 
-  ngOnDestroy() {
-    this.stopScanner();
+  ngOnDestroy(): void {
+    void this.stopScanner();
   }
 
-  async loadAttendanceContext() {
+  async loadAttendanceContext(): Promise<void> {
     try {
       const context = await this.sessionService.getMyAttendanceContext();
       this.activeSession = context?.activeSession || null;
+      this.scanSession = context?.scanSession || context?.activeSession || null;
       this.nextSession = context?.nextSession || null;
     } catch {
       this.activeSession = null;
+      this.scanSession = null;
       this.nextSession = null;
     }
   }
 
-  async loadLastAttendance() {
+  async loadLastAttendance(): Promise<void> {
     try {
       const stats: any = await this.attendanceService.getMyStats().catch(() => null);
       this.lastAttendance = stats;
@@ -78,9 +85,9 @@ export class ScanQrComponent implements OnInit, OnDestroy {
     }
   }
 
-  async toggleScanner() {
+  async toggleScanner(): Promise<void> {
     if (this.cameraActive) {
-      this.stopScanner();
+      await this.stopScanner();
       return;
     }
 
@@ -89,10 +96,10 @@ export class ScanQrComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.startScanner();
+    await this.startScanner();
   }
 
-  async startScanner() {
+  async startScanner(): Promise<void> {
     this.error = '';
     this.success = false;
     this.cameraActive = true;
@@ -104,9 +111,9 @@ export class ScanQrComponent implements OnInit, OnDestroy {
       this.html5QrCode.start(
         { facingMode: 'environment' },
         config,
-        (decodedText) => {
-          this.onQrScanned(decodedText);
-          this.stopScanner();
+        decodedText => {
+          void this.onQrScanned(decodedText);
+          void this.stopScanner();
         },
         () => {
           // Ignore transient scan errors while camera is active.
@@ -118,7 +125,7 @@ export class ScanQrComponent implements OnInit, OnDestroy {
     }, 100);
   }
 
-  async stopScanner() {
+  async stopScanner(): Promise<void> {
     if (this.html5QrCode) {
       try {
         await this.html5QrCode.stop();
@@ -133,7 +140,7 @@ export class ScanQrComponent implements OnInit, OnDestroy {
     this.cameraActive = false;
   }
 
-  async onQrScanned(qrToken: string) {
+  async onQrScanned(qrToken: string): Promise<void> {
     this.scanning = true;
     this.error = '';
 
@@ -150,47 +157,65 @@ export class ScanQrComponent implements OnInit, OnDestroy {
         this.loadAttendanceContext(),
         this.loadLastAttendance()
       ]);
-    } catch (err: any) {
-      this.error = err?.error?.message || err?.message || 'رمز QR غير صحيح أو منتهي الصلاحية.';
+    } catch (error: any) {
+      this.error = error?.error?.message || error?.message || 'رمز QR غير صحيح أو منتهي الصلاحية.';
       this.notify.error(this.error);
     } finally {
       this.scanning = false;
     }
   }
 
-  private getDeviceId(): string {
-    let id = localStorage.getItem('device_id');
-    if (!id) {
-      id = crypto.randomUUID();
-      localStorage.setItem('device_id', id);
-    }
-
-    return id;
+  get canStartScanner(): boolean {
+    return !!this.scanSession?.canMarkWithQr && !this.scanning;
   }
 
-  get canStartScanner(): boolean {
-    return !!this.activeSession?.canMarkWithQr && !this.scanning;
+  get displayedSession(): StudentAttendanceSession | null {
+    return this.scanSession || this.activeSession;
+  }
+
+  get sessionHeadline(): string {
+    if (this.scanSession?.canMarkWithQr && !this.scanSession?.isActive) {
+      return 'حصة QR متاحة للمسح الآن';
+    }
+
+    return this.displayedSession ? 'الحصة النشطة الآن' : 'لا توجد حصة نشطة الآن';
+  }
+
+  get sessionAvailabilityNote(): string {
+    if (this.scanSession?.canMarkWithQr && !this.scanSession?.isActive) {
+      return 'هذه الحصة انتهت بالفعل لكن نافذة الرصد ما زالت مفتوحة.';
+    }
+
+    return '';
   }
 
   get scannerBlockedMessage(): string {
-    if (this.activeSession?.attendanceRecorded) {
-      return 'تم تسجيل حضورك بالفعل في الحصة الحالية.';
+    if (this.scanSession?.attendanceRecorded) {
+      return 'تم تسجيل حضورك بالفعل في الحصة المتاحة للمسح الآن.';
     }
 
     if (this.activeSession && !this.activeSession.canMarkWithQr) {
-      return `الحصة الحالية لا تدعم QR. طريقة الرصد: ${this.getAttendanceTypeLabel(this.activeSession.attendanceType)}`;
+      return `الحصة الجارية الآن لا تدعم QR. طريقة الرصد الحالية: ${this.getAttendanceTypeLabel(this.activeSession.attendanceType)}`;
+    }
+
+    if (this.scanSession && !this.scanSession.canMarkWithQr) {
+      return `الحصة المتاحة الآن لا تدعم QR. طريقة الرصد: ${this.getAttendanceTypeLabel(this.scanSession.attendanceType)}`;
     }
 
     if (this.nextSession?.startTime) {
-      return `لا توجد حصة نشطة الآن. أقرب حصة تبدأ ${new Date(this.nextSession.startTime).toLocaleString('ar-EG')}.`;
+      return `لا توجد حصة متاحة للمسح الآن. أقرب حصة تبدأ ${new Date(this.nextSession.startTime).toLocaleString('ar-EG')}.`;
     }
 
-    return 'لا توجد حصة نشطة متاحة للتسجيل الآن.';
+    return 'لا توجد حصة متاحة للتسجيل عبر QR الآن.';
   }
 
   get statusMessageText(): string {
-    if (this.activeSession?.canMarkWithQr) {
-      return 'وجّه الكاميرا إلى رمز QR الخاص بالحصة النشطة.';
+    if (this.scanSession?.canMarkWithQr) {
+      if (this.scanSession.isActive) {
+        return 'وجّه الكاميرا إلى رمز QR الخاص بالحصة النشطة لتسجيل الحضور مباشرة.';
+      }
+
+      return 'نافذة الرصد ما زالت مفتوحة لهذه الحصة. وجّه الكاميرا إلى رمز QR الذي يعرضه المعلم الآن.';
     }
 
     return this.scannerBlockedMessage;
@@ -207,5 +232,15 @@ export class ScanQrComponent implements OnInit, OnDestroy {
       default:
         return 'غير محدد';
     }
+  }
+
+  private getDeviceId(): string {
+    let id = localStorage.getItem('device_id');
+    if (!id) {
+      id = crypto.randomUUID();
+      localStorage.setItem('device_id', id);
+    }
+
+    return id;
   }
 }

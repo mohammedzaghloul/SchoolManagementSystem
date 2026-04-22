@@ -102,6 +102,20 @@ public class AttendanceController : BaseApiController
         });
     }
 
+    private ActionResult? EnsureQrBroadcastIsSupported(School.Domain.Entities.Session session)
+    {
+        if (string.Equals(session.AttendanceType ?? "QR", "QR", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        return Conflict(new
+        {
+            success = false,
+            message = "بث رمز QR متاح فقط للحصص المضبوطة على QR."
+        });
+    }
+
     private static AttendanceWindowState DescribeAttendanceWindow(School.Domain.Entities.Session session)
     {
         var sessionStart = session.SessionDate.Date.Add(session.StartTime);
@@ -215,6 +229,12 @@ public class AttendanceController : BaseApiController
         if (error != null)
         {
             return error;
+        }
+
+        var qrSupportError = EnsureQrBroadcastIsSupported(session!);
+        if (qrSupportError != null)
+        {
+            return qrSupportError;
         }
 
         var windowError = EnsureAttendanceWindowIsOpen(session!);

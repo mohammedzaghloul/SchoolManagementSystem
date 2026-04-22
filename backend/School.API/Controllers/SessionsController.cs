@@ -299,28 +299,43 @@ public class SessionsController : BaseApiController
             })
             .ToListAsync();
 
-        var activeSession = todaySessions
-            .Select(s => new
+        var todaySessionDescriptors = todaySessions
+            .Select(session =>
             {
-                s.Id,
-                s.Title,
-                s.SubjectName,
-                s.TeacherName,
-                s.ClassRoomName,
-                s.StartTime,
-                s.EndTime,
-                s.AttendanceType,
-                s.IsLive,
-                s.IsActive,
-                s.IsCompleted,
-                s.AttendanceRecorded,
-                s.AttendanceStatus,
-                s.AttendanceMethod,
-                CanMarkWithQr = s.IsActive
-                    && !s.AttendanceRecorded
-                    && string.Equals(s.AttendanceType ?? "QR", "QR", StringComparison.OrdinalIgnoreCase)
+                var window = DescribeAttendanceWindow(session.StartTime, session.EndTime, now);
+                var canMarkWithQr = window.CanRecord
+                    && !session.AttendanceRecorded
+                    && string.Equals(session.AttendanceType ?? "QR", "QR", StringComparison.OrdinalIgnoreCase);
+
+                return new
+                {
+                    session.Id,
+                    session.Title,
+                    session.SubjectName,
+                    session.TeacherName,
+                    session.ClassRoomName,
+                    session.StartTime,
+                    session.EndTime,
+                    session.AttendanceType,
+                    session.IsLive,
+                    session.IsActive,
+                    session.IsCompleted,
+                    session.AttendanceRecorded,
+                    session.AttendanceStatus,
+                    session.AttendanceMethod,
+                    AttendanceWindowStatus = window.Status,
+                    AttendanceWindowLabel = window.Label,
+                    CanMarkWithQr = canMarkWithQr
+                };
             })
-            .FirstOrDefault(s => s.IsActive);
+            .ToList();
+
+        var activeSession = todaySessionDescriptors.FirstOrDefault(session => session.IsActive);
+        var scanSession = todaySessionDescriptors
+            .Where(session => session.CanMarkWithQr)
+            .OrderByDescending(session => session.IsActive)
+            .ThenByDescending(session => session.StartTime)
+            .FirstOrDefault();
 
         var nextSession = await _context.Sessions
             .Include(s => s.Subject)
@@ -348,27 +363,9 @@ public class SessionsController : BaseApiController
             className = student.ClassRoom?.Name ?? "غير محدد",
             gradeLevel = student.ClassRoom?.GradeLevel?.Name ?? "غير محدد",
             activeSession,
+            scanSession,
             nextSession,
-            todaySessions = todaySessions.Select(s => new
-            {
-                s.Id,
-                s.Title,
-                s.SubjectName,
-                s.TeacherName,
-                s.ClassRoomName,
-                s.StartTime,
-                s.EndTime,
-                s.AttendanceType,
-                s.IsLive,
-                s.IsActive,
-                s.IsCompleted,
-                s.AttendanceRecorded,
-                s.AttendanceStatus,
-                s.AttendanceMethod,
-                CanMarkWithQr = s.IsActive
-                    && !s.AttendanceRecorded
-                    && string.Equals(s.AttendanceType ?? "QR", "QR", StringComparison.OrdinalIgnoreCase)
-            })
+            todaySessions = todaySessionDescriptors
         });
     }
 

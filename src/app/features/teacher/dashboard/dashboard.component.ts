@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { Announcement, AnnouncementService } from '../../../core/services/announcement.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { DashboardService } from '../../../core/services/dashboard.service';
@@ -31,6 +31,7 @@ export class DashboardComponent implements OnInit {
   loading = true;
 
   constructor(
+    private router: Router,
     private dashboardService: DashboardService,
     private authService: AuthService,
     private announcementService: AnnouncementService,
@@ -92,6 +93,26 @@ export class DashboardComponent implements OnInit {
     return !this.currentSession && !!this.attendanceFocusSession;
   }
 
+  get qrTargetSession(): any | null {
+    const qrSessions = this.todaySessions.filter((session: any) =>
+      String(session?.attendanceType || '').toLowerCase() === 'qr'
+    );
+
+    return this.pickPreferredActionSession(qrSessions);
+  }
+
+  get qrTargetHint(): string {
+    if (!this.qrTargetSession) {
+      return 'لا توجد حصة QR متاحة للرصد الآن.';
+    }
+
+    if (this.heroSession && this.qrTargetSession.id !== this.heroSession.id) {
+      return `سيتم فتح ${this.qrTargetSession.subjectName} - ${this.qrTargetSession.classRoomName}`;
+    }
+
+    return 'سيتم فتح الحصة المناسبة لبث رمز QR.';
+  }
+
   formatTime(time: any): string {
     if (!time) return '—';
 
@@ -121,10 +142,59 @@ export class DashboardComponent implements OnInit {
     return String(time);
   }
 
+  async openQrBroadcast(): Promise<void> {
+    if (!this.qrTargetSession) {
+      return;
+    }
+
+    await this.router.navigate(
+      ['/teacher/attendance/qr'],
+      { queryParams: { sessionId: this.qrTargetSession.id } }
+    );
+  }
+
   private isSessionLive(session: any, reference: Date): boolean {
     const start = this.parseSessionTime(session?.startTime);
     const end = this.parseSessionTime(session?.endTime || session?.startTime || '23:59:59');
     return reference >= start && reference <= end;
+  }
+
+  private pickPreferredActionSession(sessions: any[]): any | null {
+    if (!sessions.length) {
+      return null;
+    }
+
+    const reference = new Date();
+    return [...sessions].sort((first: any, second: any) => {
+      const scoreDifference = this.getActionSessionScore(second, reference) - this.getActionSessionScore(first, reference);
+      if (scoreDifference !== 0) {
+        return scoreDifference;
+      }
+
+      return this.parseSessionTime(second.startTime).getTime() - this.parseSessionTime(first.startTime).getTime();
+    })[0] || null;
+  }
+
+  private getActionSessionScore(session: any, reference: Date): number {
+    let score = 0;
+
+    if (!!session?.canRecordAttendance) {
+      score += 100;
+    }
+
+    if (this.isSessionLive(session, reference)) {
+      score += 50;
+    }
+
+    if (!!session?.needsAttention) {
+      score += 25;
+    }
+
+    const studentCount = Number(session?.studentCount || 0);
+    const attendanceCount = Number(session?.attendanceCount || 0);
+    score += Math.min(Math.max(studentCount - attendanceCount, 0), 10);
+
+    return score;
   }
 
   private selectAttendanceFocusSession(sessions: any[]): any | null {
