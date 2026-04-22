@@ -4,6 +4,8 @@ type RuntimeEnvironment = {
   qrRefreshInterval?: number;
   defaultLanguage?: string;
   supportedLanguages?: string[];
+  vodafoneCashNumber?: string;
+  supportPhone?: string;
 };
 
 const runtimeEnvironment =
@@ -30,5 +32,13 @@ export const environment = {
   signalRUrl,
   qrRefreshInterval: runtimeEnvironment.qrRefreshInterval ?? 30000,
   defaultLanguage: runtimeEnvironment.defaultLanguage ?? 'ar',
-  supportedLanguages: runtimeEnvironment.supportedLanguages ?? ['ar', 'en']
+  supportedLanguages: runtimeEnvironment.supportedLanguages ?? ['ar', 'en'],
+  paymentGateway: {
+    demoMode: true,
+    vodafoneCashNumber: runtimeEnvironment.vodafoneCashNumber?.trim() || '0100',
+    supportPhone:
+      runtimeEnvironment.supportPhone?.trim()
+      || runtimeEnvironment.vodafoneCashNumber?.trim()
+      || '0100'
+  }
 };
