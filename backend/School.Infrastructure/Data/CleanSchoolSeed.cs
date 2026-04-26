@@ -123,6 +123,14 @@ public static class CleanSchoolSeed
         await SeedAnnouncementsAsync(context, userManager, today);
     }
 
+    public static async Task BootstrapIdentityAsync(
+        UserManager<ApplicationUser> userManager,
+        RoleManager<IdentityRole> roleManager)
+    {
+        await EnsureRolesAsync(roleManager);
+        await EnsureAdminAccountsAsync(userManager);
+    }
+
     public static async Task ResetDataAsync(SchoolDbContext context)
     {
         var deleteTables = new[]

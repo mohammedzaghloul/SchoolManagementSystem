@@ -184,22 +184,43 @@ app.MapHealthChecks("/health");
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
+    var logger = services.GetRequiredService<ILogger<Program>>();
     try
     {
         var context = services.GetRequiredService<SchoolDbContext>();
         await context.Database.MigrateAsync();
-        if (resetSeedRequested)
-        {
-            await CleanSchoolSeed.ResetDataAsync(context);
-        }
 
         var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
         var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
-        await SchoolDbContextSeed.SeedAsync(context, userManager, roleManager);
+        var runFullSeed = resetSeedRequested
+            || app.Environment.IsDevelopment()
+            || Environment.GetEnvironmentVariable("SCHOOL_RUN_SEED") == "1";
+
+        if (runFullSeed)
+        {
+            logger.LogInformation(
+                "Running database seed. Environment={Environment}; ResetSeed={ResetSeed}",
+                app.Environment.EnvironmentName,
+                resetSeedRequested);
+
+            if (resetSeedRequested)
+            {
+                await CleanSchoolSeed.ResetDataAsync(context);
+            }
+
+            await SchoolDbContextSeed.SeedAsync(context, userManager, roleManager);
+        }
+        else
+        {
+            logger.LogInformation(
+                "Skipping demo database seed in {Environment}. Set SCHOOL_RUN_SEED=1 to run it explicitly.",
+                app.Environment.EnvironmentName);
+
+            await CleanSchoolSeed.BootstrapIdentityAsync(userManager, roleManager);
+        }
     }
     catch (Exception ex)
     {
-        var logger = services.GetRequiredService<ILogger<Program>>();
         logger.LogError(ex, "An error occurred during seeding the database. This might be because the database server is not reachable.");
     }
 }
