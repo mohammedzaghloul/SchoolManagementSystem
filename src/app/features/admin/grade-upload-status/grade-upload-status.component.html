@@ -27,7 +27,7 @@
     <div class="filters-card publish-grid">
       <label class="field">
         <span>النطاق</span>
-        <select [(ngModel)]="publishForm.scope" [disabled]="publishing || loadingMeta">
+        <select [(ngModel)]="publishForm.scope" (ngModelChange)="onPublishScopeChanged()" [disabled]="publishing || loadingMeta">
           <option *ngFor="let scope of scopes" [value]="scope.value">{{ scope.label }}</option>
         </select>
       </label>
@@ -41,7 +41,7 @@
 
       <label class="field" *ngIf="publishForm.scope === 'Class'">
         <span>الفصل</span>
-        <select [(ngModel)]="publishForm.classId" [disabled]="publishing || loadingMeta">
+        <select [(ngModel)]="publishForm.classId" (ngModelChange)="onPublishClassChanged()" [disabled]="publishing || loadingMeta">
           <option *ngFor="let classRoom of classRooms" [ngValue]="classRoom.id">{{ classRoom.name }}</option>
         </select>
       </label>
@@ -49,7 +49,7 @@
       <label class="field">
         <span>المادة</span>
         <select [(ngModel)]="publishForm.subjectId" [disabled]="publishing || loadingMeta">
-          <option *ngFor="let subject of subjects" [ngValue]="subject.id">{{ subject.name }}</option>
+          <option *ngFor="let subject of availableSubjects" [ngValue]="subject.id">{{ subject.name }}</option>
         </select>
       </label>
 

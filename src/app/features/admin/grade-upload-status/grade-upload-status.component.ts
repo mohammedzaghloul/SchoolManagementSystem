@@ -74,6 +74,14 @@ export class GradeUploadStatusComponent implements OnInit {
     return this.dashboard?.globalStatus === 'Completed';
   }
 
+  get availableSubjects(): Subject[] {
+    const scopedSubjects = this.publishForm.scope === 'Class' && this.publishForm.classId
+      ? this.subjects.filter(subject => subject.classRoomId === Number(this.publishForm.classId))
+      : this.subjects;
+
+    return this.getUniqueSubjects(scopedSubjects.length ? scopedSubjects : this.subjects);
+  }
+
   async loadMeta(): Promise<void> {
     this.loadingMeta = true;
     try {
@@ -88,7 +96,7 @@ export class GradeUploadStatusComponent implements OnInit {
       this.subjects = (subjects || []).filter(subject => subject.isActive !== false);
       this.publishForm.gradeLevelId = this.gradeLevels[0]?.id || null;
       this.publishForm.classId = this.classRooms[0]?.id || null;
-      this.publishForm.subjectId = this.subjects[0]?.id || 0;
+      this.syncSelectedSubject();
     } catch (error: any) {
       this.errorMessage = error?.message || 'تعذر تحميل بيانات النشر.';
       this.notify.error(this.errorMessage);
@@ -149,6 +157,14 @@ export class GradeUploadStatusComponent implements OnInit {
     await this.loadDashboard();
   }
 
+  onPublishScopeChanged(): void {
+    this.syncSelectedSubject();
+  }
+
+  onPublishClassChanged(): void {
+    this.syncSelectedSubject();
+  }
+
   trackBySession(_: number, session: GradeSessionMonitor): number {
     return session.sessionId;
   }
@@ -157,6 +173,30 @@ export class GradeUploadStatusComponent implements OnInit {
     if (status === 'Approved') return 'Approved';
     if (status === 'InProgress') return 'In Progress';
     return 'Not Started';
+  }
+
+  private syncSelectedSubject(): void {
+    const selectedSubjectExists = this.availableSubjects.some(subject => subject.id === Number(this.publishForm.subjectId));
+    if (!selectedSubjectExists) {
+      this.publishForm.subjectId = this.availableSubjects[0]?.id || 0;
+    }
+  }
+
+  private getUniqueSubjects(subjects: Subject[]): Subject[] {
+    const uniqueSubjects = new Map<string, Subject>();
+
+    for (const subject of subjects) {
+      const key = this.normalizeSubjectName(subject.name);
+      if (!uniqueSubjects.has(key)) {
+        uniqueSubjects.set(key, subject);
+      }
+    }
+
+    return Array.from(uniqueSubjects.values()).sort((first, second) => first.name.localeCompare(second.name, 'ar'));
+  }
+
+  private normalizeSubjectName(name: string): string {
+    return name.trim().replace(/\s+/g, ' ').toLocaleLowerCase('ar');
   }
 
   private getDateInputValue(date: Date): string {
