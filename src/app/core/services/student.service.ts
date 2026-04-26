@@ -1,7 +1,15 @@
 // core/services/student.service.ts
 import { Injectable } from '@angular/core';
 import { ApiService } from './api.service';
-import { Student, StudentFilter, PaginatedResponse } from '../models/student.model';
+import {
+  PaginatedResponse,
+  Student,
+  StudentAttendanceSummary,
+  StudentDashboard,
+  StudentFilter,
+  StudentGradeSummary,
+  StudentSearchResult
+} from '../models/student.model';
 
 @Injectable({
   providedIn: 'root'
@@ -54,6 +62,25 @@ export class StudentService {
 
   async getStudentById(id: number): Promise<Student> {
     return this.api.get<Student>(`/api/Students/${id}`);
+  }
+
+  async searchStudents(query: string, limit = 10): Promise<StudentSearchResult[]> {
+    return this.api.get<StudentSearchResult[]>('/api/Students/search', {
+      q: query,
+      limit
+    });
+  }
+
+  async getStudentDashboard(id: number): Promise<StudentDashboard> {
+    return this.api.get<StudentDashboard>(`/api/Students/${id}/dashboard`);
+  }
+
+  async getStudentDashboardGrades(id: number): Promise<StudentGradeSummary[]> {
+    return this.api.get<StudentGradeSummary[]>(`/api/Students/${id}/grades`);
+  }
+
+  async getStudentDashboardAttendance(id: number): Promise<StudentAttendanceSummary[]> {
+    return this.api.get<StudentAttendanceSummary[]>(`/api/Students/${id}/attendance`);
   }
 
   async createStudent(data: any): Promise<Student> {

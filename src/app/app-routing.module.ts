@@ -89,6 +89,10 @@ const routes: Routes = [
                 loadComponent: () => import('./features/admin/grade-upload-status/grade-upload-status.component').then(m => m.GradeUploadStatusComponent)
             },
             {
+                path: 'student-dashboard',
+                loadComponent: () => import('./features/admin/students/student-dashboard/student-dashboard.component').then(m => m.StudentDashboardComponent)
+            },
+            {
                 path: 'classes',
                 loadComponent: () => import('./features/admin/classes/class-management/class-management.component').then(m => m.ClassManagementComponent)
             },

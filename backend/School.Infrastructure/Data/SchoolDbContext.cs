@@ -60,6 +60,15 @@ public class SchoolDbContext : IdentityDbContext<ApplicationUser>
             .HasForeignKey(s => s.ClassRoomId)
             .OnDelete(DeleteBehavior.SetNull);
 
+        builder.Entity<Student>()
+            .HasIndex(s => s.FullName);
+
+        builder.Entity<Student>()
+            .HasIndex(s => s.Email);
+
+        builder.Entity<Student>()
+            .HasIndex(s => s.QrCodeValue);
+
         // Configure Session relationships
         builder.Entity<Session>()
             .HasOne(s => s.Subject)

@@ -1,9 +1,11 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using School.Application.DTOs.Students;
 using Microsoft.EntityFrameworkCore;
 using School.Application.Features.Students.Commands;
 using School.Application.Features.Students.Queries;
+using School.Application.Interfaces;
 using School.Domain.Entities;
 using School.Infrastructure.Data;
 using School.Infrastructure.Identity;
@@ -16,15 +18,29 @@ public class StudentsController : BaseApiController
     private readonly SchoolDbContext _context;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly RoleManager<IdentityRole> _roleManager;
+    private readonly IStudentQueryService _studentQueryService;
 
     public StudentsController(
         SchoolDbContext context,
         UserManager<ApplicationUser> userManager,
-        RoleManager<IdentityRole> roleManager)
+        RoleManager<IdentityRole> roleManager,
+        IStudentQueryService studentQueryService)
     {
         _context = context;
         _userManager = userManager;
         _roleManager = roleManager;
+        _studentQueryService = studentQueryService;
+    }
+
+    [HttpGet("search")]
+    [Authorize(Roles = "Admin")]
+    public async Task<ActionResult<IReadOnlyList<StudentSearchResultDto>>> SearchStudents(
+        [FromQuery] string? q,
+        [FromQuery] int limit = 10,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _studentQueryService.SearchStudentsAsync(q, limit, cancellationToken);
+        return Ok(result);
     }
 
     [HttpGet]
@@ -35,7 +51,52 @@ public class StudentsController : BaseApiController
         return Ok(result);
     }
 
-    [HttpGet("{id}")]
+    [HttpGet("{id:int}/dashboard")]
+    [Authorize(Roles = "Admin")]
+    public async Task<ActionResult<StudentDashboardDto>> GetStudentDashboard(
+        int id,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _studentQueryService.GetStudentDashboardAsync(id, cancellationToken);
+        if (result == null)
+        {
+            return NotFound(new { message = "الطالب غير موجود." });
+        }
+
+        return Ok(result);
+    }
+
+    [HttpGet("{id:int}/grades")]
+    [Authorize(Roles = "Admin")]
+    public async Task<ActionResult<IReadOnlyList<StudentGradeDto>>> GetStudentGradesForDashboard(
+        int id,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _studentQueryService.GetStudentGradesAsync(id, cancellationToken);
+        if (result == null)
+        {
+            return NotFound(new { message = "الطالب غير موجود." });
+        }
+
+        return Ok(result);
+    }
+
+    [HttpGet("{id:int}/attendance")]
+    [Authorize(Roles = "Admin")]
+    public async Task<ActionResult<IReadOnlyList<StudentAttendanceDto>>> GetStudentAttendanceForDashboard(
+        int id,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _studentQueryService.GetStudentAttendanceAsync(id, cancellationToken);
+        if (result == null)
+        {
+            return NotFound(new { message = "الطالب غير موجود." });
+        }
+
+        return Ok(result);
+    }
+
+    [HttpGet("{id:int}")]
     public async Task<ActionResult<StudentDto>> GetStudent(int id)
     {
         var result = await Mediator.Send(new GetStudentByIdQuery { Id = id });

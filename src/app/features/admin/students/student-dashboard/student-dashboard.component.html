@@ -1,0 +1,224 @@
+<div class="student-dashboard-page" dir="rtl">
+  <section class="search-band">
+    <div class="search-title">
+      <span class="eyebrow">Student Dashboard</span>
+      <h1>بحث الطالب</h1>
+    </div>
+
+    <div class="search-box">
+      <i class="fas fa-search"></i>
+      <input
+        type="search"
+        [(ngModel)]="query"
+        (ngModelChange)="onSearchInput()"
+        (focus)="onSearchFocus()"
+        placeholder="ابحث باسم الطالب أو الكود..."
+        autocomplete="off">
+      <span class="search-loader" *ngIf="searching"></span>
+
+      <div class="suggestions" *ngIf="results.length > 0">
+        <button
+          type="button"
+          class="suggestion-row"
+          *ngFor="let student of results; trackBy: trackBySearchResult"
+          (click)="selectStudent(student)">
+          <span class="student-avatar">{{ student.fullName.charAt(0) }}</span>
+          <span class="suggestion-main">
+            <strong>{{ student.fullName }}</strong>
+            <small>{{ student.gradeLevelName || 'مرحلة غير محددة' }} · {{ student.classRoomName || 'فصل غير محدد' }}</small>
+          </span>
+          <span class="code-chip">{{ student.code || ('STD-' + student.id) }}</span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <section class="state-panel error" *ngIf="errorMessage && !loadingDashboard">
+    <i class="fas fa-triangle-exclamation"></i>
+    <span>{{ errorMessage }}</span>
+  </section>
+
+  <section class="state-panel" *ngIf="loadingDashboard">
+    <div class="spinner-border text-primary" role="status"></div>
+    <span>جاري تحميل بيانات الطالب...</span>
+  </section>
+
+  <ng-container *ngIf="dashboard as student">
+    <section class="student-header">
+      <div class="student-identity">
+        <div class="big-avatar">{{ student.name.charAt(0) }}</div>
+        <div>
+          <h2>{{ student.name }}</h2>
+          <p>{{ student.gradeLevelName || 'مرحلة غير محددة' }} · {{ student.classRoomName || 'فصل غير محدد' }}</p>
+          <div class="identity-meta">
+            <span><i class="fas fa-id-card"></i> {{ student.code || ('STD-' + student.id) }}</span>
+            <span *ngIf="student.parentName"><i class="fas fa-user-group"></i> {{ student.parentName }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="header-metrics">
+        <div>
+          <span>المتوسط</span>
+          <strong>{{ formatPercent(student.avg) }}</strong>
+        </div>
+        <div>
+          <span>آخر حضور</span>
+          <strong>{{ attendanceStatusLabel(student.lastAttendance) }}</strong>
+        </div>
+      </div>
+    </section>
+
+    <section class="grade-workflow" [class.done]="student.gradesCompleted">
+      <div class="workflow-copy">
+        <span class="workflow-chip">
+          <i class="fas" [class.fa-circle-check]="student.gradesCompleted" [class.fa-clock]="!student.gradesCompleted"></i>
+          {{ student.gradesCompleted ? 'تم رفع الدرجات' : 'جاري رفع الدرجات' }}
+        </span>
+        <strong>{{ student.approvedSubjects }} / {{ student.totalSubjects }} مواد معتمدة</strong>
+      </div>
+      <div class="workflow-progress" aria-hidden="true">
+        <span [style.width.%]="gradeCompletionPercent"></span>
+      </div>
+    </section>
+
+    <section class="quick-stats">
+      <article class="stat-tile grade">
+        <span>الدرجات</span>
+        <strong>{{ formatPercent(student.avg) }}</strong>
+      </article>
+      <article class="stat-tile attendance">
+        <span>الحضور</span>
+        <strong>{{ formatPercent(student.attendance) }}</strong>
+      </article>
+      <article class="stat-tile activity">
+        <span>النشاط</span>
+        <strong>{{ formatPercent(student.activity) }}</strong>
+      </article>
+    </section>
+
+    <section class="alerts-band" *ngIf="student.alerts.length > 0">
+      <article class="alert-item" *ngFor="let alert of student.alerts" [class.danger]="alert.type === 'danger'">
+        <i class="fas fa-triangle-exclamation"></i>
+        <div>
+          <strong>{{ alert.title }}</strong>
+          <span>{{ alert.message }}</span>
+        </div>
+      </article>
+    </section>
+
+    <section class="tabs-shell">
+      <div class="tabs-bar" role="tablist">
+        <button type="button" [class.active]="activeTab === 'grades'" (click)="setTab('grades')">
+          <i class="fas fa-chart-line"></i>
+          <span>الدرجات</span>
+        </button>
+        <button type="button" [class.active]="activeTab === 'attendance'" (click)="setTab('attendance')">
+          <i class="fas fa-calendar-check"></i>
+          <span>الحضور</span>
+        </button>
+        <button type="button" [class.active]="activeTab === 'assignments'" (click)="setTab('assignments')">
+          <i class="fas fa-list-check"></i>
+          <span>الواجبات</span>
+        </button>
+      </div>
+
+      <div class="tab-panel" *ngIf="activeTab === 'grades'">
+        <div class="table-tools">
+          <label>
+            <span>المادة</span>
+            <select [(ngModel)]="gradeFilter">
+              <option value="all">كل المواد</option>
+              <option *ngFor="let subject of subjectOptions" [value]="subject">{{ subject }}</option>
+            </select>
+          </label>
+          <label>
+            <span>الترتيب</span>
+            <select [(ngModel)]="gradeSort">
+              <option value="date-desc">الأحدث</option>
+              <option value="score-desc">الأعلى درجة</option>
+              <option value="score-asc">الأقل درجة</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="responsive-table" *ngIf="filteredGrades.length > 0; else noGrades">
+          <table>
+            <thead>
+              <tr>
+                <th>المادة</th>
+                <th>النوع</th>
+                <th>الدرجة</th>
+                <th>التاريخ</th>
+                <th>الحالة</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let grade of filteredGrades; trackBy: trackByGrade">
+                <td>
+                  <strong>{{ grade.subjectName }}</strong>
+                  <small>{{ grade.teacherName || 'مدرس غير محدد' }}</small>
+                </td>
+                <td>{{ grade.gradeType }}</td>
+                <td>
+                  <span class="score-pill" [ngClass]="scoreClass(grade.score)">
+                    {{ formatPercent(grade.score) }}
+                  </span>
+                </td>
+                <td>{{ grade.date | date:'d/M/yyyy' }}</td>
+                <td>
+                  <span class="status-pill" [class.done]="grade.isApproved">
+                    {{ grade.isApproved ? 'معتمد' : 'قيد الاعتماد' }}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="tab-panel" *ngIf="activeTab === 'attendance'">
+        <div class="timeline-list" *ngIf="attendanceRows.length > 0; else noAttendance">
+          <article class="timeline-item" *ngFor="let record of attendanceRows; trackBy: trackByAttendance" [ngClass]="attendanceClass(record)">
+            <span class="timeline-dot"></span>
+            <div>
+              <strong>{{ record.date | date:'d/M/yyyy' }} → {{ attendanceStatusLabel(record) }}</strong>
+              <small>{{ record.method || 'Manual' }} · {{ record.subjectName || record.sessionTitle || 'حصة غير محددة' }}</small>
+            </div>
+          </article>
+        </div>
+      </div>
+
+      <div class="tab-panel" *ngIf="activeTab === 'assignments'">
+        <div class="assignment-list" *ngIf="assignmentRows.length > 0; else noAssignments">
+          <article class="assignment-row" *ngFor="let assignment of assignmentRows; trackBy: trackByAssignment">
+            <div>
+              <strong>{{ assignment.title }}</strong>
+              <small>{{ assignment.subjectName || 'مادة غير محددة' }} · {{ assignment.dueDate | date:'d/M/yyyy' }}</small>
+            </div>
+            <span class="assignment-chip" [ngClass]="assignmentClass(assignment)">
+              {{ assignment.statusLabel }}
+            </span>
+          </article>
+        </div>
+      </div>
+    </section>
+  </ng-container>
+
+  <section class="empty-dashboard" *ngIf="!dashboard && !loadingDashboard && !errorMessage">
+    <i class="fas fa-user-magnifying-glass"></i>
+    <h2>اختار طالب من البحث</h2>
+  </section>
+
+  <ng-template #noGrades>
+    <div class="empty-inner">لا توجد درجات مسجلة لهذا الطالب.</div>
+  </ng-template>
+
+  <ng-template #noAttendance>
+    <div class="empty-inner">لا توجد سجلات حضور لهذا الطالب.</div>
+  </ng-template>
+
+  <ng-template #noAssignments>
+    <div class="empty-inner">لا توجد واجبات مرتبطة بهذا الطالب.</div>
+  </ng-template>
+</div>

@@ -56,6 +56,7 @@ builder.Services.AddScoped<IQrCodeService, QrCodeService>();
 builder.Services.AddScoped<IScheduleService, ScheduleService>();
 builder.Services.AddScoped<ITeacherWorkflowService, TeacherWorkflowService>();
 builder.Services.AddScoped<ILiveSessionService, LiveSessionService>();
+builder.Services.AddScoped<IStudentQueryService, StudentQueryService>();
 builder.Services.AddHttpClient<IFaceRecognitionService, FaceRecognitionService>();
 builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();

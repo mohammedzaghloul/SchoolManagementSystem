@@ -76,21 +76,39 @@
       <div class="teacher-head">
         <div class="teacher-avatar">{{ teacher.teacherName.charAt(0) }}</div>
         <div class="teacher-main">
-          <h2>{{ teacher.teacherName }}</h2>
+          <h2>{{ teacher.teacherName }} <span>({{ getTeacherSubjectSummary(teacher) }})</span></h2>
           <p *ngIf="teacher.teacherEmail">{{ teacher.teacherEmail }}</p>
         </div>
         <span class="status-chip" [class.done]="teacher.isComplete">
           <i class="fas" [class.fa-circle-check]="teacher.isComplete" [class.fa-clock]="!teacher.isComplete"></i>
-          {{ teacher.statusLabel }}
+          {{ teacher.isComplete ? 'تم' : 'جاري' }}
         </span>
+      </div>
+
+      <div class="teacher-progress">
+        <div>
+          <span>{{ teacher.confirmedSubjects }} / {{ teacher.totalSubjects }} مواد</span>
+          <strong>{{ getTeacherCompletionPercent(teacher) }}%</strong>
+        </div>
+        <div class="teacher-progress-track">
+          <span [style.width.%]="getTeacherCompletionPercent(teacher)" [class.done]="teacher.isComplete"></span>
+        </div>
       </div>
 
       <div class="teacher-stats">
         <span>{{ teacher.confirmedSubjects }} معتمد</span>
-        <span>{{ teacher.pendingSubjects }} قيد الرصد</span>
+        <span>{{ teacher.pendingSubjects }} قيد الرفع</span>
+        <span *ngIf="getFirstPendingSubjectName(teacher) as pendingSubject">
+          المتبقي: {{ pendingSubject }}
+        </span>
       </div>
 
-      <div class="subjects-grid">
+      <button class="details-toggle" type="button" (click)="toggleTeacherDetails(teacher.teacherId)">
+        <i class="fas" [class.fa-chevron-down]="!isTeacherExpanded(teacher.teacherId)" [class.fa-chevron-up]="isTeacherExpanded(teacher.teacherId)"></i>
+        {{ isTeacherExpanded(teacher.teacherId) ? 'إخفاء التفاصيل' : 'عرض تفاصيل المواد' }}
+      </button>
+
+      <div class="subjects-grid" *ngIf="isTeacherExpanded(teacher.teacherId)">
         <div class="subject-row" *ngFor="let subject of teacher.subjects; trackBy: trackBySubject" [class.done]="subject.isConfirmed">
           <div>
             <strong>{{ subject.subjectName }}</strong>

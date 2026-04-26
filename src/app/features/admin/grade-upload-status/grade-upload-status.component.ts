@@ -25,6 +25,7 @@ export class GradeUploadStatusComponent implements OnInit {
   status: AdminGradeUploadStatusResponse | null = null;
   loading = false;
   errorMessage = '';
+  private expandedTeacherIds = new Set<number>();
 
   constructor(
     private gradeService: GradeService,
@@ -71,6 +72,41 @@ export class GradeUploadStatusComponent implements OnInit {
 
   trackBySubject(_: number, subject: AdminGradeUploadSubjectStatus): number {
     return subject.subjectId;
+  }
+
+  getTeacherCompletionPercent(teacher: AdminGradeUploadTeacherStatus): number {
+    if (teacher.totalSubjects <= 0) {
+      return teacher.isComplete ? 100 : 0;
+    }
+
+    return Math.round((teacher.confirmedSubjects / teacher.totalSubjects) * 100);
+  }
+
+  getTeacherSubjectSummary(teacher: AdminGradeUploadTeacherStatus): string {
+    const subjects = Array.from(new Set(teacher.subjects.map(subject => subject.subjectName).filter(Boolean)));
+    if (subjects.length === 0) {
+      return 'بدون مواد';
+    }
+
+    const visibleSubjects = subjects.slice(0, 2).join('، ');
+    return subjects.length > 2 ? `${visibleSubjects} +${subjects.length - 2}` : visibleSubjects;
+  }
+
+  getFirstPendingSubjectName(teacher: AdminGradeUploadTeacherStatus): string | null {
+    return teacher.subjects.find(subject => !subject.isConfirmed)?.subjectName || null;
+  }
+
+  isTeacherExpanded(teacherId: number): boolean {
+    return this.expandedTeacherIds.has(teacherId);
+  }
+
+  toggleTeacherDetails(teacherId: number): void {
+    if (this.expandedTeacherIds.has(teacherId)) {
+      this.expandedTeacherIds.delete(teacherId);
+      return;
+    }
+
+    this.expandedTeacherIds.add(teacherId);
   }
 
   private getDateInputValue(date: Date): string {
