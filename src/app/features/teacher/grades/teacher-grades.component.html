@@ -61,9 +61,14 @@
       <span>أدخل درجات {{ pendingGradesCount }} طالب لتفعيل اعتماد الرفع.</span>
     </div>
 
-    <div class="completion-banner ready" *ngIf="gradebook && !gradebook.isLocked && pendingGradesCount === 0">
+    <div class="completion-banner" *ngIf="gradebook && !gradebook.isLocked && pendingGradesCount === 0 && hasUnsavedChanges">
+      <i class="fas fa-cloud-arrow-up"></i>
+      <span>كل الدرجات مكتملة. احفظ الدرجات أولاً ثم اعتمد الرفع.</span>
+    </div>
+
+    <div class="completion-banner ready" *ngIf="gradebook && !gradebook.isLocked && pendingGradesCount === 0 && !hasUnsavedChanges">
       <i class="fas fa-circle-check"></i>
-      <span>كل الدرجات جاهزة، يمكنك اعتماد الرفع الآن.</span>
+      <span>كل الدرجات محفوظة، يمكنك اعتماد الرفع الآن.</span>
     </div>
   </section>
 
@@ -87,7 +92,7 @@
     </article>
     <article class="summary-card info">
       <span>نسبة الإكمال</span>
-      <strong>{{ gradebook.progressPercent }}%</strong>
+      <strong>{{ entryProgressPercent }}%</strong>
     </article>
   </section>
 
@@ -128,7 +133,7 @@
             <div class="student-avatar">{{ student.studentName.charAt(0) }}</div>
             <div class="student-info">
               <h3>{{ student.studentName }}</h3>
-              <p>{{ student.isGraded ? ((student.percentage || 0) + '%') : 'لم يتم الرصد' }}</p>
+              <p>{{ studentGradeLabel(student) }}</p>
             </div>
           </div>
 

@@ -34,6 +34,7 @@ export class TeacherGradesComponent implements OnInit {
   saving = false;
   approving = false;
   loadErrorMessage = '';
+  hasUnsavedChanges = false;
 
   constructor(
     private gradeService: GradeService,
@@ -67,6 +68,14 @@ export class TeacherGradesComponent implements OnInit {
     return Math.max(this.totalStudents - this.enteredGradesCount, 0);
   }
 
+  get entryProgressPercent(): number {
+    if (this.totalStudents === 0) {
+      return 0;
+    }
+
+    return Math.round((this.enteredGradesCount / this.totalStudents) * 100);
+  }
+
   get canSave(): boolean {
     return Boolean(this.gradebook)
       && !this.gradebook!.isLocked
@@ -81,7 +90,8 @@ export class TeacherGradesComponent implements OnInit {
       && !this.approving
       && !this.saving
       && this.totalStudents > 0
-      && this.pendingGradesCount === 0;
+      && this.pendingGradesCount === 0
+      && !this.hasUnsavedChanges;
   }
 
   get statusLabel(): string {
@@ -126,9 +136,11 @@ export class TeacherGradesComponent implements OnInit {
         score: student.score ?? null,
         maxScore: student.maxScore || 100
       }));
+      this.hasUnsavedChanges = false;
     } catch (error: any) {
       this.gradebook = null;
       this.students = [];
+      this.hasUnsavedChanges = false;
       this.loadErrorMessage = error?.message || 'تعذر تحميل كشف الدرجات.';
       this.notify.error(this.loadErrorMessage);
     } finally {
@@ -143,16 +155,19 @@ export class TeacherGradesComponent implements OnInit {
   updateScore(student: EditableSessionGradeStudent, value: string | number | null): void {
     if (value === null || value === '' || typeof value === 'undefined') {
       student.score = null;
+      this.hasUnsavedChanges = true;
       return;
     }
 
     const parsed = Number(value);
     if (!Number.isFinite(parsed)) {
       student.score = null;
+      this.hasUnsavedChanges = true;
       return;
     }
 
     student.score = Math.min(student.maxScore, Math.max(0, parsed));
+    this.hasUnsavedChanges = true;
   }
 
   updateMaxScore(student: EditableSessionGradeStudent, value: string | number | null): void {
@@ -161,6 +176,20 @@ export class TeacherGradesComponent implements OnInit {
     if (student.score !== null && student.score > student.maxScore) {
       student.score = student.maxScore;
     }
+    this.hasUnsavedChanges = true;
+  }
+
+  studentGradeLabel(student: EditableSessionGradeStudent): string {
+    if (student.score === null) {
+      return 'لم يتم الرصد';
+    }
+
+    const maxScore = student.maxScore || 100;
+    const percentage = maxScore > 0
+      ? Math.round((Number(student.score) / maxScore) * 1000) / 10
+      : 0;
+
+    return `${percentage}%`;
   }
 
   async saveGrades(): Promise<void> {
