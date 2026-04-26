@@ -55,6 +55,16 @@
       <i class="fas fa-lock"></i>
       <span>{{ gradebook?.isApproved ? 'تم اعتماد هذه الجلسة ولا يمكن تعديلها.' : 'انتهى موعد التعديل لهذه الجلسة.' }}</span>
     </div>
+
+    <div class="completion-banner" *ngIf="gradebook && !gradebook.isLocked && pendingGradesCount > 0">
+      <i class="fas fa-circle-info"></i>
+      <span>أدخل درجات {{ pendingGradesCount }} طالب لتفعيل اعتماد الرفع.</span>
+    </div>
+
+    <div class="completion-banner ready" *ngIf="gradebook && !gradebook.isLocked && pendingGradesCount === 0">
+      <i class="fas fa-circle-check"></i>
+      <span>كل الدرجات جاهزة، يمكنك اعتماد الرفع الآن.</span>
+    </div>
   </section>
 
   <section class="empty-state choose-state" *ngIf="!loadingSessions && sessions.length === 0 && !loadErrorMessage">
@@ -72,11 +82,11 @@
       <strong>{{ enteredGradesCount }}</strong>
     </article>
     <article class="summary-card warning">
-      <span>Not Graded</span>
+      <span>لم يتم الرصد</span>
       <strong>{{ pendingGradesCount }}</strong>
     </article>
     <article class="summary-card info">
-      <span>Progress</span>
+      <span>نسبة الإكمال</span>
       <strong>{{ gradebook.progressPercent }}%</strong>
     </article>
   </section>
@@ -118,13 +128,13 @@
             <div class="student-avatar">{{ student.studentName.charAt(0) }}</div>
             <div class="student-info">
               <h3>{{ student.studentName }}</h3>
-              <p>{{ student.isGraded ? ((student.percentage || 0) + '%') : 'Not Graded' }}</p>
+              <p>{{ student.isGraded ? ((student.percentage || 0) + '%') : 'لم يتم الرصد' }}</p>
             </div>
           </div>
 
           <div class="grade-card-inputs">
             <label class="score-field">
-              <span>Score</span>
+              <span>الدرجة</span>
               <input
                 type="number"
                 min="0"
@@ -135,7 +145,7 @@
                 [disabled]="saving || gradebook.isLocked">
             </label>
             <label class="score-field">
-              <span>Max Score</span>
+              <span>النهاية العظمى</span>
               <input
                 type="number"
                 min="1"
