@@ -1,11 +1,14 @@
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using School.Domain.Entities;
+using School.Infrastructure.Identity;
 
 namespace School.Infrastructure.Data;
 
 public static class GradeManagementSeed
 {
     private const double DefaultMaxScore = 100;
+    private const string TeacherPassword = "Teacher@123";
 
     private static readonly TeacherSeed[] TeacherSeeds =
     [
@@ -28,8 +31,15 @@ public static class GradeManagementSeed
         new("Science", "SCI", "Mahmoud")
     ];
 
-    public static async Task SeedAsync(SchoolDbContext context, CancellationToken cancellationToken = default)
+    public static async Task SeedAsync(
+        SchoolDbContext context,
+        UserManager<ApplicationUser> userManager,
+        RoleManager<IdentityRole> roleManager,
+        CancellationToken cancellationToken = default)
     {
+        await EnsureTeacherRoleAsync(roleManager);
+        var teachers = await EnsureTeachersAsync(context, userManager, cancellationToken);
+
         var hasGradeManagementData = await context.GradeSessions.AnyAsync(cancellationToken)
             || await context.Grades.AnyAsync(cancellationToken)
             || await context.GradeUploads.AnyAsync(cancellationToken);
@@ -39,7 +49,6 @@ public static class GradeManagementSeed
             return;
         }
 
-        var teachers = await EnsureTeachersAsync(context, cancellationToken);
         var gradeLevels = await EnsureGradeLevelsAsync(context, cancellationToken);
         var classRooms = await EnsureClassRoomsAsync(context, gradeLevels, teachers, cancellationToken);
         var subjects = await EnsureSubjectsAsync(context, classRooms, teachers, cancellationToken);
@@ -49,8 +58,54 @@ public static class GradeManagementSeed
         await EnsureGradesAndUploadsAsync(context, sessions, studentsByClassId, cancellationToken);
     }
 
+    private static async Task EnsureTeacherRoleAsync(RoleManager<IdentityRole> roleManager)
+    {
+        if (!await roleManager.RoleExistsAsync("Teacher"))
+        {
+            await roleManager.CreateAsync(new IdentityRole("Teacher"));
+        }
+    }
+
+    private static async Task<ApplicationUser> EnsureTeacherUserAsync(
+        UserManager<ApplicationUser> userManager,
+        TeacherSeed seed)
+    {
+        var user = await userManager.FindByEmailAsync(seed.Email);
+        if (user == null)
+        {
+            user = new ApplicationUser
+            {
+                UserName = seed.Email,
+                Email = seed.Email,
+                FullName = seed.Name,
+                EmailConfirmed = true
+            };
+
+            var createResult = await userManager.CreateAsync(user, TeacherPassword);
+            if (!createResult.Succeeded)
+            {
+                var errors = string.Join(", ", createResult.Errors.Select(error => error.Description));
+                throw new InvalidOperationException($"Could not create grade seed teacher {seed.Email}: {errors}");
+            }
+        }
+
+        user.UserName = seed.Email;
+        user.Email = seed.Email;
+        user.FullName = seed.Name;
+        user.EmailConfirmed = true;
+
+        if (!await userManager.IsInRoleAsync(user, "Teacher"))
+        {
+            await userManager.AddToRoleAsync(user, "Teacher");
+        }
+
+        await userManager.UpdateAsync(user);
+        return user;
+    }
+
     private static async Task<Dictionary<string, Teacher>> EnsureTeachersAsync(
         SchoolDbContext context,
+        UserManager<ApplicationUser> userManager,
         CancellationToken cancellationToken)
     {
         var teachers = await context.Teachers.ToListAsync(cancellationToken);
@@ -61,13 +116,21 @@ public static class GradeManagementSeed
 
         foreach (var seed in TeacherSeeds)
         {
-            if (teachersByName.ContainsKey(Normalize(seed.Name)))
+            var user = await EnsureTeacherUserAsync(userManager, seed);
+
+            if (teachersByName.TryGetValue(Normalize(seed.Name), out var existingTeacher))
             {
+                existingTeacher.UserId = user.Id;
+                existingTeacher.FullName = seed.Name;
+                existingTeacher.Email = seed.Email;
+                existingTeacher.Phone = seed.Phone;
+                existingTeacher.IsActive = true;
                 continue;
             }
 
             var teacher = new Teacher
             {
+                UserId = user.Id,
                 FullName = seed.Name,
                 Email = seed.Email,
                 Phone = seed.Phone,
@@ -80,10 +143,25 @@ public static class GradeManagementSeed
 
         await context.SaveChangesAsync(cancellationToken);
 
-        return TeacherSeeds.ToDictionary(
+        var seededTeachers = TeacherSeeds.ToDictionary(
             seed => seed.Name,
             seed => teachersByName[Normalize(seed.Name)],
             StringComparer.OrdinalIgnoreCase);
+
+        foreach (var seed in TeacherSeeds)
+        {
+            var user = await userManager.FindByEmailAsync(seed.Email);
+            if (user == null)
+            {
+                continue;
+            }
+
+            user.TeacherId = seededTeachers[seed.Name].Id;
+            user.FullName = seed.Name;
+            await userManager.UpdateAsync(user);
+        }
+
+        return seededTeachers;
     }
 
     private static async Task<Dictionary<string, GradeLevel>> EnsureGradeLevelsAsync(

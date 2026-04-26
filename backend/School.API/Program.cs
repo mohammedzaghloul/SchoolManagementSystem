@@ -211,7 +211,7 @@ using (var scope = app.Services.CreateScope())
             }
 
             await SchoolDbContextSeed.SeedAsync(context, userManager, roleManager);
-            await GradeManagementSeed.SeedAsync(context);
+            await GradeManagementSeed.SeedAsync(context, userManager, roleManager);
         }
         else
         {
