@@ -64,7 +64,7 @@ export class BottomNavComponent implements OnInit, OnDestroy {
         this.dashboardRoute = '/teacher/dashboard';
         this.attendanceRoute = '/teacher/attendance';
         this.attendanceLabel = 'الحضور';
-        this.classesRoute = '/teacher/classes';
+        this.classesRoute = '/teacher/timetable';
         this.classesLabel = 'حصصي';
         this.classesIcon = 'fa-chalkboard';
         this.paymentsRoute = null;

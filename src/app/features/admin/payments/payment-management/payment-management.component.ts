@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
@@ -16,7 +16,7 @@ type InvoiceStatusFilter = 'all' | 'Pending' | 'Partial' | 'Overdue' | 'Paid';
   templateUrl: './payment-management.component.html',
   styleUrls: ['./payment-management.component.css']
 })
-export class PaymentManagementComponent implements OnInit {
+export class PaymentManagementComponent implements OnInit, OnDestroy {
   invoices: AdminPaymentInvoice[] = [];
   filteredInvoices: AdminPaymentInvoice[] = [];
   students: any[] = [];
@@ -27,6 +27,9 @@ export class PaymentManagementComponent implements OnInit {
   searchTerm = '';
   selectedStatus: InvoiceStatusFilter = 'all';
   selectedStudent = 'all';
+
+  readonly pageSize = 10;
+  currentPage = 1;
 
   showModal = false;
   isEditMode = false;
@@ -43,6 +46,10 @@ export class PaymentManagementComponent implements OnInit {
       this.loadInvoices(),
       this.loadStudents()
     ]);
+  }
+
+  ngOnDestroy(): void {
+    document.body.classList.remove('modal-open-fix');
   }
 
   async loadInvoices(): Promise<void> {
@@ -82,12 +89,40 @@ export class PaymentManagementComponent implements OnInit {
 
       return matchesSearch && matchesStatus && matchesStudent;
     });
+    this.currentPage = 1;
+  }
+
+  get totalPages(): number {
+    return Math.ceil(this.filteredInvoices.length / this.pageSize);
+  }
+
+  get pagedInvoices(): AdminPaymentInvoice[] {
+    const start = (this.currentPage - 1) * this.pageSize;
+    return this.filteredInvoices.slice(start, start + this.pageSize);
+  }
+
+  get pageNumbers(): (number | string)[] {
+    const total = this.totalPages;
+    const current = this.currentPage;
+    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+    const pages: (number | string)[] = [1];
+    if (current > 3) pages.push('...');
+    for (let i = Math.max(2, current - 1); i <= Math.min(total - 1, current + 1); i++) pages.push(i);
+    if (current < total - 2) pages.push('...');
+    pages.push(total);
+    return pages;
+  }
+
+  goToPage(page: number): void {
+    if (page < 1 || page > this.totalPages) return;
+    this.currentPage = page;
   }
 
   openAddModal(): void {
     this.isEditMode = false;
     this.currentInvoice = this.createEmptyInvoice();
     this.showModal = true;
+    document.body.classList.add('modal-open-fix');
   }
 
   openEditModal(invoice: AdminPaymentInvoice): void {
@@ -97,10 +132,12 @@ export class PaymentManagementComponent implements OnInit {
       dueDate: this.toDateInput(invoice.dueDate)
     };
     this.showModal = true;
+    document.body.classList.add('modal-open-fix');
   }
 
   closeModal(): void {
     this.showModal = false;
+    document.body.classList.remove('modal-open-fix');
   }
 
   async saveInvoice(): Promise<void> {

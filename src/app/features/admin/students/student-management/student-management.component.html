@@ -1,32 +1,93 @@
 <div class="page-container" dir="rtl">
+    <!-- Header -->
     <div class="page-header d-flex justify-content-between align-items-center mb-4">
         <div>
             <h2 class="page-title text-gradient fw-bold">إدارة الطلاب</h2>
-            <p class="text-muted mb-0">إجمالي الطلاب: {{ students.length }}</p>
+            <p class="text-muted mb-0">
+                إجمالي الطلاب: <strong>{{ students.length }}</strong>
+                &nbsp;|&nbsp;
+                نشط: <strong class="text-success">{{ activeCount }}</strong>
+                &nbsp;|&nbsp;
+                غير نشط: <strong class="text-danger">{{ inactiveCount }}</strong>
+            </p>
         </div>
-        <button class="btn btn-premium d-flex align-items-center gap-2" (click)="openAddModal()">
-            <i class="fas fa-plus"></i>
+        <button class="btn btn-add-premium d-flex align-items-center gap-2" (click)="openAddModal()">
+            <div class="plus-icon-circle">
+                <i class="fas fa-plus"></i>
+            </div>
             <span>إضافة طالب جديد</span>
         </button>
     </div>
 
+    <!-- Stats Cards -->
+    <div class="stats-grid mb-4">
+        <div class="stat-card">
+            <div class="stat-icon-wrap blue">
+                <i class="fas fa-users"></i>
+            </div>
+            <div>
+                <span class="stat-label">إجمالي الطلاب</span>
+                <strong>{{ students.length }}</strong>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon-wrap green">
+                <i class="fas fa-user-check"></i>
+            </div>
+            <div>
+                <span class="stat-label">طلاب نشطون</span>
+                <strong>{{ activeCount }}</strong>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon-wrap red">
+                <i class="fas fa-user-xmark"></i>
+            </div>
+            <div>
+                <span class="stat-label">غير نشطين</span>
+                <strong>{{ inactiveCount }}</strong>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon-wrap purple">
+                <i class="fas fa-chalkboard-user"></i>
+            </div>
+            <div>
+                <span class="stat-label">مع ولي أمر</span>
+                <strong>{{ withParentCount }}</strong>
+            </div>
+        </div>
+    </div>
+
+    <!-- Grade Level Tabs -->
+    <div class="grade-tabs-wrap">
+        <button class="grade-tab" [class.active]="selectedGrade === 'all'" (click)="selectGrade('all')">
+            <i class="fas fa-users"></i>
+            <span>كل الطلاب</span>
+            <span class="grade-count">{{ getGradeCount('all') }}</span>
+        </button>
+        <button *ngFor="let grade of gradeLevels" class="grade-tab" [class.active]="selectedGrade === grade.id"
+            (click)="selectGrade(grade.id)">
+            <i class="fas fa-graduation-cap"></i>
+            <span>{{ grade.name }}</span>
+            <span class="grade-count">{{ getGradeCount(grade.id) }}</span>
+        </button>
+    </div>
+
+    <!-- Filters + Table Card -->
     <div class="card border-0 shadow-sm rounded-4 mb-4">
         <div class="card-body p-4">
             <div class="premium-toolbar">
                 <div class="search-wrapper">
                     <i class="fas fa-search search-icon"></i>
-                    <input
-                        type="text"
-                        class="form-control"
-                        placeholder="بحث عن طالب بالاسم أو البريد..."
-                        [(ngModel)]="searchTerm"
-                        (input)="applyFilter()">
+                    <input type="text" class="form-control" placeholder="بحث عن طالب بالاسم أو البريد..."
+                        [(ngModel)]="searchTerm" (input)="applyFilter()">
                 </div>
 
                 <div class="filter-wrapper">
                     <select class="form-select" [(ngModel)]="selectedClassRoom" (change)="applyFilter()">
                         <option value="all">كل الفصول</option>
-                        <option *ngFor="let cls of classRooms" [value]="cls.id">{{ cls.name }}</option>
+                        <option *ngFor="let cls of classRooms" [value]="cls.id">{{ getClassRoomLabel(cls) }}</option>
                     </select>
                 </div>
 
@@ -37,38 +98,47 @@
                         <option value="inactive">غير نشط</option>
                     </select>
                 </div>
+
+                <div class="filter-wrapper">
+                    <select class="form-select" [(ngModel)]="selectedFaceFilter" (change)="applyFilter()">
+                        <option value="all">بصمة الوجه - الكل</option>
+                        <option value="trained">مدرب ✅</option>
+                        <option value="untrained">غير مدرب ❌</option>
+                    </select>
+                </div>
             </div>
 
             <div *ngIf="loading" class="text-center py-5">
                 <div class="spinner-border text-primary" role="status">
                     <span class="visually-hidden">Loading...</span>
                 </div>
-                <p class="mt-2">جاري تحميل الطلاب...</p>
+                <p class="mt-2 text-muted">جاري تحميل الطلاب...</p>
             </div>
 
             <div *ngIf="error" class="alert alert-danger mb-4">
-                {{ error }}
+                <i class="fas fa-circle-exclamation me-2"></i>{{ error }}
             </div>
 
             <div class="table-responsive" *ngIf="!loading">
                 <table class="table custom-table align-middle">
                     <thead>
                         <tr>
-                            <th>ID</th>
-                            <th>اسم الطالب</th>
+                            <th>#</th>
+                            <th>الطالب</th>
                             <th>الصف / الفصل</th>
                             <th>ولي الأمر</th>
+                            <th>بصمة الوجه</th>
                             <th>الحالة</th>
                             <th>إجراءات</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr *ngFor="let student of filteredStudents">
-                            <td class="text-muted fw-bold">#{{ student.id }}</td>
+                        <tr *ngFor="let student of pagedStudents; let i = index">
+                            <td class="text-muted fw-bold small">#{{ student.id }}</td>
                             <td>
                                 <div class="d-flex align-items-center gap-3">
-                                    <div class="avatar bg-light-orange text-orange">
-                                        <i class="fas fa-user-circle fs-3 text-secondary"></i>
+                                    <div class="student-avatar" [style.background]="getAvatarColor(student.fullName)">
+                                        {{ getInitials(student.fullName) }}
                                     </div>
                                     <div>
                                         <h6 class="mb-0 fw-bold">{{ student.fullName }}</h6>
@@ -76,100 +146,290 @@
                                     </div>
                                 </div>
                             </td>
-                            <td><span class="fw-medium text-dark">{{ student.classRoomName || 'غير محدد' }}</span></td>
-                            <td><span class="text-secondary fw-semibold">{{ student.parentName || '—' }}</span></td>
                             <td>
-                                <span
-                                    (click)="toggleStudentStatus(student)"
-                                    title="اضغط لتغيير الحالة"
-                                    [class]="student.isActive ? 'badge bg-success-subtle text-success px-3 py-2 rounded-pill fw-bold cursor-pointer' : 'badge bg-danger-subtle text-danger px-3 py-2 rounded-pill fw-bold cursor-pointer'">
+                                <div class="d-flex flex-column">
+                                    <span class="fw-bold text-dark">{{ student.gradeLevelName || student.gradeName ||
+                                        '—' }}</span>
+                                    <span class="small text-muted">{{ student.classRoomName || 'فصل غير محدد' }}</span>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="text-secondary fw-semibold" *ngIf="student.parentName">
+                                    <i class="fas fa-user-tie text-muted me-1"></i>{{ student.parentName }}
+                                </span>
+                                <span class="text-muted fst-italic" *ngIf="!student.parentName">غير مربوط</span>
+                            </td>
+                            <!-- Face Training Badge -->
+                            <td>
+                                <span class="face-badge trained" *ngIf="student.isFaceTrained">
+                                    <i class="fas fa-circle-check"></i> مدرب
+                                </span>
+                                <span class="face-badge untrained" *ngIf="!student.isFaceTrained">
+                                    <i class="fas fa-circle-xmark"></i> غير مدرب
+                                </span>
+                            </td>
+                            <td>
+                                <span (click)="toggleStudentStatus(student)" title="اضغط لتغيير الحالة"
+                                    class="badge px-3 py-2 rounded-pill fw-bold cursor-pointer status-badge"
+                                    [class.active-badge]="student.isActive" [class.inactive-badge]="!student.isActive">
+                                    <i class="fas" [class.fa-circle-check]="student.isActive"
+                                        [class.fa-circle-xmark]="!student.isActive"></i>
                                     {{ student.isActive ? 'نشط' : 'غير نشط' }}
                                 </span>
                             </td>
                             <td>
                                 <div class="d-flex gap-2">
-                                    <button class="btn btn-sm btn-icon" [routerLink]="['/admin/students/train-face', student.id]" title="تدريب بصمة الوجه">
+                                    <button class="btn btn-sm btn-icon"
+                                        [routerLink]="['/admin/students/train-face', student.id]"
+                                        title="تدريب بصمة الوجه">
                                         <i class="fas fa-portrait text-info"></i>
                                     </button>
-                                    <button class="btn btn-sm btn-icon" (click)="openEditModal(student)">
+                                    <button class="btn btn-sm btn-icon" (click)="openEditModal(student)" title="تعديل">
                                         <i class="far fa-edit text-primary"></i>
                                     </button>
-                                    <button class="btn btn-sm btn-icon" (click)="deleteStudent(student.id)">
+                                    <button class="btn btn-sm btn-icon" (click)="deleteStudent(student.id)" title="حذف">
                                         <i class="far fa-trash-alt text-danger"></i>
                                     </button>
                                 </div>
                             </td>
                         </tr>
                         <tr *ngIf="filteredStudents.length === 0">
-                            <td colspan="6" class="text-center py-4 text-muted">لا يوجد طلاب متطابقون مع البحث</td>
+                            <td colspan="7" class="text-center py-5">
+                                <i class="fas fa-users-slash fs-1 d-block mb-3 text-muted opacity-50"></i>
+                                <p class="text-muted mb-0">لا يوجد طلاب مطابقون للبحث</p>
+                            </td>
                         </tr>
                     </tbody>
                 </table>
+            </div>
+
+            <div class="student-mobile-list" *ngIf="!loading && filteredStudents.length > 0">
+                <article class="student-mobile-card" *ngFor="let student of pagedStudents">
+                    <div class="student-mobile-main">
+                        <div class="student-avatar" [style.background]="getAvatarColor(student.fullName)">
+                            {{ getInitials(student.fullName) }}
+                        </div>
+                        <div class="student-mobile-title">
+                            <span class="student-mobile-id">#{{ student.id }}</span>
+                            <h6>{{ student.fullName }}</h6>
+                            <small>{{ student.email }}</small>
+                        </div>
+                    </div>
+
+                    <div class="student-mobile-details">
+                        <div class="mobile-detail">
+                            <span class="mobile-detail-label">
+                                <i class="fas fa-graduation-cap"></i>
+                                الصف / الفصل
+                            </span>
+                            <span class="mobile-detail-value">
+                                {{ student.gradeLevelName || student.gradeName || '—' }} · {{ student.classRoomName ||
+                                'غير محدد' }}
+                            </span>
+                        </div>
+                        <div class="mobile-detail">
+                            <span class="mobile-detail-label">
+                                <i class="fas fa-user-tie"></i>
+                                ولي الأمر
+                            </span>
+                            <span class="mobile-detail-value">{{ student.parentName || 'غير مربوط' }}</span>
+                        </div>
+                    </div>
+
+                    <div class="student-mobile-badges">
+                        <span class="face-badge trained" *ngIf="student.isFaceTrained">
+                            <i class="fas fa-circle-check"></i> مدرب
+                        </span>
+                        <span class="face-badge untrained" *ngIf="!student.isFaceTrained">
+                            <i class="fas fa-circle-xmark"></i> غير مدرب
+                        </span>
+                        <span (click)="toggleStudentStatus(student)" title="اضغط لتغيير الحالة"
+                            class="badge px-3 py-2 rounded-pill fw-bold cursor-pointer status-badge"
+                            [class.active-badge]="student.isActive" [class.inactive-badge]="!student.isActive">
+                            <i class="fas" [class.fa-circle-check]="student.isActive"
+                                [class.fa-circle-xmark]="!student.isActive"></i>
+                            {{ student.isActive ? 'نشط' : 'غير نشط' }}
+                        </span>
+                    </div>
+
+                    <div class="student-mobile-actions">
+                        <button type="button" class="btn student-mobile-action face"
+                            [routerLink]="['/admin/students/train-face', student.id]">
+                            <i class="fas fa-portrait"></i>
+                            <span>بصمة</span>
+                        </button>
+                        <button type="button" class="btn student-mobile-action edit" (click)="openEditModal(student)">
+                            <i class="far fa-edit"></i>
+                            <span>تعديل</span>
+                        </button>
+                        <button type="button" class="btn student-mobile-action delete" (click)="deleteStudent(student.id)">
+                            <i class="far fa-trash-alt"></i>
+                            <span>حذف</span>
+                        </button>
+                    </div>
+                </article>
+            </div>
+
+            <div class="student-mobile-empty" *ngIf="!loading && filteredStudents.length === 0">
+                <i class="fas fa-users-slash"></i>
+                <p>لا يوجد طلاب مطابقون للبحث</p>
+            </div>
+
+            <!-- Pagination -->
+            <div class="pagination-bar" *ngIf="!loading && totalPages > 1">
+                <button class="page-nav" [disabled]="currentPage === 1" (click)="goToPage(currentPage - 1)">
+                    <i class="fas fa-chevron-right"></i> السابق
+                </button>
+                <div class="page-numbers">
+                    <ng-container *ngFor="let p of pageNumbers">
+                        <span *ngIf="p === '...'" class="page-ellipsis">...</span>
+                        <button *ngIf="p !== '...'" class="page-num" [class.active]="p === currentPage"
+                            (click)="goToPage(+p)">{{ p }}</button>
+                    </ng-container>
+                </div>
+                <button class="page-nav" [disabled]="currentPage === totalPages" (click)="goToPage(currentPage + 1)">
+                    التالي <i class="fas fa-chevron-left"></i>
+                </button>
+                <span class="page-info">
+                    عرض {{ pagedStudents.length }} من {{ filteredStudents.length }} طالب
+                </span>
             </div>
         </div>
     </div>
 </div>
 
+<!-- Modal -->
 <div class="modal-backdrop fade show" *ngIf="showModal"></div>
-<div class="modal fade show d-block" *ngIf="showModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg rounded-4">
-            <div class="modal-header border-0 p-4 align-items-center">
-                <h5 class="modal-title fw-bold mb-0">{{ isEditMode ? 'تعديل بيانات طالب' : 'إضافة طالب جديد' }}</h5>
+<div class="modal fade show d-block student-modal-shell" [class.mobile-full-screen]="showModal" *ngIf="showModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg student-modal-dialog">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden student-modal-card">
+            <!-- Sticky Header -->
+            <div class="modal-header border-0 p-4 align-items-center sticky-top bg-white z-index-modal-header student-modal-header">
+                <div class="modal-icon-wrap">
+                    <i class="fas" [class.fa-user-plus]="!isEditMode" [class.fa-user-pen]="isEditMode"></i>
+                </div>
+                <div class="ms-3">
+                    <h5 class="modal-title fw-bold mb-0">{{ isEditMode ? 'تعديل بيانات طالب' : 'إضافة طالب جديد' }}</h5>
+                    <p class="text-muted small mb-0">{{ isEditMode ? 'عدّل البيانات ثم اضغط حفظ' : 'أدخل بيانات الطالب
+                        الجديد' }}</p>
+                </div>
                 <button type="button" class="btn-close shadow-none m-0 me-auto ms-0" (click)="closeModal()"></button>
             </div>
-            <form (ngSubmit)="saveStudent()">
-                <div class="modal-body p-4 pt-0">
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">الاسم الكامل</label>
-                        <input type="text" class="form-control rounded-3" name="fullName" [(ngModel)]="currentStudent.fullName" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">البريد الإلكتروني</label>
-                        <input type="email" class="form-control rounded-3" name="email" [(ngModel)]="currentStudent.email" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">رقم الهاتف</label>
-                        <input type="text" class="form-control rounded-3" name="phone" [(ngModel)]="currentStudent.phone">
-                    </div>
-                    <div class="mb-3" *ngIf="!isEditMode">
-                        <label class="form-label fw-semibold">كلمة المرور</label>
-                        <input type="password" class="form-control rounded-3" name="password" [(ngModel)]="currentStudent.password">
-                    </div>
 
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-semibold">الفصل الدراسي</label>
-                            <select class="form-select rounded-3" name="classRoomId" [(ngModel)]="currentStudent.classRoomId">
-                                <option [ngValue]="null">اختر الفصل...</option>
-                                <option *ngFor="let cls of classRooms" [ngValue]="cls.id">{{ cls.name }}</option>
-                            </select>
+            <form class="student-modal-form" (ngSubmit)="saveStudent()">
+                <div class="modal-body p-4 pt-2 student-modal-body">
+                    <!-- Section 1: Personal Info -->
+                    <div class="form-section mb-4">
+                        <div class="section-header mb-3">
+                            <i class="fas fa-id-card text-primary me-2"></i>
+                            <span class="fw-bold text-dark">البيانات الشخصية الأساسية</span>
                         </div>
-
-                        <div class="col-md-6 mb-3">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <label class="form-label fw-semibold mb-0">ولي الأمر</label>
-                                <a class="small text-primary text-decoration-none" routerLink="/admin/parents" (click)="closeModal()">
-                                    إضافة ولي أمر جديد
-                                </a>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold small">الاسم الكامل <span
+                                        class="text-danger">*</span></label>
+                                <input type="text" class="form-control rounded-3" name="fullName"
+                                    [(ngModel)]="currentStudent.fullName" required placeholder="مثال: أحمد محمد علي">
                             </div>
-                            <select class="form-select rounded-3" name="parentId" [(ngModel)]="currentStudent.parentId">
-                                <option [ngValue]="null">بدون ربط حالياً</option>
-                                <option *ngFor="let parent of parents" [ngValue]="parent.id">{{ parent.fullName }}</option>
-                            </select>
-                            <small class="text-muted d-block mt-2">من هنا تربط الطالب بولي أمر موجود، ويمكنك إنشاء ولي أمر جديد من صفحة الإدارة الخاصة بهم.</small>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold small">البريد الإلكتروني <span
+                                        class="text-danger">*</span></label>
+                                <input type="email" class="form-control rounded-3" name="email"
+                                    [(ngModel)]="currentStudent.email" required placeholder="name@example.com">
+                            </div>
+                            <div class="col-md-6" *ngIf="!isEditMode">
+                                <label class="form-label fw-semibold small">كلمة المرور المؤقتة <span
+                                        class="text-danger">*</span></label>
+                                <input type="password" class="form-control rounded-3" name="password"
+                                    [(ngModel)]="currentStudent.password" required autocomplete="new-password"
+                                    placeholder="أدخل كلمة مرور قوية">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold small">رقم الهاتف</label>
+                                <input type="text" class="form-control rounded-3" name="phone"
+                                    [(ngModel)]="currentStudent.phone" placeholder="01xxxxxxxxx">
+                            </div>
                         </div>
                     </div>
 
-                    <div class="form-check form-switch mb-0">
-                        <input class="form-check-input" type="checkbox" name="isActive" [(ngModel)]="currentStudent.isActive">
-                        <label class="form-check-label fw-semibold">حساب نشط</label>
+                    <!-- Section 2: Academic Info -->
+                    <div class="form-section mb-4 academic-section">
+                        <div class="section-header mb-3">
+                            <i class="fas fa-graduation-cap text-success me-2"></i>
+                            <span class="fw-bold text-dark">البيانات الدراسية</span>
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold small">السنة الدراسية</label>
+                                <select class="form-select rounded-3" name="modalGradeId" [(ngModel)]="modalGradeId"
+                                    (change)="onModalGradeChange()">
+                                    <option [ngValue]="null">كل السنوات الدراسية</option>
+                                    <option *ngFor="let g of gradeLevels" [ngValue]="g.id">{{ g.name }}</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold small">الفصل الدراسي</label>
+                                <select class="form-select rounded-3" name="classRoomId"
+                                    [(ngModel)]="currentStudent.classRoomId">
+                                    <option [ngValue]="null">اختر الفصل...</option>
+                                    <option *ngIf="getClassRoomsForModalGrade().length === 0" [ngValue]="null" disabled>
+                                        لا توجد فصول متاحة
+                                    </option>
+                                    <option *ngFor="let cls of getClassRoomsForModalGrade()" [ngValue]="cls.id">{{
+                                        getClassRoomLabel(cls) }}</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section 3: Parent Info -->
+                    <div class="form-section mb-4">
+                        <div class="section-header mb-3 d-flex justify-content-between align-items-center">
+                            <div>
+                                <i class="fas fa-user-friends text-warning me-2"></i>
+                                <span class="fw-bold text-dark">ولي الأمر المرتبط</span>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-primary py-1 px-3 rounded-pill add-parent-inline"
+                                routerLink="/admin/parents" (click)="closeModal()">
+                                <i class="fas fa-plus me-1"></i> ولي أمر جديد
+                            </button>
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label fw-semibold small">اختر ولي الأمر من القائمة</label>
+                                <select class="form-select rounded-3" name="parentId"
+                                    [(ngModel)]="currentStudent.parentId">
+                                    <option [ngValue]="null">بدون ربط (يمكن الربط لاحقاً)</option>
+                                    <option *ngFor="let parent of parents" [ngValue]="parent.id">{{ parent.fullName }}
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section 4: Account Status -->
+                    <div class="form-section">
+                        <div class="section-header mb-3">
+                            <i class="fas fa-shield-halved text-info me-2"></i>
+                            <span class="fw-bold text-dark">حالة الحساب والوصول</span>
+                        </div>
+                        <div class="status-toggle-wrap">
+                            <div class="form-check form-switch d-flex align-items-center gap-3 ps-0">
+                                <label class="form-check-label fw-bold mb-0 cursor-pointer" for="isActiveSwitch">
+                                    تفعيل حساب الطالب للدخول للنظام
+                                </label>
+                                <input class="form-check-input ms-auto" type="checkbox" id="isActiveSwitch"
+                                    name="isActive" [(ngModel)]="currentStudent.isActive">
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="modal-footer border-0 p-4 pt-0">
-                    <button type="button" class="btn btn-light rounded-3 px-4" (click)="closeModal()" [disabled]="submitting">إلغاء</button>
+                <div class="modal-footer border-0 p-4 pt-2 bg-light-soft student-modal-footer">
+                    <button type="button" class="btn btn-light-premium rounded-3 px-4" (click)="closeModal()"
+                        [disabled]="submitting">إلغاء</button>
                     <button type="submit" class="btn btn-premium px-5" [disabled]="submitting">
-                        {{ submitting ? 'جاري الحفظ...' : 'حفظ البيانات' }}
+                        <i class="fas fa-spinner fa-spin me-2" *ngIf="submitting"></i>
+                        {{ submitting ? 'جاري الحفظ...' : (isEditMode ? 'تحديث البيانات' : 'حفظ وإضافة') }}
                     </button>
                 </div>
             </form>

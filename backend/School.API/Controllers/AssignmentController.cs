@@ -83,6 +83,19 @@ public class AssignmentController : BaseApiController
         var teacher = await _context.Teachers.FirstOrDefaultAsync(t => t.Email == userEmail);
         if (teacher == null) return Unauthorized();
 
+        var subject = await _context.Subjects
+            .AsNoTracking()
+            .FirstOrDefaultAsync(currentSubject =>
+                currentSubject.Id == assignment.SubjectId &&
+                currentSubject.ClassRoomId == assignment.ClassRoomId &&
+                currentSubject.TeacherId == teacher.Id &&
+                currentSubject.IsActive);
+
+        if (subject == null)
+        {
+            return Forbid();
+        }
+
         assignment.TeacherId = teacher.Id;
         _context.Assignments.Add(assignment);
         await _context.SaveChangesAsync();
@@ -133,6 +146,16 @@ public class AssignmentController : BaseApiController
     [Authorize(Roles = "Teacher")]
     public async Task<IActionResult> GetSubmissions(int id)
     {
+        var userEmail = User.FindFirstValue(ClaimTypes.Email);
+        var teacher = await _context.Teachers.FirstOrDefaultAsync(t => t.Email == userEmail);
+        if (teacher == null) return Unauthorized();
+
+        var ownsAssignment = await _context.Assignments.AnyAsync(assignment => assignment.Id == id && assignment.TeacherId == teacher.Id);
+        if (!ownsAssignment)
+        {
+            return Forbid();
+        }
+
         var submissions = await _context.AssignmentSubmissions
             .Include(s => s.Student)
             .Where(s => s.AssignmentId == id)
@@ -156,6 +179,16 @@ public class AssignmentController : BaseApiController
     {
         var assignment = await _context.Assignments.FindAsync(id);
         if (assignment == null) return NotFound();
+
+        if (User.IsInRole("Teacher"))
+        {
+            var userEmail = User.FindFirstValue(ClaimTypes.Email);
+            var teacher = await _context.Teachers.FirstOrDefaultAsync(t => t.Email == userEmail);
+            if (teacher == null || assignment.TeacherId != teacher.Id)
+            {
+                return Forbid();
+            }
+        }
 
         // Remove related submissions first
         var submissions = _context.AssignmentSubmissions.Where(s => s.AssignmentId == id);

@@ -1,6 +1,7 @@
 import { Component, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { Subscription } from 'rxjs';
 import WaveSurfer from 'wavesurfer.js';
 import { SignalRService } from '../../../core/services/signalr.service';
@@ -22,6 +23,8 @@ declare var MediaRecorder: any;
 export class ChatRoomComponent implements OnInit, OnDestroy {
   contacts: Contact[] = [];
   filteredContacts: Contact[] = [];
+  visibleContactsCount = 15;
+  readonly contactsPageSize = 15;
   selectedContact: Contact | null = null;
   messages: Message[] = [];
   newMessage = '';
@@ -29,6 +32,10 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
   messageSearchQuery = '';
   loading = false;
   loadingMessages = false;
+  loadingOlderMessages = false;
+  messagesPage = 1;
+  messagesPageSize = 30;
+  hasMoreMessages = false;
   currentUserRole = '';
   currentUserId = '';
   showEmojiPicker = false;
@@ -42,6 +49,7 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
   onlineUsers: Set<string> = new Set();
   showAttachMenu = false;
   imagePreview: string | null = null;
+  confirmDeleteId: string | null = null;
 
   private audioUnlocked = false;
   private recordingStream: MediaStream | null = null;
@@ -50,11 +58,20 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
   private typingSub?: Subscription;
   private onlineSub?: Subscription;
   private readSub?: Subscription;
+  private routeSub?: Subscription;
   private typingTimeout: any;
   private wavesurfers: Map<string, WaveSurfer> = new Map();
   private mutationObserver?: MutationObserver;
   private mutationObserverAttached = false;
   private isUserScrollingManually = false;
+
+  get visibleContacts(): Contact[] {
+    return this.filteredContacts.slice(0, this.visibleContactsCount);
+  }
+
+  get hasMoreContacts(): boolean {
+    return this.visibleContactsCount < this.filteredContacts.length;
+  }
 
   @ViewChild('sentAudio') sentAudio!: ElementRef<HTMLAudioElement>;
   @ViewChild('receivedAudio') receivedAudio!: ElementRef<HTMLAudioElement>;
@@ -73,7 +90,8 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
     private signalR: SignalRService,
     private auth: AuthService,
     private chatService: ChatService,
-    private notify: NotificationService
+    private notify: NotificationService,
+    private route: ActivatedRoute
   ) { }
 
   unlockAudio() {
@@ -102,6 +120,11 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
     this.loading = true;
     await this.loadContacts();
     this.loading = false;
+    this.selectContactFromRoute();
+
+    this.routeSub = this.route.queryParamMap.subscribe(() => {
+      this.selectContactFromRoute();
+    });
 
     await this.signalR.startConnection();
     this.listenForMessages();
@@ -152,9 +175,11 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
         return timeB - timeA;
       });
       this.filteredContacts = [...this.contacts];
+      this.visibleContactsCount = this.contactsPageSize;
     } catch {
       this.contacts = [];
       this.filteredContacts = [];
+      this.visibleContactsCount = this.contactsPageSize;
     }
   }
 
@@ -163,6 +188,7 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
     
     if (!query) {
       this.filteredContacts = [...this.contacts];
+      this.visibleContactsCount = this.contactsPageSize;
       return;
     }
 
@@ -170,20 +196,30 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
       const nameMatch = contact.name?.toLowerCase().includes(query);
       const studentMatch = contact.studentName?.toLowerCase().includes(query);
       const roleMatch = this.getContactRoleLabel(contact).toLowerCase().includes(query);
+      const subjectMatch = contact.subjectName?.toLowerCase().includes(query);
       
-      return nameMatch || studentMatch || roleMatch;
+      return nameMatch || studentMatch || roleMatch || subjectMatch;
     });
+    this.visibleContactsCount = this.contactsPageSize;
+  }
+
+  loadMoreContacts(): void {
+    this.visibleContactsCount += this.contactsPageSize;
   }
 
   async selectContact(contact: Contact): Promise<void> {
     this.selectedContact = contact;
     this.messages = [];
+    this.messagesPage = 1;
+    this.hasMoreMessages = false;
     this.loadingMessages = true;
     this.showMessageSearch = false;
+    this.showEmojiPicker = false;
+    this.showAttachMenu = false;
     this.messageSearchQuery = '';
     this.isUserScrollingManually = false;
 
-    await this.loadMessages(contact.id);
+    await this.loadMessages(contact.id, 1, false);
     this.loadingMessages = false;
 
     if (contact.unreadCount > 0) {
@@ -200,12 +236,12 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
     setTimeout(() => this.scrollToBottom(), 400);
   }
 
-  async loadMessages(contactId: string): Promise<void> {
+  async loadMessages(contactId: string, page: number = 1, appendOlder: boolean = false): Promise<void> {
     try {
-      const response: any = await this.chatService.getMessages(contactId, 1, 100);
+      const response: any = await this.chatService.getMessages(contactId, page, this.messagesPageSize);
       const rawMessages = Array.isArray(response) ? response : (response.items || []);
 
-      this.messages = rawMessages.map((message: any) => ({
+      const mappedMessages = rawMessages.map((message: any) => ({
         ...message,
         id: message.id?.toString() || Date.now().toString(),
         timestamp: message.sentAt || message.timestamp || new Date(),
@@ -213,12 +249,59 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
         messageType: message.messageType || 'text'
       }));
 
+      this.messages = appendOlder
+        ? [...mappedMessages, ...this.messages]
+        : mappedMessages;
+
       this.messages.sort((a, b) =>
         new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
       );
+
+      this.messagesPage = Array.isArray(response) ? page : (response.page || page);
+      this.hasMoreMessages = Array.isArray(response)
+        ? rawMessages.length >= this.messagesPageSize
+        : !!response.hasMore;
     } catch (error) {
       console.error('Error loading messages:', error);
-      this.messages = [];
+      if (!appendOlder) {
+        this.messages = [];
+        this.hasMoreMessages = false;
+      }
+    }
+  }
+
+  private selectContactFromRoute(): void {
+    const contactId = this.route.snapshot.queryParamMap.get('contactId');
+    if (!contactId || this.selectedContact?.id === contactId) {
+      return;
+    }
+
+    const contact = this.contacts.find(item => item.id === contactId);
+    if (contact) {
+      this.selectContact(contact);
+    }
+  }
+
+  async loadOlderMessages(): Promise<void> {
+    if (!this.selectedContact || this.loadingOlderMessages || !this.hasMoreMessages) {
+      return;
+    }
+
+    const container = this.chatMessagesContainer?.nativeElement;
+    const previousScrollHeight = container?.scrollHeight || 0;
+    this.loadingOlderMessages = true;
+
+    try {
+      await this.loadMessages(this.selectedContact.id, this.messagesPage + 1, true);
+
+      setTimeout(() => {
+        const element = this.chatMessagesContainer?.nativeElement;
+        if (element) {
+          element.scrollTop = element.scrollHeight - previousScrollHeight;
+        }
+      }, 50);
+    } finally {
+      this.loadingOlderMessages = false;
     }
   }
 
@@ -352,6 +435,7 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
     const messageContent = this.newMessage;
     this.newMessage = '';
     this.showEmojiPicker = false;
+    this.showAttachMenu = false;
 
     const optimisticMessage: Message = {
       id: 'temp_' + Date.now(),
@@ -368,17 +452,26 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
     this.scrollToBottom();
 
     try {
+      let sentMessage: any;
       if (this.signalR.isConnected()) {
-        await this.signalR.sendMessage(this.selectedContact.id, messageContent);
+        sentMessage = await this.signalR.sendMessage(this.selectedContact.id, messageContent);
       } else {
-        await this.chatService.sendMessage(this.selectedContact.id, messageContent);
+        sentMessage = await this.chatService.sendMessage(this.selectedContact.id, messageContent);
       }
 
       this.playSentSound();
       optimisticMessage.isSending = false;
+
+      if (sentMessage && sentMessage.id) {
+        optimisticMessage.id = sentMessage.id.toString();
+        if (sentMessage.sentAt) optimisticMessage.timestamp = sentMessage.sentAt;
+      }
+
+      this.notify.success('تم إرسال الرسالة بنجاح.', 'تم الإرسال');
     } catch (error) {
       console.error('Failed to send message:', error);
       optimisticMessage.isSending = false;
+      this.messages = this.messages.filter(m => m.id !== optimisticMessage.id);
       this.notify.error('تعذر إرسال الرسالة. حاول مرة أخرى.');
     }
 
@@ -387,15 +480,39 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
     }
   }
 
+  async copyMessage(content: string, event: Event): Promise<void> {
+    event.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(content);
+      this.notify.success('تم نسخ الرسالة.', 'تم النسخ');
+    } catch {
+      this.notify.error('تعذر النسخ.');
+    }
+  }
+
   async deleteMessage(messageId: string, event: Event) {
     event.stopPropagation();
-    if (!confirm('هل تريد حذف هذه الرسالة؟')) {
+
+    // Don't allow deleting temp/optimistic messages
+    if (messageId.startsWith('temp_')) {
+      this.notify.info('الرسالة لا تزال قيد الإرسال.');
       return;
     }
 
+    // First click = show confirm toast
+    if (this.confirmDeleteId !== messageId) {
+      this.confirmDeleteId = messageId;
+      this.notify.warning('اضغط مرة أخرى للتأكيد وحذف الرسالة.', 'تأكيد الحذف');
+      setTimeout(() => { this.confirmDeleteId = null; }, 3000);
+      return;
+    }
+
+    // Second click = actually delete
+    this.confirmDeleteId = null;
     try {
       await this.chatService.deleteMessage(messageId);
       this.messages = this.messages.filter(message => message.id !== messageId);
+      this.notify.success('تم حذف الرسالة بنجاح.', 'تم الحذف');
     } catch (error) {
       console.error('Failed to delete message:', error);
       this.notify.error('تعذر حذف الرسالة.');
@@ -539,6 +656,7 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
       this.isRecording = false;
       clearInterval(this.recordingInterval);
       this.audioChunks = [];
+      this.notify.info('تم إلغاء التسجيل.', 'إلغاء');
     }
   }
 
@@ -568,6 +686,7 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
       imageUrl: isImage ? tempUrl : undefined,
       fileName: file.name,
       fileType: messageType,
+      fileSize: file.size,
       timestamp: new Date(),
       isIncoming: false,
       isSending: true,
@@ -602,9 +721,18 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
       }
 
       optimisticMessage.isSending = false;
+      optimisticMessage.fileUrl = uploadResult.fileUrl;
+      optimisticMessage.fileName = uploadResult.fileName;
+      optimisticMessage.fileType = uploadResult.fileType;
+      optimisticMessage.fileSize = uploadResult.fileSize;
+      if (isImage) {
+        optimisticMessage.imageUrl = uploadResult.fileUrl;
+      }
+      this.notify.success('تم إرسال الملف بنجاح.', 'تم الإرسال');
     } catch (error) {
       console.error('Failed to upload file:', error);
       optimisticMessage.isSending = false;
+      this.messages = this.messages.filter(m => m.id !== optimisticMessage.id);
       this.notify.error('تعذر رفع الملف. حاول مرة أخرى.');
     } finally {
       if (tempUrl) {
@@ -797,6 +925,8 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
   goBack() {
     this.selectedContact = null;
     this.showMessageSearch = false;
+    this.showEmojiPicker = false;
+    this.showAttachMenu = false;
   }
 
   private playSentSound() {
@@ -804,7 +934,7 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
     const audio = this.sentAudio?.nativeElement;
     if (audio) {
       audio.currentTime = 0;
-      audio.volume = 1.0;
+      audio.volume = 0.42;
       audio.play().catch(() => this.playUiTone(740, 120, 920));
       return;
     }
@@ -817,7 +947,7 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
     const audio = this.receivedAudio?.nativeElement;
     if (audio) {
       audio.currentTime = 0;
-      audio.volume = 1.0;
+      audio.volume = 0.55;
       audio.play().catch(() => this.playUiTone(580, 180, 720));
 
       if ('vibrate' in navigator) {
@@ -834,7 +964,7 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
     const audio = this.notifyAudio?.nativeElement;
     if (audio) {
       audio.currentTime = 0;
-      audio.volume = 1.0;
+      audio.volume = 0.5;
       audio.play().catch(() => this.playUiTone(880, 200, 1080));
 
       if ('vibrate' in navigator) {
@@ -931,6 +1061,7 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
     this.typingSub?.unsubscribe();
     this.onlineSub?.unsubscribe();
     this.readSub?.unsubscribe();
+    this.routeSub?.unsubscribe();
     clearTimeout(this.typingTimeout);
     clearInterval(this.recordingInterval);
     this.stopRecordingTracks();

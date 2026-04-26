@@ -50,6 +50,9 @@ public static class SessionScheduleGenerator
         var existingKeys = new HashSet<string>(
             existingSessions.Select(session => BuildKey(session.ClassRoomId, session.SessionDate, session.StartTime, session.EndTime))
         );
+        var existingTeacherSlotKeys = new HashSet<string>(
+            existingSessions.Select(session => BuildTeacherSlotKey(session.TeacherId, session.SessionDate, session.StartTime, session.EndTime))
+        );
 
         var generated = new List<Session>();
 
@@ -77,11 +80,15 @@ public static class SessionScheduleGenerator
                     var subjectIndex = (schoolDayIndex + weekIndex + slotIndex) % classSubjects.Count;
                     var subject = classSubjects[subjectIndex];
                     var key = BuildKey(classGroup.Key, date, slot.Start, slot.End);
+                    var teacherSlotKey = BuildTeacherSlotKey(subject.TeacherId!.Value, date, slot.Start, slot.End);
 
-                    if (!existingKeys.Add(key))
+                    if (existingKeys.Contains(key) || existingTeacherSlotKeys.Contains(teacherSlotKey))
                     {
                         continue;
                     }
+
+                    existingKeys.Add(key);
+                    existingTeacherSlotKeys.Add(teacherSlotKey);
 
                     generated.Add(new Session
                     {
@@ -136,5 +143,10 @@ public static class SessionScheduleGenerator
     private static string BuildKey(int classRoomId, DateTime sessionDate, TimeSpan startTime, TimeSpan endTime)
     {
         return $"{classRoomId}:{sessionDate:yyyyMMdd}:{startTime:c}:{endTime:c}";
+    }
+
+    private static string BuildTeacherSlotKey(int teacherId, DateTime sessionDate, TimeSpan startTime, TimeSpan endTime)
+    {
+        return $"{teacherId}:{sessionDate:yyyyMMdd}:{startTime:c}:{endTime:c}";
     }
 }

@@ -16,61 +16,87 @@
     </div>
 
     <div class="header-left" *ngIf="!isProfilePage">
-        <!-- SVG Branding for mobile/sidebar toggle compatibility -->
         <div class="mobile-logo d-lg-none me-3" routerLink="/dashboard">
             <svg width="28" height="28" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M30 10L55 22L30 34L5 22L30 10Z" fill="#3B82F6" />
                 <path d="M15 28V38C15 38 22 45 30 45C38 45 45 38 45 38V28" stroke="#3B82F6" stroke-width="4" fill="none" />
             </svg>
         </div>
-        
+
         <div class="notification-box" [class.open]="showNotifications">
             <button class="btn btn-icon position-relative" (click)="toggleNotifications($event)" aria-label="الإشعارات">
                 <i class="far fa-bell"></i>
-                <span *ngIf="unreadCount > 0" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                <span *ngIf="unreadCount > 0" class="notification-count">
                     {{ unreadCount }}
                 </span>
             </button>
 
-            <div class="dropdown-menu notifications-menu shadow-lg border-0" *ngIf="showNotifications"
-                (click)="$event.stopPropagation()">
-                <div class="dropdown-header d-flex justify-content-between align-items-center">
+            <div class="dropdown-menu notifications-menu show" *ngIf="showNotifications"
+                (click)="$event.stopPropagation()" role="dialog" aria-label="مركز الإشعارات">
+                <header class="notification-panel__header">
                     <div>
-                        <span>الإشعارات</span>
-                        <small class="d-block text-muted mt-1" *ngIf="notifications.length > 0">آخر التحديثات داخل الموقع</small>
+                        <span class="notification-panel__eyebrow">مركز الإشعارات</span>
+                        <h3>آخر التنبيهات</h3>
                     </div>
-                    <button class="btn btn-link btn-sm p-0 text-primary text-decoration-none"
-                        *ngIf="notifications.length > 0" (click)="clearNotifications($event)">مسح الكل</button>
+
+                    <div class="notification-panel__actions">
+                        <button type="button" class="notification-chip notification-chip--success"
+                            *ngIf="canEnableBrowserNotifications" (click)="enableNotifications($event)">
+                            <i class="fas fa-bolt"></i>
+                            تفعيل
+                        </button>
+                        <span class="notification-chip notification-chip--enabled" *ngIf="browserNotificationsEnabled">
+                            <i class="fas fa-check"></i>
+                            مفعل
+                        </span>
+                        <button type="button" class="notification-chip"
+                            *ngIf="notifications.length > 0" (click)="clearNotifications($event)">
+                            مسح الكل
+                        </button>
+                    </div>
+                </header>
+
+                <div class="notification-panel__summary" *ngIf="notifications.length > 0">
+                    <span>{{ unreadCount }} غير مقروء</span>
+                    <a routerLink="/notifications" (click)="showNotifications = false">عرض الكل</a>
                 </div>
 
-                <div class="dropdown-content">
-                    <div *ngIf="notifications.length === 0" class="notification-item text-center p-4 text-muted">
-                        <i class="fas fa-bell-slash mb-2 d-block opacity-25" style="font-size: 2rem;"></i>
-                        <p class="mb-1 small">لا توجد إشعارات جديدة الآن</p>
-                        <small>أي رسالة أو تنبيه جديد سيظهر هنا تلقائيًا.</small>
+                <div class="notification-panel__content">
+                    <div *ngIf="notifications.length === 0" class="notification-empty">
+                        <div class="notification-empty__icon">
+                            <i class="fas fa-bell-slash"></i>
+                        </div>
+                        <h4>لا توجد إشعارات الآن</h4>
+                        <p>أي رسالة أو تنبيه جديد هيظهر هنا تلقائيًا.</p>
                     </div>
 
-                    <div *ngFor="let notif of notifications" class="notification-item p-3 border-bottom"
-                        [style.cursor]="notif.type === 'message' ? 'pointer' : 'default'"
-                        (click)="notif.type === 'message' && goToChat()">
-                        <div class="d-flex gap-3">
-                            <div class="notif-icon-circle rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
-                                [style.background]="notif.type === 'message' ? '#dcfce7' : '#e0f2fe'"
-                                [style.color]="notif.type === 'message' ? '#15803d' : '#0369a1'"
-                                style="width: 38px; height: 38px;">
-                                <i class="fas" [class.fa-envelope]="notif.type === 'message'"
-                                    [class.fa-bell]="notif.type !== 'message'"></i>
+                    <article *ngFor="let notif of visibleNotifications"
+                        class="notification-card"
+                        [class.notification-card--unread]="!notif.isRead"
+                        [class.notification-card--message]="notif.type === 'message'"
+                        (click)="notif.type === 'message' && goToChat(notif)">
+                        <div class="notification-card__icon" [ngClass]="'notification-card__icon--' + notif.type">
+                            <i [class]="getNotificationIcon(notif.type)"></i>
+                        </div>
+
+                        <div class="notification-card__body">
+                            <div class="notification-card__top">
+                                <h4>{{ notif.title }}</h4>
+                                <span>{{ notif.createdAt | date:'shortTime' }}</span>
                             </div>
-                            <div class="flex-grow-1 overflow-hidden">
-                                <h6 class="mb-1 fw-bold small text-dark-emphasis">{{ notif.title }}</h6>
-                                <p class="mb-1 text-muted small">{{ notif.message }}</p>
-                                <div class="notification-meta">
-                                    <small class="text-muted-dark opacity-75">{{ notif.createdAt | date:'short' }}</small>
-                                    <button *ngIf="notif.type === 'message'" class="btn btn-link btn-sm p-0 text-decoration-none"
-                                        (click)="goToChat(); $event.stopPropagation();">فتح التواصل</button>
-                                </div>
+                            <p>{{ notif.message }}</p>
+                            <div class="notification-card__meta">
+                                <span>{{ getNotificationLabel(notif.type) }}</span>
+                                <button *ngIf="notif.type === 'message'" type="button"
+                                    (click)="goToChat(notif); $event.stopPropagation();">
+                                    فتح المحادثة
+                                </button>
                             </div>
                         </div>
+                    </article>
+
+                    <div class="notification-load-more" *ngIf="hasMoreNotifications">
+                        <button type="button" (click)="loadMoreNotifications($event)">إظهار المزيد</button>
                     </div>
                 </div>
             </div>

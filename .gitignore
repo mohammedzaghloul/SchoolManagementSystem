@@ -2,11 +2,14 @@ node_modules/
 dist/
 out-tsc/
 .angular/
+.codex-build/
+.codex-logs/
 
 backend/**/bin/
 backend/**/obj/
 
 .vs/
+**/.vs/
 .vscode/
 *.user
 *.suo

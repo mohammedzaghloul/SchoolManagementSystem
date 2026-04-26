@@ -98,7 +98,10 @@ export class StudentExamsComponent implements OnInit, OnDestroy {
   selectedExam: Exam | null = null;
 
   viewResult(exam: Exam) {
-    this.selectedExam = exam;
+    this.selectedExam = {
+      ...exam,
+      maxScore: exam.maxScore || exam.totalMarks || 0
+    };
     this.showScoreCard = true;
   }
 

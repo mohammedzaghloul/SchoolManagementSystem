@@ -41,8 +41,12 @@ export class QrAttendanceComponent implements OnInit, OnDestroy {
     private router: Router
   ) {}
 
+  get availableSessions(): any[] {
+    return this.sessions;
+  }
+
   get availableQrSessions(): any[] {
-    return this.sessions.filter(session => this.isQrSession(session));
+    return this.availableSessions;
   }
 
   async ngOnInit(): Promise<void> {
@@ -97,7 +101,7 @@ export class QrAttendanceComponent implements OnInit, OnDestroy {
     this.qrToken = '';
     this.selectedSessionData = this.sessions.find(session => session.id === this.selectedSessionId) || this.selectedSessionData;
 
-    if (!this.selectedSessionData || !this.isQrSession(this.selectedSessionData)) {
+    if (!this.selectedSessionData) {
       this.attendanceList = [];
       this.computeStats();
       this.loading = false;
@@ -157,7 +161,7 @@ export class QrAttendanceComponent implements OnInit, OnDestroy {
       ? this.sessions.find(session => session.id === this.selectedSessionId) || null
       : null;
 
-    if (requestedSession && this.isQrSession(requestedSession)) {
+    if (requestedSession) {
       this.selectedSessionData = requestedSession;
       return;
     }
@@ -182,11 +186,11 @@ export class QrAttendanceComponent implements OnInit, OnDestroy {
   }
 
   private pickPreferredQrSession(): any | null {
-    if (!this.availableQrSessions.length) {
+    if (!this.availableSessions.length) {
       return null;
     }
 
-    return [...this.availableQrSessions].sort((first, second) => {
+    return [...this.availableSessions].sort((first, second) => {
       const scoreDifference = this.getQrSessionScore(second) - this.getQrSessionScore(first);
       if (scoreDifference !== 0) {
         return scoreDifference;
@@ -232,21 +236,16 @@ export class QrAttendanceComponent implements OnInit, OnDestroy {
 
   private startQrCountdown(): void {
     this.clearTimers();
-    this.countdown = 300;
+    this.countdown = 10;
 
     this.timer = setInterval(() => {
       this.countdown--;
       if (this.countdown <= 0) {
         void this.regenerateQr();
-        this.countdown = 300;
+        this.countdown = 10;
       }
     }, 1000);
 
-    this.autoRefreshTimer = setInterval(() => {
-      void this.regenerateQr();
-    }, 5000);
-
-    let lastPresentCount = this.stats.present;
     this.listRefreshTimer = setInterval(async () => {
       if (!this.selectedSessionId) {
         return;
@@ -256,19 +255,14 @@ export class QrAttendanceComponent implements OnInit, OnDestroy {
         const attendanceResponse: any = await this.attendanceService.getSessionAttendance(this.selectedSessionId);
         this.attendanceList = Array.isArray(attendanceResponse) ? attendanceResponse : attendanceResponse?.data || [];
         this.computeStats();
-
-        if (this.stats.present > lastPresentCount) {
-          lastPresentCount = this.stats.present;
-          await this.regenerateQr();
-        }
       } catch {
         // Ignore transient refresh failures while the QR screen is open.
       }
-    }, 2000);
+    }, 5000);
   }
 
   private async regenerateQr(): Promise<void> {
-    if (!this.selectedSessionId || !this.selectedSessionData || !this.isQrSession(this.selectedSessionData)) {
+    if (!this.selectedSessionId || !this.selectedSessionData) {
       return;
     }
 

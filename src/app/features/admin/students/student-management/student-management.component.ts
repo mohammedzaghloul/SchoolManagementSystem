@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -17,7 +17,7 @@ import { ConfirmDialogComponent, ConfirmDialogData } from '../../../../shared/co
   templateUrl: './student-management.component.html',
   styleUrls: ['./student-management.component.css']
 })
-export class StudentManagementComponent implements OnInit {
+export class StudentManagementComponent implements OnInit, OnDestroy {
   students: any[] = [];
   filteredStudents: any[] = [];
   gradeLevels: any[] = [];
@@ -29,19 +29,18 @@ export class StudentManagementComponent implements OnInit {
   searchTerm = '';
   selectedStatus = 'all';
   selectedClassRoom: any = 'all';
+  selectedFaceFilter = 'all';
+  selectedGrade: any = 'all';
+  modalGradeId: number | null = null;
+
+  // Pagination
+  readonly pageSize = 10;
+  currentPage = 1;
 
   // Modal State
   showModal = false;
   isEditMode = false;
-  currentStudent: any = {
-    fullName: '',
-    email: '',
-    phone: '',
-    password: 'Student@123', // Default for new students
-    classRoomId: null,
-    parentId: null,
-    isActive: true
-  };
+  currentStudent: any = this.createEmptyStudent();
 
   constructor(
     private studentService: StudentService,
@@ -57,8 +56,65 @@ export class StudentManagementComponent implements OnInit {
       this.loadMeta(),
       this.loadParents()
     ]);
+    // Ensure filters are applied after all metadata (like gradeLevels) is loaded
+    this.applyFilter();
   }
 
+  ngOnDestroy(): void {
+    document.body.classList.remove('modal-open-fix');
+  }
+
+  // ─── Stats ────────────────────────────────────────────
+  get activeCount(): number { return this.students.filter(s => s.isActive).length; }
+  get inactiveCount(): number { return this.students.filter(s => !s.isActive).length; }
+  get withParentCount(): number { return this.students.filter(s => s.parentId).length; }
+
+  // ─── Pagination ───────────────────────────────────────
+  get totalPages(): number { return Math.ceil(this.filteredStudents.length / this.pageSize); }
+
+  get pagedStudents(): any[] {
+    const start = (this.currentPage - 1) * this.pageSize;
+    return this.filteredStudents.slice(start, start + this.pageSize);
+  }
+
+  get pageNumbers(): (number | string)[] {
+    const total = this.totalPages;
+    const current = this.currentPage;
+    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+    const pages: (number | string)[] = [1];
+    if (current > 3) pages.push('...');
+    for (let i = Math.max(2, current - 1); i <= Math.min(total - 1, current + 1); i++) pages.push(i);
+    if (current < total - 2) pages.push('...');
+    pages.push(total);
+    return pages;
+  }
+
+  goToPage(page: number): void {
+    if (page < 1 || page > this.totalPages) return;
+    this.currentPage = page;
+  }
+
+  // ─── Avatar Helpers ───────────────────────────────────
+  getInitials(name: string): string {
+    if (!name) return '?';
+    const parts = name.trim().split(' ');
+    return parts.length >= 2
+      ? (parts[0][0] + parts[1][0]).toUpperCase()
+      : parts[0].substring(0, 2).toUpperCase();
+  }
+
+  getAvatarColor(name: string): string {
+    const colors = [
+      '#6366f1', '#8b5cf6', '#ec4899', '#f43f5e',
+      '#f97316', '#eab308', '#22c55e', '#14b8a6',
+      '#3b82f6', '#06b6d4'
+    ];
+    if (!name) return colors[0];
+    const index = name.charCodeAt(0) % colors.length;
+    return colors[index];
+  }
+
+  // ─── Data Loading ─────────────────────────────────────
   async loadMeta() {
     try {
       this.gradeLevels = await this.gradeService.getGrades();
@@ -90,6 +146,7 @@ export class StudentManagementComponent implements OnInit {
     }
   }
 
+  // ─── Filtering ────────────────────────────────────────
   applyFilter() {
     let list = this.students;
     if (this.searchTerm) {
@@ -105,35 +162,100 @@ export class StudentManagementComponent implements OnInit {
     if (this.selectedClassRoom !== 'all') {
       list = list.filter(s => s.classRoomId == this.selectedClassRoom);
     }
+    if (this.selectedGrade !== 'all') {
+      const selectedGradeObj = this.gradeLevels.find(g => g.id == this.selectedGrade);
+      const gradeName = selectedGradeObj ? selectedGradeObj.name : null;
+      
+      list = list.filter(s => 
+        s.gradeId == this.selectedGrade ||
+        s.gradeLevelId == this.selectedGrade ||
+        s.gradeName == this.selectedGrade ||
+        s.gradeLevelName == this.selectedGrade ||
+        (gradeName && (s.gradeName == gradeName || s.gradeLevelName == gradeName))
+      );
+    }
+    if (this.selectedFaceFilter !== 'all') {
+      list = list.filter(s => this.selectedFaceFilter === 'trained' ? !!s.isFaceTrained : !s.isFaceTrained);
+    }
     this.filteredStudents = list;
+    this.currentPage = 1;
   }
 
+  // Count students per grade
+  getGradeCount(gradeId: any): number {
+    if (gradeId === 'all') return this.students.length;
+    
+    const gradeObj = this.gradeLevels.find(g => g.id == gradeId);
+    const gradeName = gradeObj ? gradeObj.name : null;
+
+    return this.students.filter(s => 
+      s.gradeId == gradeId ||
+      s.gradeLevelId == gradeId ||
+      s.gradeName == gradeId ||
+      s.gradeLevelName == gradeId ||
+      (gradeName && (s.gradeName == gradeName || s.gradeLevelName == gradeName))
+    ).length;
+  }
+
+  selectGrade(gradeId: any): void {
+    this.selectedGrade = gradeId;
+    this.applyFilter();
+  }
+
+  // ─── Modal ────────────────────────────────────────────
   openAddModal() {
     this.isEditMode = false;
-    this.currentStudent = {
-      fullName: '',
-      email: '',
-      phone: '',
-      password: 'Student@123',
-      classRoomId: null,
-      parentId: null,
-      isActive: true
-    };
+    this.currentStudent = this.createEmptyStudent();
+    this.modalGradeId = this.selectedGrade !== 'all' ? Number(this.selectedGrade) : null;
     this.showModal = true;
+    document.body.classList.add('modal-open-fix');
+    this.resetModalScroll();
   }
 
   openEditModal(student: any) {
     this.isEditMode = true;
+    const classRoom = this.classRooms.find(c => c.id === student.classRoomId);
+    this.modalGradeId = classRoom ? this.getClassRoomGradeId(classRoom) : null;
+
     this.currentStudent = {
       ...student,
       classRoomId: student.classRoomId ?? null,
       parentId: student.parentId ?? null
     };
     this.showModal = true;
+    document.body.classList.add('modal-open-fix');
+    this.resetModalScroll();
   }
 
-  closeModal() {
-    this.showModal = false;
+  onModalGradeChange(): void {
+    this.currentStudent.classRoomId = null;
+  }
+
+  getClassRoomsForModalGrade(): any[] {
+    if (!this.modalGradeId) return this.classRooms;
+    return this.classRooms.filter(c => this.getClassRoomGradeId(c) == this.modalGradeId);
+  }
+
+  getClassRoomLabel(classRoom: any): string {
+    const gradeId = this.getClassRoomGradeId(classRoom);
+    const gradeName = classRoom.gradeLevelName ||
+      classRoom.gradeName ||
+      this.gradeLevels.find(g => g.id == gradeId)?.name;
+
+    return gradeName ? `${classRoom.name} - ${gradeName}` : classRoom.name;
+  }
+
+  private getClassRoomGradeId(classRoom: any): number | null {
+    return classRoom?.gradeLevelId ??
+      classRoom?.gradeId ??
+      classRoom?.gradeLevel?.id ??
+      classRoom?.grade?.id ??
+      null;
+  }
+
+  closeModal() { 
+    this.showModal = false; 
+    document.body.classList.remove('modal-open-fix');
   }
 
   async saveStudent() {
@@ -141,15 +263,26 @@ export class StudentManagementComponent implements OnInit {
       alert('يرجى إدخال اسم الطالب والبريد الإلكتروني');
       return;
     }
-    
     this.submitting = true;
     try {
       const payload = { ...this.currentStudent };
       payload.classRoomId = payload.classRoomId || null;
       payload.parentId = payload.parentId || null;
-      
+
       if (this.isEditMode) {
-        await this.studentService.updateStudent(this.currentStudent.id, payload);
+        const updatePayload = {
+          id: payload.id,
+          fullName: payload.fullName,
+          email: payload.email,
+          phone: payload.phone,
+          address: payload.address,
+          dateOfBirth: payload.dateOfBirth,
+          gender: payload.gender,
+          classRoomId: payload.classRoomId,
+          parentId: payload.parentId,
+          isActive: payload.isActive
+        };
+        await this.studentService.updateStudent(this.currentStudent.id, updatePayload);
       } else {
         await this.studentService.createStudent(payload);
       }
@@ -162,6 +295,7 @@ export class StudentManagementComponent implements OnInit {
     }
   }
 
+  // ─── Delete ───────────────────────────────────────────
   deleteStudent(id: number) {
     const dialogRef = this.dialog.open(ConfirmDialogComponent, {
       width: '400px',
@@ -179,14 +313,15 @@ export class StudentManagementComponent implements OnInit {
         try {
           await this.studentService.deleteStudent(id);
           this.students = this.students.filter(s => s.id !== id);
-          this.applyFilter();
+          this.applyFilter(); // Crucial: update UI
         } catch (err: any) {
-          alert('حدث خطأ في الحذف: تأكد من الصلاحيات أو محاولة مرة أخرى.');
+          alert('حدث خطأ في الحذف: تأكد من الارتباطات ببيانات أخرى أو حاول مرة أخرى.');
         }
       }
     });
   }
 
+  // ─── Toggle Status ────────────────────────────────────
   async toggleStudentStatus(student: any) {
     try {
       const result = await this.studentService.toggleStatus(student.id);
@@ -195,5 +330,23 @@ export class StudentManagementComponent implements OnInit {
     } catch {
       alert('خطأ في تغيير حالة الطالب');
     }
+  }
+
+  private createEmptyStudent(): any {
+    return {
+      fullName: '',
+      email: '',
+      phone: '',
+      password: '',
+      classRoomId: null,
+      parentId: null,
+      isActive: true
+    };
+  }
+
+  private resetModalScroll(): void {
+    setTimeout(() => {
+      document.querySelector<HTMLElement>('.student-modal-body')?.scrollTo({ top: 0 });
+    });
   }
 }

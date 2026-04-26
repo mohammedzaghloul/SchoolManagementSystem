@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -14,7 +14,7 @@ import { ParentService } from '../../../../core/services/parent.service';
   templateUrl: './parent-management.component.html',
   styleUrls: ['./parent-management.component.css']
 })
-export class ParentManagementComponent implements OnInit {
+export class ParentManagementComponent implements OnInit, OnDestroy {
   parents: Parent[] = [];
   filteredParents: Parent[] = [];
   loading = false;
@@ -35,12 +35,18 @@ export class ParentManagementComponent implements OnInit {
     await this.loadParents();
   }
 
+  ngOnDestroy(): void {
+    document.body.classList.remove('modal-open-fix');
+  }
+
   async loadParents(): Promise<void> {
     this.loading = true;
     this.error = '';
 
     try {
-      this.parents = await this.parentService.getParents();
+      const data = await this.parentService.getParents();
+      // Default sorting by ID descending
+      this.parents = data.sort((a, b) => b.id - a.id);
       this.applyFilter();
     } catch (err: any) {
       this.error = err?.message || 'حدث خطأ في تحميل أولياء الأمور.';
@@ -68,6 +74,7 @@ export class ParentManagementComponent implements OnInit {
     this.isEditMode = false;
     this.currentParent = this.createEmptyParent();
     this.showModal = true;
+    document.body.classList.add('modal-open-fix');
   }
 
   openEditModal(parent: Parent): void {
@@ -81,10 +88,12 @@ export class ParentManagementComponent implements OnInit {
       childrenCount: parent.childrenCount
     };
     this.showModal = true;
+    document.body.classList.add('modal-open-fix');
   }
 
   closeModal(): void {
     this.showModal = false;
+    document.body.classList.remove('modal-open-fix');
   }
 
   async saveParent(): Promise<void> {

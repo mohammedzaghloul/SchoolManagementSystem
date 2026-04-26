@@ -1,62 +1,138 @@
-<div class="timetable-container" dir="rtl">
-    <!-- Slim Header -->
-    <div class="header-content text-center animate-slide-down">
-        <h2 class="fw-bold text-dark mb-1">جدولي الدراسي</h2>
-        <p class="text-secondary small">عرض سريع للحصص المجدولة</p>
+<div class="teacher-timetable-page" dir="rtl">
+    <section class="timetable-hero">
+        <div>
+            <span class="eyebrow">جدول المدرس</span>
+            <h1>حصص الأسبوع يا أستاذ {{ teacherName }}</h1>
+            <p>اليوم الواحد ممكن يحتوي على أكثر من حصة؛ كل حصة تظهر في وقتها مع وصول سريع لرصد الحضور.</p>
+        </div>
+
+        <div class="week-controls" aria-label="تغيير الأسبوع">
+            <button type="button" class="week-button" (click)="shiftWeek(-1)" aria-label="الأسبوع السابق">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+            <button type="button" class="week-button week-button--current" (click)="goToCurrentWeek()">
+                الأسبوع الحالي
+            </button>
+            <button type="button" class="week-button" (click)="shiftWeek(1)" aria-label="الأسبوع التالي">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+        </div>
+    </section>
+
+    <section class="summary-grid" aria-label="ملخص جدول الأسبوع">
+        <article class="summary-card">
+            <span>نطاق الأسبوع</span>
+            <strong>{{ weekRangeLabel }}</strong>
+        </article>
+        <article class="summary-card">
+            <span>عدد الحصص</span>
+            <strong>{{ totalWeekSessions }}</strong>
+        </article>
+        <article class="summary-card">
+            <span>الفصول</span>
+            <strong>{{ totalClasses }}</strong>
+        </article>
+        <article class="summary-card">
+            <span>الحصة القادمة</span>
+            <strong>{{ nextSession ? nextSession.startLabel : 'لا توجد' }}</strong>
+        </article>
+        <article class="summary-card">
+            <span>أكثر يوم مزدحم</span>
+            <strong>{{ maxDailySessions }} حصص</strong>
+        </article>
+    </section>
+
+    <div class="state-card state-card--error" *ngIf="error">
+        <i class="fas fa-triangle-exclamation"></i>
+        <span>{{ error }}</span>
     </div>
 
-    <!-- Error/Loading -->
-    <div class="alert alert-danger py-2 px-3 small" *ngIf="error">{{ error }}</div>
-    
-    <div *ngIf="loading" class="text-center py-4">
-        <div class="spinner-sm spinner-border text-primary" role="status"></div>
+    <div class="state-card" *ngIf="loading" aria-busy="true">
+        <span class="loader"></span>
+        <span>جارٍ تحميل جدول الحصص...</span>
     </div>
 
-    <!-- Compact Grid -->
-    <div class="timetable-grid-card overflow-hidden animate-fade-in" *ngIf="!loading && !error">
-        <div class="table-responsive">
-            <table class="table table-borderless timetable-modern-table mb-0">
+    <section class="timetable-panel" *ngIf="!loading && !error">
+        <header class="panel-header">
+            <div>
+                <span class="section-kicker">الأسبوع</span>
+                <h2>الخريطة الزمنية للحصص</h2>
+            </div>
+            <span class="count-badge">{{ timeSlots.length }} مواعيد</span>
+        </header>
+
+        <div class="timetable-scroll" *ngIf="totalWeekSessions > 0; else emptyWeek">
+            <table class="timetable-table">
                 <thead>
                     <tr>
-                        <th class="time-header-cell">اليوم</th>
-                        <th class="py-3 time-slot-header text-center" *ngFor="let time of timeSlots">
-                            <span class="text-primary fw-bold">{{ time }}</span>
+                        <th class="day-column">اليوم</th>
+                        <th *ngFor="let time of timeSlots; trackBy: trackBySlot" class="time-column">
+                            {{ time }}
                         </th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr *ngFor="let day of daysOfWeek">
-                        <td class="day-header-cell border-end">
-                            <div class="day-name fw-bold">{{ day }}</div>
-                        </td>
-                        <td *ngFor="let time of timeSlots" class="slot-cell">
-                            <div *ngIf="timetableMatrix[day]?.[time]; else emptySlot" 
-                                class="session-premium-card animate-pop-in"
-                                [class]="getSubjectColor(timetableMatrix[day][time]!.subjectName)">
-                                <div class="card-content h-100 d-flex flex-column justify-content-between">
-                                    <div class="subject-title text-truncate">{{ timetableMatrix[day][time]!.subjectName }}</div>
-                                    
-                                    <div class="meta-section">
-                                        <div class="badge-glass mb-1 w-100 justify-content-center">
-                                            <i class="fas fa-school me-1"></i> {{ timetableMatrix[day][time]!.classRoomName }}
+                    <tr *ngFor="let day of weekDays; trackBy: trackByDay" [class.today-row]="day.isToday">
+                        <th class="day-cell">
+                            <span class="day-name">{{ day.label }}</span>
+                            <span class="day-date">{{ day.dateLabel }}</span>
+                            <span class="day-count">{{ day.sessionCount }} حصص</span>
+                            <span class="today-pill" *ngIf="day.isToday">اليوم</span>
+                        </th>
+
+                        <td *ngFor="let time of timeSlots; trackBy: trackBySlot" class="slot-cell">
+                            <ng-container *ngIf="getSessionsForSlot(day, time) as slotSessions">
+                                <div class="session-stack" *ngIf="slotSessions.length; else emptySlot">
+                                    <article
+                                        class="subject-card"
+                                        *ngFor="let session of slotSessions; trackBy: trackBySession"
+                                        [ngClass]="getSubjectClass(session.subjectName)">
+                                        <div class="subject-card__time">
+                                            <span>{{ session.startLabel }}</span>
+                                            <small *ngIf="session.endLabel">{{ session.endLabel }}</small>
                                         </div>
-                                        <button class="btn btn-action-glass w-100 py-1" 
-                                                [routerLink]="['/teacher/attendance/manual']" 
-                                                [queryParams]="{sessionId: timetableMatrix[day][time]!.id}">
-                                            رصد
-                                        </button>
-                                    </div>
+                                        <h3>{{ session.subjectName || 'حصة دراسية' }}</h3>
+                                        <p>
+                                            <i class="fas fa-building-columns"></i>
+                                            {{ session.classRoomName || session.className || 'الفصل غير محدد' }}
+                                        </p>
+                                        <a
+                                            [routerLink]="['/teacher/attendance/manual']"
+                                            [queryParams]="{ sessionId: session.id }"
+                                            class="record-link"
+                                            aria-label="رصد حضور الحصة">
+                                            <span>رصد الحضور</span>
+                                            <i class="fas fa-chevron-left"></i>
+                                        </a>
+                                    </article>
                                 </div>
-                            </div>
+                            </ng-container>
+
                             <ng-template #emptySlot>
-                                <div class="empty-placeholder">
-                                    <div class="dot"></div>
-                                </div>
+                                <span class="empty-slot" aria-label="لا توجد حصة"></span>
                             </ng-template>
                         </td>
                     </tr>
                 </tbody>
             </table>
         </div>
-    </div>
+
+        <ng-template #emptyWeek>
+            <div class="empty-state">
+                <div class="empty-state__icon">
+                    <i class="fas fa-calendar-week"></i>
+                </div>
+                <h3>لا توجد حصص في هذا الأسبوع</h3>
+                <p>انتقل للأسبوع الحالي أو راجع شاشة الحضور للحصص اليومية المسجلة.</p>
+                <div class="empty-actions">
+                    <button type="button" class="empty-action empty-action--light" (click)="goToCurrentWeek()">
+                        الأسبوع الحالي
+                    </button>
+                    <a routerLink="/teacher/attendance" class="empty-action empty-action--primary">
+                        إدارة الحضور
+                    </a>
+                </div>
+            </div>
+        </ng-template>
+    </section>
 </div>

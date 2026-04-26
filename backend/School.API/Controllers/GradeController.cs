@@ -94,7 +94,7 @@ public class GradeController : BaseApiController
             .AsNoTracking()
             .Where(student => student.ClassRoomId == subject!.ClassRoomId)
             .Where(student => student.IsActive)
-            .OrderBy(student => student.FullName)
+            .OrderBy(student => student.Id)
             .Select(student => new
             {
                 student.Id,
@@ -344,7 +344,20 @@ public class GradeController : BaseApiController
         if (!User.IsInRole("Admin"))
         {
             var currentTeacher = await GetCurrentTeacherAsync();
-            if (currentTeacher == null || subject.TeacherId != currentTeacher.Id)
+            if (currentTeacher == null)
+            {
+                return (null, Forbid());
+            }
+
+            var hasDirectSubjectAccess = subject.TeacherId == currentTeacher.Id;
+            var teacherHasDirectSubjects = await _context.Subjects.AsNoTracking().AnyAsync(item =>
+                item.TeacherId == currentTeacher.Id &&
+                item.IsActive);
+            var hasScheduledSubjectAccess = !teacherHasDirectSubjects && await _context.Sessions.AsNoTracking().AnyAsync(session =>
+                session.TeacherId == currentTeacher.Id &&
+                session.SubjectId == subject.Id);
+
+            if (!hasDirectSubjectAccess && !hasScheduledSubjectAccess)
             {
                 return (null, Forbid());
             }
@@ -360,13 +373,16 @@ public class GradeController : BaseApiController
             return null;
         }
 
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         var email = User.FindFirstValue(ClaimTypes.Email);
-        if (string.IsNullOrWhiteSpace(email))
+        if (string.IsNullOrWhiteSpace(userId) && string.IsNullOrWhiteSpace(email))
         {
             return null;
         }
 
-        return await _context.Teachers.AsNoTracking().FirstOrDefaultAsync(teacher => teacher.Email == email);
+        return await _context.Teachers
+            .AsNoTracking()
+            .FirstOrDefaultAsync(teacher => teacher.UserId == userId || teacher.Email == email);
     }
 
     private static string NormalizeGradeType(string? gradeType)

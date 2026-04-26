@@ -1,108 +1,107 @@
-<div class="grades-shell" dir="rtl" [class.dark-mode]="isDarkMode">
+<div class="grades-shell" dir="rtl">
   <div class="shell-content">
-    <section class="hero-panel">
-      <div class="hero-copy">
-        <span class="eyebrow">Exam Results</span>
-        <h1>نتائج الاختبارات</h1>
-        <p>فلترة النتائج حسب السنة والفترة مع عرض أوضح للمتوسط العام وأقوى المواد وأضعفها.</p>
+    <!-- Header -->
+    <section class="hero-panel d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <span class="eyebrow">Academic Records</span>
+        <h1 class="text-white">نتائج الاختبارات</h1>
+        <p class="text-muted-dark small mb-0">تتبع تقدمك الدراسي وتفاصيل درجاتك في جميع المواد.</p>
       </div>
-
-      <div class="hero-actions">
-        <button type="button" class="theme-toggle" (click)="toggleTheme()">
-          <i class="fas" [ngClass]="isDarkMode ? 'fa-sun' : 'fa-moon'"></i>
-          <span>{{ isDarkMode ? 'الوضع الفاتح' : 'الوضع الداكن' }}</span>
-        </button>
+      <div class="d-flex gap-3">
+        <div class="glass-card py-2 px-3 text-center rounded-3">
+          <span class="d-block small text-muted-dark fw-bold">المواد</span>
+          <strong class="text-white">{{ filteredGrades.length }}</strong>
+        </div>
+        <div class="glass-card py-2 px-3 text-center rounded-3 border-success border-opacity-20">
+          <span class="d-block small text-muted-dark fw-bold">المعدل</span>
+          <strong class="text-success">{{ overallAverage }}%</strong>
+        </div>
       </div>
     </section>
 
+    <!-- Filters -->
     <section class="filter-panel">
-      <div class="filter-row">
-        <label class="select-chip">
-          <span>السنة الدراسية</span>
-          <select [(ngModel)]="selectedYear" (change)="filterGrades()">
-            <option value="all">جميع السنوات</option>
+      <div class="filter-row d-flex flex-wrap align-items-center gap-4">
+        <label class="select-chip d-flex align-items-center gap-2 mb-0">
+          <span class="small text-muted-dark fw-bold">السنة:</span>
+          <select [(ngModel)]="selectedYear" (change)="filterGrades()" class="form-select form-select-sm bg-dark text-white border-secondary">
+            <option value="all">الكل</option>
             <option *ngFor="let year of years" [value]="year">{{ year }}</option>
           </select>
         </label>
 
-        <label class="select-chip">
-          <span>الفترة</span>
-          <select [(ngModel)]="selectedTerm" (change)="filterGrades()">
-            <option value="all">جميع الفترات</option>
+        <label class="select-chip d-flex align-items-center gap-2 mb-0">
+          <span class="small text-muted-dark fw-bold">الفصل:</span>
+          <select [(ngModel)]="selectedTerm" (change)="filterGrades()" class="form-select form-select-sm bg-dark text-white border-secondary">
+            <option value="all">الكل</option>
             <option *ngFor="let term of terms" [value]="term">{{ term }}</option>
           </select>
         </label>
       </div>
     </section>
 
-    <div class="loading-state" *ngIf="loading">
-      <div class="spinner-border text-primary" role="status"></div>
-    </div>
-
-    <div class="empty-state" *ngIf="!loading && filteredGrades.length === 0">
-      لا توجد درجات مسجلة لهذه الفلاتر حاليًا.
-    </div>
-
-    <section class="content-grid" *ngIf="!loading && filteredGrades.length > 0">
-      <div class="summary-card">
-        <h2>ملخص الأداء</h2>
-
-        <div class="average-orb">
-          <strong>{{ overallAverage }}%</strong>
-          <span>المعدل العام</span>
-        </div>
-
-        <div class="summary-list">
-          <div class="summary-chip best" *ngIf="highestSubject">
-            <span>أعلى درجة</span>
-            <strong>{{ highestSubject.subjectName || highestSubject.subjectId }} - {{ highestSubject.value }}</strong>
+    <!-- Content -->
+    <div class="row g-3" *ngIf="!loading && filteredGrades.length > 0">
+      <!-- Performance Summary -->
+      <div class="col-xl-3">
+        <div class="summary-card h-100">
+          <h3 class="small fw-bold text-white mb-3">ملخص الأداء</h3>
+          <div class="average-orb">
+            <strong>{{ overallAverage }}%</strong>
+            <span>المعدل</span>
           </div>
-
-          <div class="summary-chip low" *ngIf="lowestSubject">
-            <span>أقل درجة</span>
-            <strong>{{ lowestSubject.subjectName || lowestSubject.subjectId }} - {{ lowestSubject.value }}</strong>
+          <div class="text-start mt-4 d-flex flex-column gap-2">
+            <div class="glass-card p-2 rounded-3 border-0 bg-white bg-opacity-5" *ngIf="highestSubject">
+              <small class="text-muted-dark d-block">أعلى درجة</small>
+              <div class="d-flex justify-content-between">
+                <span class="small fw-bold">{{ highestSubject.subjectName }}</span>
+                <span class="small text-success fw-bold">{{ highestSubject.value }}%</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      <div class="table-card">
-        <div class="table-head">
-          <h2>تفاصيل المواد</h2>
-          <span>{{ filteredGrades.length }} مادة</span>
-        </div>
-
-        <div class="table-wrap">
-          <table class="grades-table">
-            <thead>
-              <tr>
-                <th>المادة</th>
-                <th>الدرجة</th>
-                <th>النسبة</th>
-                <th>التقدير</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let grade of filteredGrades">
-                <td>{{ grade.subjectName || 'مادة' }}</td>
-                <td>{{ grade.value }} / 100</td>
-                <td>
-                  <div class="progress-cell">
-                    <span>{{ grade.value }}%</span>
-                    <div class="progress-track">
-                      <div class="progress-fill" [style.width.%]="grade.value"></div>
+      <!-- Table -->
+      <div class="col-xl-9">
+        <div class="table-card shadow-lg">
+          <div class="table-responsive">
+            <table class="grades-table w-100">
+              <thead>
+                <tr>
+                  <th class="text-end">المادة</th>
+                  <th class="text-center">الدرجة</th>
+                  <th class="text-center">النسبة</th>
+                  <th class="text-center">التقدير</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let grade of visibleGrades">
+                  <td class="fw-bold text-white">{{ grade.subjectName }}</td>
+                  <td class="text-center text-muted-dark fw-bold">
+                    <span dir="ltr">
+                        <span class="text-white">{{ grade.value }}</span>
+                        <span class="text-muted-dark opacity-50 mx-1">/</span>
+                        <span class="text-muted-dark">100</span>
+                    </span>
+                  </td>
+                  <td class="text-center">
+                    <div class="d-flex align-items-center justify-content-center gap-3">
+                      <div class="progress-track"><div class="progress-fill" [style.width.%]="grade.value" style="height:100%;"></div></div>
+                      <span class="small fw-800 text-white">{{ grade.value }}%</span>
                     </div>
-                  </div>
-                </td>
-                <td>
-                  <span class="grade-chip" [ngClass]="'chip-' + getEvaluation(grade.value).color">
-                    {{ getEvaluation(grade.value).text }}
-                  </span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+                  </td>
+                  <td class="text-center">
+                    <span class="grade-chip" [ngClass]="'chip-' + grade.evaluation?.color">
+                      {{ grade.evaluation?.text }}
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
-    </section>
+    </div>
   </div>
 </div>

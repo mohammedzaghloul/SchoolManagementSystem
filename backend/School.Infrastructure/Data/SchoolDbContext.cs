@@ -22,7 +22,10 @@ public class SchoolDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<Exam> Exams { get; set; }
     public DbSet<ExamResult> ExamResults { get; set; }
     public DbSet<GradeRecord> GradeRecords { get; set; }
+    public DbSet<EmailOtp> EmailOtps { get; set; }
     public DbSet<Message> Messages { get; set; }
+    public DbSet<Schedule> Schedules { get; set; }
+    public DbSet<StudentSubject> StudentSubjects { get; set; }
     public DbSet<Video> Videos { get; set; }
     public DbSet<Assignment> Assignments { get; set; }
     public DbSet<AssignmentSubmission> AssignmentSubmissions { get; set; }
@@ -34,6 +37,7 @@ public class SchoolDbContext : IdentityDbContext<ApplicationUser>
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
+        builder.ApplyConfigurationsFromAssembly(typeof(SchoolDbContext).Assembly);
 
         // Configure Student -> Parent relationship
         builder.Entity<Student>()
@@ -61,6 +65,12 @@ public class SchoolDbContext : IdentityDbContext<ApplicationUser>
             .WithMany(sub => sub.Sessions)
             .HasForeignKey(s => s.SubjectId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<Session>()
+            .HasOne(s => s.Schedule)
+            .WithMany(schedule => schedule.Sessions)
+            .HasForeignKey(s => s.ScheduleId)
+            .OnDelete(DeleteBehavior.SetNull);
 
         // Configure Attendance relationships
         builder.Entity<Attendance>()

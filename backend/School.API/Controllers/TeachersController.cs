@@ -99,6 +99,15 @@ public class TeachersController : BaseApiController
             IsActive = command.IsActive
         };
 
+        if (command.SubjectId.HasValue)
+        {
+            var subject = await _context.Subjects.FindAsync(command.SubjectId.Value);
+            if (subject != null)
+            {
+                teacher.Subjects.Add(subject);
+            }
+        }
+
         _context.Teachers.Add(teacher);
         await _context.SaveChangesAsync();
 
@@ -126,7 +135,9 @@ public class TeachersController : BaseApiController
     {
         if (id != command.Id) return BadRequest();
 
-        var teacher = await _context.Teachers.FirstOrDefaultAsync(item => item.Id == id);
+        var teacher = await _context.Teachers
+            .Include(t => t.Subjects)
+            .FirstOrDefaultAsync(item => item.Id == id);
         if (teacher == null)
         {
             return NotFound(new { message = "المعلم غير موجود." });
@@ -187,6 +198,20 @@ public class TeachersController : BaseApiController
         teacher.Phone = phone;
         teacher.IsActive = command.IsActive;
 
+        if (command.SubjectId.HasValue)
+        {
+            teacher.Subjects.Clear();
+            var subject = await _context.Subjects.FindAsync(command.SubjectId.Value);
+            if (subject != null)
+            {
+                teacher.Subjects.Add(subject);
+            }
+        }
+        else
+        {
+            teacher.Subjects.Clear();
+        }
+
         await _context.SaveChangesAsync();
         return Ok(true);
     }
@@ -203,8 +228,50 @@ public class TeachersController : BaseApiController
 
         var linkedUser = await FindLinkedTeacherUserAsync(teacher);
 
-        _context.Teachers.Remove(teacher);
-        await _context.SaveChangesAsync();
+        await using var transaction = await _context.Database.BeginTransactionAsync();
+
+        try
+        {
+            await _context.ClassRooms
+                .Where(classRoom => classRoom.TeacherId == id)
+                .ExecuteUpdateAsync(setters => setters.SetProperty(classRoom => classRoom.TeacherId, (int?)null));
+
+            await _context.Subjects
+                .Where(subject => subject.TeacherId == id)
+                .ExecuteUpdateAsync(setters => setters.SetProperty(subject => subject.TeacherId, (int?)null));
+
+            await _context.Videos
+                .Where(video => video.TeacherId == id)
+                .ExecuteUpdateAsync(setters => setters.SetProperty(video => video.TeacherId, (int?)null));
+
+            await _context.Schedules
+                .Where(schedule => schedule.TeacherId == id)
+                .ExecuteDeleteAsync();
+
+            await _context.Sessions
+                .Where(session => session.TeacherId == id)
+                .ExecuteDeleteAsync();
+
+            await _context.Assignments
+                .Where(assignment => assignment.TeacherId == id)
+                .ExecuteDeleteAsync();
+
+            await _context.Exams
+                .Where(exam => exam.TeacherId == id)
+                .ExecuteDeleteAsync();
+
+            _context.Teachers.Remove(teacher);
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+        }
+        catch (DbUpdateException)
+        {
+            await transaction.RollbackAsync();
+            return Conflict(new
+            {
+                message = "لا يمكن حذف المعلم الآن لأنه مرتبط ببيانات مدرسية أخرى. راجع الجداول أو المواد أو الاختبارات المرتبطة به أولاً."
+            });
+        }
 
         if (linkedUser != null)
         {

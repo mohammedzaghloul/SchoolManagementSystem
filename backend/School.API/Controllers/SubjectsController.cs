@@ -29,7 +29,20 @@ public class SubjectsController : BaseApiController
 
         if (currentTeacher != null)
         {
-            query = query.Where(subject => subject.TeacherId == currentTeacher.Id);
+            var hasDirectSubjects = await _context.Subjects
+                .AsNoTracking()
+                .AnyAsync(subject => subject.TeacherId == currentTeacher.Id && subject.IsActive);
+
+            query = hasDirectSubjects
+                ? query.Where(subject => subject.TeacherId == currentTeacher.Id)
+                : query.Where(subject =>
+                    _context.Sessions.Any(session =>
+                        session.TeacherId == currentTeacher.Id &&
+                        session.SubjectId == subject.Id));
+        }
+        else if (User.IsInRole("Teacher"))
+        {
+            return Ok(Array.Empty<object>());
         }
         else if (isAdmin && teacherId > 0)
         {
@@ -200,13 +213,16 @@ public class SubjectsController : BaseApiController
             return null;
         }
 
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         var email = User.FindFirstValue(ClaimTypes.Email);
-        if (string.IsNullOrWhiteSpace(email))
+        if (string.IsNullOrWhiteSpace(userId) && string.IsNullOrWhiteSpace(email))
         {
             return null;
         }
 
-        return await _context.Teachers.AsNoTracking().FirstOrDefaultAsync(teacher => teacher.Email == email);
+        return await _context.Teachers
+            .AsNoTracking()
+            .FirstOrDefaultAsync(teacher => teacher.UserId == userId || teacher.Email == email);
     }
 
     private static string? NormalizeTerm(string? term)

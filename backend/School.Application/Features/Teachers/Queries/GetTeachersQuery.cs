@@ -14,6 +14,8 @@ public class TeacherDto
     public string FullName { get; set; }
     public string Email { get; set; }
     public string Phone { get; set; }
+    public int? SubjectId { get; set; }
+    public string? SubjectName { get; set; }
     public bool IsActive { get; set; }
 }
 
@@ -28,15 +30,21 @@ public class GetTeachersQueryHandler : IRequestHandler<GetTeachersQuery, List<Te
 
     public async Task<List<TeacherDto>> Handle(GetTeachersQuery request, CancellationToken cancellationToken)
     {
-        var teachers = await _unitOfWork.Repository<Teacher>().ListAllAsync();
-
-        return teachers.Select(t => new TeacherDto
-        {
-            Id = t.Id,
-            FullName = t.FullName,
-            Email = t.Email,
-            Phone = t.Phone,
-            IsActive = t.IsActive
+        var spec = new TeachersWithSubjectsSpecification();
+        var teachers = await _unitOfWork.Repository<Teacher>().ListAsync(spec);
+        
+        return teachers.Select(t => {
+            var primarySubject = t.Subjects?.FirstOrDefault();
+            return new TeacherDto
+            {
+                Id = t.Id,
+                FullName = t.FullName,
+                Email = t.Email,
+                Phone = t.Phone,
+                SubjectId = primarySubject?.Id,
+                SubjectName = primarySubject?.Name,
+                IsActive = t.IsActive
+            };
         }).ToList();
     }
 }

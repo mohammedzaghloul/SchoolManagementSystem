@@ -52,29 +52,77 @@
             <button class="close-btn" (click)="toggleMenu()"><i class="fas fa-times"></i></button>
         </div>
         <div class="sheet-content">
-            <a routerLink="/admin/students" class="sheet-item" (click)="toggleMenu()">
-                <i class="fas fa-user-graduate"></i>
-                <span>الطلاب</span>
-            </a>
-            <a routerLink="/admin/teachers" class="sheet-item" (click)="toggleMenu()">
-                <i class="fas fa-chalkboard-teacher"></i>
-                <span>المدرسين</span>
-            </a>
-            <a routerLink="/admin/sessions" class="sheet-item" (click)="toggleMenu()" *ngIf="userRole === 'Admin'">
-                <i class="fas fa-calendar-days"></i>
-                <span>جدول الحصص</span>
-            </a>
-            <a routerLink="/teacher/exams" class="sheet-item" (click)="toggleMenu()" *ngIf="userRole === 'Teacher'">
-                <i class="fas fa-file-alt"></i>
-                <span>الامتحانات</span>
-            </a>
+            <ng-container *ngIf="userRole === 'Admin'">
+                <a routerLink="/admin/students" class="sheet-item" (click)="toggleMenu()">
+                    <i class="fas fa-user-graduate"></i>
+                    <span>الطلاب</span>
+                </a>
+                <a routerLink="/admin/teachers" class="sheet-item" (click)="toggleMenu()">
+                    <i class="fas fa-chalkboard-teacher"></i>
+                    <span>المدرسين</span>
+                </a>
+                <a routerLink="/admin/sessions" class="sheet-item" (click)="toggleMenu()">
+                    <i class="fas fa-calendar-days"></i>
+                    <span>جدول الحصص</span>
+                </a>
+                <a routerLink="/admin/reports" class="sheet-item" (click)="toggleMenu()">
+                    <i class="fas fa-chart-pie"></i>
+                    <span>التقارير</span>
+                </a>
+            </ng-container>
+
+            <ng-container *ngIf="userRole === 'Teacher'">
+                <a routerLink="/teacher/grades" class="sheet-item" (click)="toggleMenu()">
+                    <i class="fas fa-pen"></i>
+                    <span>درجات الطلاب</span>
+                </a>
+                <a routerLink="/teacher/assignments" class="sheet-item" (click)="toggleMenu()">
+                    <i class="fas fa-tasks"></i>
+                    <span>الواجبات</span>
+                </a>
+                <a routerLink="/teacher/exams" class="sheet-item" (click)="toggleMenu()">
+                    <i class="fas fa-file-alt"></i>
+                    <span>الامتحانات</span>
+                </a>
+                <a routerLink="/teacher/videos" class="sheet-item" (click)="toggleMenu()">
+                    <i class="fas fa-video"></i>
+                    <span>الفيديوهات</span>
+                </a>
+            </ng-container>
+
+            <ng-container *ngIf="userRole === 'Student'">
+                <a routerLink="/student/exams" class="sheet-item" (click)="toggleMenu()">
+                    <i class="fas fa-file-alt"></i>
+                    <span>الامتحانات</span>
+                </a>
+                <a routerLink="/student/grades" class="sheet-item" (click)="toggleMenu()">
+                    <i class="fas fa-chart-line"></i>
+                    <span>الدرجات</span>
+                </a>
+                <a routerLink="/student/videos" class="sheet-item" (click)="toggleMenu()">
+                    <i class="fas fa-video"></i>
+                    <span>الفيديوهات</span>
+                </a>
+            </ng-container>
+
+            <ng-container *ngIf="userRole === 'Parent'">
+                <a routerLink="/parent/dashboard" class="sheet-item" (click)="toggleMenu()">
+                    <i class="fas fa-children"></i>
+                    <span>متابعة الأبناء</span>
+                </a>
+                <a routerLink="/parent/payments" class="sheet-item" (click)="toggleMenu()">
+                    <i class="fas fa-file-invoice-dollar"></i>
+                    <span>المصروفات والفواتير</span>
+                </a>
+                <a routerLink="/chat" class="sheet-item" (click)="onChatClick(); toggleMenu()">
+                    <i class="fas fa-comments"></i>
+                    <span>التواصل مع المدرسة</span>
+                </a>
+            </ng-container>
+
             <a routerLink="/profile" class="sheet-item" (click)="toggleMenu()">
                 <i class="fas fa-user-circle"></i>
                 <span>الملف الشخصي</span>
-            </a>
-            <a routerLink="/admin/reports" class="sheet-item" (click)="toggleMenu()">
-                <i class="fas fa-chart-pie"></i>
-                <span>التقارير</span>
             </a>
             <div class="sheet-divider"></div>
             <button class="sheet-item text-danger" (click)="logout()">

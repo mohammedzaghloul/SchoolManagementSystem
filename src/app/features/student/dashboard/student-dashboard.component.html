@@ -1,146 +1,173 @@
-<!-- features/student/dashboard/student-dashboard.component.html -->
 <div class="student-dashboard" dir="rtl">
-  <!-- Welcome Section -->
-  <div class="welcome-section">
-    <div class="student-info">
-      <h1 class="text-gradient">مرحباً، {{ studentName }}</h1>
-      <p>{{ className }} - {{ gradeLevel }}</p>
-    </div>
-    <div class="attendance-status">
-      <div class="status-circle">
-        <svg viewBox="0 0 36 36">
-          <path d="M18 2.0845
-            a 15.9155 15.9155 0 0 1 0 31.831
-            a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#E5E7EB" stroke-width="3" />
-          <path d="M18 2.0845
-            a 15.9155 15.9155 0 0 1 0 31.831
-            a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#10B981" stroke-width="3"
-            [attr.stroke-dasharray]="attendancePercent + ', 100'" />
-        </svg>
-        <span class="percentage">{{ attendancePercent }}%</span>
-      </div>
-      <p>نسبة الحضور</p>
-    </div>
-  </div>
 
-  <!-- Active/Next Session Banner -->
-  <div class="next-session-card glass-card shadow-premium mb-3" *ngIf="nextSession">
-    <div class="d-flex justify-content-between align-items-center">
-      <div class="session-info">
-        <span class="badge gradient-success mb-2">الحصة القادمة</span>
-        <h3 class="mb-1">{{ nextSession.subjectName }}</h3>
-        <p class="text-muted small mb-0">
-          <i class="far fa-clock me-1"></i> 
-          <span class="text-primary fw-bold" *ngIf="timeUntilSession">متبقي: {{ timeUntilSession }}</span>
-          <span *ngIf="!timeUntilSession">تبدأ في: {{ nextSession.startTime | date:'h:mm a' }}</span>
-        </p>
-      </div>
-      <div class="session-action">
-        <button class="btn-scan-compact" [routerLink]="['/student/scan/qr']">
-          <i class="fas fa-qrcode"></i>
-          <span>سجل الآن</span>
-        </button>
-      </div>
+    <!-- Loading State -->
+    <div class="text-center py-5" *ngIf="loading">
+        <div class="spinner-border text-primary"></div>
     </div>
-  </div>
 
-  <!-- Quick Actions -->
-  <div class="quick-actions row g-2">
-    <div class="col-3">
-      <button class="action-btn glass-card glass-card-hover w-100 p-2 h-100 d-flex flex-column align-items-center justify-content-center gap-1" [routerLink]="['/student/scan/qr']">
-        <i class="fas fa-qrcode fs-5 text-primary"></i>
-        <span class="fw-bold small-text">حضور</span>
-      </button>
-    </div>
-    <div class="col-3">
-      <button class="action-btn glass-card glass-card-hover w-100 p-2 h-100 d-flex flex-column align-items-center justify-content-center gap-1" [routerLink]="['/student/exams']">
-        <i class="fas fa-pencil-alt fs-5 text-warning"></i>
-        <span class="fw-bold small-text">اختبارات</span>
-      </button>
-    </div>
-    <div class="col-3">
-      <button class="action-btn glass-card glass-card-hover w-100 p-2 h-100 d-flex flex-column align-items-center justify-content-center gap-1" [routerLink]="['/student/grades']">
-        <i class="fas fa-chart-line fs-5 text-success"></i>
-        <span class="fw-bold small-text">درجات</span>
-      </button>
-    </div>
-    <div class="col-3">
-      <button class="action-btn glass-card glass-card-hover w-100 p-2 h-100 d-flex flex-column align-items-center justify-content-center gap-1" [routerLink]="['/student/schedule']">
-        <i class="fas fa-calendar fs-5 text-info"></i>
-        <span class="fw-bold small-text">جدول</span>
-      </button>
-    </div>
-  </div>
+    <ng-container *ngIf="!loading">
 
-  <!-- Today's Schedule -->
-  <div class="schedule-card glass-card">
-    <h3>جدول اليوم</h3>
-    <div class="schedule-list">
-      <div class="schedule-item" *ngFor="let session of todaySessions">
-        <div class="time">{{ session.startTime }} - {{ session.endTime }}</div>
-        <div class="subject">{{ session.subject }}</div>
-        <div class="teacher">{{ session.teacherName }}</div>
-        <span class="status-badge" [class.completed]="session.completed" *ngIf="!session.isLive">
-          {{ session.completed ? 'تم' : 'قادمة' }}
-        </span>
-        <button class="btn btn-danger btn-sm rounded-pill px-3 fw-bold" *ngIf="session.isLive"
-          [routerLink]="['/live', session.id]">
-          انضم الآن <i class="fas fa-video ms-1"></i>
-        </button>
-      </div>
-    </div>
-  </div>
+        <!-- ═══════════════════════════════════ WELCOME BANNER ════════════════════════════════════ -->
+        <section class="welcome-banner mb-4">
+            <div class="welcome-left">
+                <p class="welcome-eyebrow">مرحباً بك 👋</p>
+                <h1 class="welcome-name">{{ studentName }}</h1>
+                <p class="welcome-sub text-muted-dark mb-0" *ngIf="className">
+                    <i class="fas fa-graduation-cap me-2 text-primary opacity-75"></i>
+                    {{ className }} — {{ gradeLevel }}
+                </p>
+            </div>
+            <div class="attendance-ring">
+                <svg viewBox="0 0 36 36">
+                    <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                        fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="3" />
+                    <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                        fill="none" stroke="#10b981" stroke-width="3"
+                        [attr.stroke-dasharray]="attendancePercent + ', 100'" stroke-linecap="round" />
+                </svg>
+                <div class="ring-inner">
+                    <span class="ring-pct">{{ attendancePercent }}%</span>
+                    <span class="ring-label">حضور</span>
+                </div>
+            </div>
+        </section>
 
-  <!-- Recent Grades -->
-  <div class="grades-card glass-card">
-    <h3>آخر الدرجات</h3>
-    <div class="grades-list">
-      <div class="grade-item" *ngFor="let grade of recentGrades">
-        <div class="subject">{{ grade.subject }}</div>
-        <div class="grade">
-          <span class="score">{{ grade.score }}</span>
-          <span class="max">/ {{ grade.maxScore }}</span>
+        <!-- ═══════════════════════════════════ NEXT SESSION ════════════════════════════════════ -->
+        <section class="next-session-banner mb-4" *ngIf="nextSession">
+            <div class="ns-pulse"></div>
+            <div class="ns-content">
+                <span class="ns-eyebrow">الحصة القادمة</span>
+                <h3 class="ns-title">{{ nextSession.subjectName }}</h3>
+                <div class="ns-meta">
+                    <span><i class="far fa-clock me-1"></i>{{ nextSession.startTime | date:'h:mm a' }}</span>
+                    <span class="ns-countdown" *ngIf="timeUntilSession">متبقي {{ timeUntilSession }}</span>
+                </div>
+            </div>
+            <a routerLink="/student/scan/qr" class="btn btn-success btn-sm rounded-pill px-4 fw-bold">
+                <i class="fas fa-qrcode me-1"></i> سجل حضورك
+            </a>
+        </section>
+
+        <!-- ═══════════════════════════════════ QUICK ACTIONS ════════════════════════════════════ -->
+        <div class="quick-actions mb-4">
+            <a routerLink="/student/scan/qr" class="quick-btn">
+                <div class="qb-icon" style="--c:#8b5cf6"><i class="fas fa-qrcode"></i></div>
+                <span>الحضور</span>
+            </a>
+            <a routerLink="/student/exams" class="quick-btn">
+                <div class="qb-icon" style="--c:#f59e0b"><i class="fas fa-pencil-alt"></i></div>
+                <span>الاختبارات</span>
+            </a>
+            <a routerLink="/student/grades" class="quick-btn">
+                <div class="qb-icon" style="--c:#10b981"><i class="fas fa-chart-line"></i></div>
+                <span>النتائج</span>
+            </a>
+            <a routerLink="/student/timetable" class="quick-btn">
+                <div class="qb-icon" style="--c:#38bdf8"><i class="fas fa-calendar-days"></i></div>
+                <span>الجدول</span>
+            </a>
+            <a routerLink="/student/assignments" class="quick-btn">
+                <div class="qb-icon" style="--c:#f43f5e"><i class="fas fa-file-alt"></i></div>
+                <span>الواجبات</span>
+                <span class="qb-badge" *ngIf="upcomingAssignmentsCount > 0">{{ upcomingAssignmentsCount }}</span>
+            </a>
+            <a routerLink="/student/videos" class="quick-btn">
+                <div class="qb-icon" style="--c:#a855f7"><i class="fas fa-play-circle"></i></div>
+                <span>المكتبة</span>
+            </a>
         </div>
-      </div>
-    </div>
-    <a href="#" [routerLink]="['/student/grades']" class="view-all">عرض كل الدرجات</a>
-  </div>
 
-  <!-- Upcoming Exams -->
-  <div class="exams-card glass-card">
-    <h3>الاختبارات القادمة</h3>
-    <div class="exams-list">
-      <div class="exam-item" *ngFor="let exam of upcomingExams">
-        <div class="exam-header">
-          <h4>{{ exam.subject }}</h4>
-          <span class="date">{{ exam.date | date:'d MMM' }}</span>
-        </div>
-        <p>{{ exam.description }}</p>
-        <div class="exam-footer">
-          <span class="time"><i class="far fa-clock"></i> {{ exam.duration }}</span>
-          <span class="total-marks">{{ exam.totalMarks }} درجة</span>
-        </div>
-      </div>
-    </div>
-  </div>
+        <!-- ═══════════════════════════════════ MAIN CONTENT ════════════════════════════════════ -->
+        <div class="row g-3 mb-4">
 
-  <!-- Announcements -->
-  <div class="announcements-section mt-4 mb-4" dir="rtl">
-    <h3 class="section-title mb-3">📰 آخر الأخبار والتنبيهات</h3>
-    <div class="row g-3">
-      <div class="col-md-4" *ngFor="let announcement of announcements">
-        <div class="glass-card glass-card-hover p-3 h-100 border-start border-primary border-4">
-          <div class="d-flex justify-content-between mb-2">
-            <span class="badge gradient-primary small">إعلان</span>
-            <small class="text-muted">{{ announcement.createdAt | date:'short' }}</small>
-          </div>
-          <h6 class="fw-bold mb-2">{{ announcement.title }}</h6>
-          <p class="text-muted small mb-0">{{ announcement.content }}</p>
+            <!-- Today's Schedule -->
+            <div class="col-lg-7">
+                <div class="content-panel h-100">
+                    <div class="panel-header mb-3">
+                        <h3><i class="fas fa-list-check text-primary small me-2"></i> جدول اليوم</h3>
+                        <span class="count-badge">{{ todaySessions.length }}</span>
+                    </div>
+
+                    <div *ngIf="todaySessions.length > 0; else noSessions">
+                        <div class="session-row" *ngFor="let s of todaySessions">
+                            <div class="session-time">{{ s.startTime | date:'h:mm' }}</div>
+                            <div class="session-info">
+                                <span class="session-subject">{{ s.subjectName }}</span>
+                                <span class="session-teacher text-muted-dark">{{ s.teacherName }}</span>
+                            </div>
+                            <span class="session-status" [ngClass]="s.completed ? 'status-done' : 'status-upcoming'">
+                                {{ s.completed ? 'منتهي' : 'قادم' }}
+                            </span>
+                        </div>
+                    </div>
+                    <ng-template #noSessions>
+                        <div class="empty-mini">لا توجد حصص اليوم</div>
+                    </ng-template>
+                </div>
+            </div>
+
+            <!-- Grades + Exams -->
+            <div class="col-lg-5">
+                <div class="d-flex flex-column gap-3 h-100">
+
+                    <!-- Recent Grades -->
+                    <div class="content-panel">
+                        <div class="panel-header mb-3">
+                            <h3><i class="fas fa-star text-warning small me-2"></i> آخر الدرجات</h3>
+                            <a routerLink="/student/grades" class="panel-link">عرض الكل</a>
+                        </div>
+                        <div *ngIf="recentGrades.length > 0; else noGrades">
+                            <div class="grade-row" *ngFor="let g of recentGrades">
+                                <span class="grade-subject">{{ g.subjectName || g.subject }}</span>
+                                <span class="grade-score"
+                                    [ngClass]="(g.value ?? g.score ?? g.percentage ?? 0) >= 85 ? 'text-success' : (g.value ?? g.score ?? g.percentage ?? 0) >= 60 ? 'text-warning' : 'text-danger'">
+                                    {{ g.value ?? g.score ?? g.percentage ?? '—' }}{{ (g.value ?? g.score ?? g.percentage) != null ? '%' : '' }}
+                                </span>
+                            </div>
+                        </div>
+                        <ng-template #noGrades>
+                            <div class="empty-mini">لا توجد درجات بعد</div>
+                        </ng-template>
+                    </div>
+
+                    <!-- Upcoming Exams -->
+                    <div class="content-panel">
+                        <div class="panel-header mb-3">
+                            <h3><i class="fas fa-pen-nib text-info small me-2"></i> الاختبارات</h3>
+                            <a routerLink="/student/exams" class="panel-link">عرض الكل</a>
+                        </div>
+                        <div *ngIf="upcomingExams.length > 0; else noExams">
+                            <div class="exam-row" *ngFor="let e of upcomingExams">
+                                <span class="exam-subject">{{ e.title }}</span>
+                                <span class="exam-date text-muted-dark">{{ e.startTime | date:'d MMM' }}</span>
+                            </div>
+                        </div>
+                        <ng-template #noExams>
+                            <div class="empty-mini">لا توجد اختبارات قادمة</div>
+                        </ng-template>
+                    </div>
+                </div>
+            </div>
         </div>
-      </div>
-      <div class="col-12 text-center py-4 bg-light rounded-4" *ngIf="announcements.length === 0">
-        <p class="text-muted mb-0">لا توجد إعلانات جديدة حالياً</p>
-      </div>
-    </div>
-  </div>
+
+        <!-- ═══════════════════════════════════ ANNOUNCEMENTS ════════════════════════════════════ -->
+        <section *ngIf="announcements.length > 0">
+            <div class="panel-header mb-3">
+                <h3><i class="fas fa-bullhorn text-primary small me-2"></i> الإعلانات</h3>
+            </div>
+            <div class="row g-3">
+                <div class="col-md-4" *ngFor="let ann of announcements">
+                    <div class="announcement-card">
+                        <div class="ann-header">
+                            <span class="ann-badge">إعلان</span>
+                            <span class="ann-date text-muted-dark">{{ ann.createdAt | date:'d MMM' }}</span>
+                        </div>
+                        <h6 class="ann-title">{{ ann.title }}</h6>
+                        <p class="ann-body text-muted-dark">{{ ann.content }}</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </ng-container>
 </div>

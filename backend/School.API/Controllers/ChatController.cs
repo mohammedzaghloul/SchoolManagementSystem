@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.SignalR;
+using School.API.Hubs;
 using School.Application.Features.Chat.Queries;
 using School.Application.Features.Chat.Commands;
 using School.Infrastructure.Data;
@@ -16,27 +18,50 @@ public class ChatController : BaseApiController
     private readonly SchoolDbContext _context;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IWebHostEnvironment _env;
+    private readonly IHubContext<ChatHub> _hubContext;
 
-    public ChatController(SchoolDbContext context, UserManager<ApplicationUser> userManager, IWebHostEnvironment env)
+    public ChatController(
+        SchoolDbContext context,
+        UserManager<ApplicationUser> userManager,
+        IWebHostEnvironment env,
+        IHubContext<ChatHub> hubContext)
     {
         _context = context;
         _userManager = userManager;
         _env = env;
+        _hubContext = hubContext;
     }
 
     [HttpGet("history/{otherUserId}")]
-    public async Task<ActionResult<List<MessageDto>>> GetChatHistory(string otherUserId)
+    public async Task<ActionResult> GetChatHistory(string otherUserId, [FromQuery] int page = 1, [FromQuery] int size = 50)
     {
         var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(currentUserId)) return Unauthorized();
+
+        var safePage = Math.Max(1, page);
+        var safeSize = Math.Clamp(size, 10, 100);
         
         var query = new GetChatHistoryQuery
         {
             UserId1 = currentUserId,
-            UserId2 = otherUserId
+            UserId2 = otherUserId,
+            Page = safePage,
+            Size = safeSize
         };
 
         var messages = await Mediator.Send(query);
-        return Ok(messages);
+        var total = await _context.Messages.CountAsync(m => !m.IsDeleted &&
+            ((m.SenderId == currentUserId && m.ReceiverId == otherUserId) ||
+             (m.SenderId == otherUserId && m.ReceiverId == currentUserId)));
+
+        return Ok(new
+        {
+            items = messages,
+            page = safePage,
+            size = safeSize,
+            total,
+            hasMore = safePage * safeSize < total
+        });
     }
 
     [HttpPost("send")]
@@ -59,7 +84,32 @@ public class ChatController : BaseApiController
 
         var messageId = await Mediator.Send(command);
         if (messageId > 0)
-            return Ok(new { success = true, messageId });
+        {
+            var sentAt = DateTime.UtcNow;
+            var messageData = new
+            {
+                id = messageId,
+                senderId,
+                receiverId = dto.ReceiverId,
+                content = dto.Content,
+                fileUrl = dto.FileUrl,
+                fileName = dto.FileName,
+                fileType = dto.FileType,
+                fileSize = dto.FileSize,
+                messageType = dto.MessageType ?? "text",
+                sentAt,
+                isRead = false
+            };
+
+            await _hubContext.Clients.Group(dto.ReceiverId).SendAsync("ReceiveMessage", messageData);
+            if (dto.ReceiverId != senderId)
+            {
+                await _hubContext.Clients.Group(senderId).SendAsync("ReceiveMessage", messageData);
+            }
+
+            return Ok(new { success = true, messageId, sentAt });
+        }
+
         return BadRequest(new { success = false });
     }
 
@@ -132,6 +182,7 @@ public class ChatController : BaseApiController
                                 id = userTeacher.Id,
                                 name = teacher.FullName ?? userTeacher.FullName ?? "معلم الفصل",
                                 role = "Teacher",
+                                subjectName = await GetTeacherSubjectSummary(teacher.Id, student.ClassRoomId),
                                 lastMessage = await GetLastMessage(userId, userTeacher.Id),
                                 lastMessageTime = await GetLastMessageTime(userId, userTeacher.Id),
                                 unreadCount = await GetUnreadCount(userId, userTeacher.Id),
@@ -160,6 +211,7 @@ public class ChatController : BaseApiController
                             id = userTeacher.Id,
                             name = teacher.FullName ?? userTeacher.FullName ?? "مدرس مادة",
                             role = "Teacher",
+                            subjectName = await GetTeacherSubjectSummary(teacher.Id, student.ClassRoomId),
                             lastMessage = await GetLastMessage(userId, userTeacher.Id),
                             lastMessageTime = await GetLastMessageTime(userId, userTeacher.Id),
                             unreadCount = await GetUnreadCount(userId, userTeacher.Id),
@@ -181,6 +233,27 @@ public class ChatController : BaseApiController
             if (teacher != null && teacher.ClassRooms != null)
             {
                 var addedIds = new HashSet<string>();
+
+                var admins = await _userManager.GetUsersInRoleAsync("Admin");
+                foreach (var admin in admins.Where(admin => admin.Id != userId))
+                {
+                    if (addedIds.Add(admin.Id))
+                    {
+                        contacts.Add(new
+                        {
+                            id = admin.Id,
+                            name = admin.FullName ?? admin.Email ?? "إدارة المدرسة",
+                            studentName = "",
+                            role = "Admin",
+                            className = "",
+                            lastMessage = await GetLastMessage(userId, admin.Id),
+                            lastMessageTime = await GetLastMessageTime(userId, admin.Id),
+                            unreadCount = await GetUnreadCount(userId, admin.Id),
+                            isOnline = false
+                        });
+                    }
+                }
+
                 foreach (var cl in teacher.ClassRooms)
                 {
                     foreach (var st in cl.Students)
@@ -255,6 +328,7 @@ public class ChatController : BaseApiController
                                     name = teacher.FullName ?? userTeacher.FullName ?? "معلم الفصل",
                                     studentName = child.FullName,
                                     role = "Teacher",
+                                    subjectName = await GetTeacherSubjectSummary(teacher.Id, child.ClassRoomId),
                                     lastMessage = await GetLastMessage(userId, userTeacher.Id),
                                     lastMessageTime = await GetLastMessageTime(userId, userTeacher.Id),
                                     unreadCount = await GetUnreadCount(userId, userTeacher.Id),
@@ -286,6 +360,7 @@ public class ChatController : BaseApiController
                                     name = teacher.FullName ?? userTeacher.FullName ?? "مدرس مادة",
                                     studentName = child.FullName,
                                     role = "Teacher",
+                                    subjectName = await GetTeacherSubjectSummary(teacher.Id, child.ClassRoomId),
                                     lastMessage = await GetLastMessage(userId, userTeacher.Id),
                                     lastMessageTime = await GetLastMessageTime(userId, userTeacher.Id),
                                     unreadCount = await GetUnreadCount(userId, userTeacher.Id),
@@ -312,6 +387,7 @@ public class ChatController : BaseApiController
                         name = teacher.FullName ?? userTeacher.FullName ?? "معلم",
                         studentName = "",
                         role = "Teacher",
+                        subjectName = await GetTeacherSubjectSummary(teacher.Id),
                         lastMessage = await GetLastMessage(userId, userTeacher.Id),
                         lastMessageTime = await GetLastMessageTime(userId, userTeacher.Id),
                         unreadCount = await GetUnreadCount(userId, userTeacher.Id),
@@ -418,6 +494,28 @@ public class ChatController : BaseApiController
     {
         return await _context.Messages
             .CountAsync(m => m.SenderId == otherUserId && m.ReceiverId == currentUserId && !m.IsRead && !m.IsDeleted);
+    }
+
+    private async Task<string> GetTeacherSubjectSummary(int teacherId, int? classRoomId = null)
+    {
+        var query = _context.Subjects
+            .AsNoTracking()
+            .Where(subject => subject.TeacherId == teacherId && subject.IsActive);
+
+        if (classRoomId.HasValue)
+        {
+            query = query.Where(subject => subject.ClassRoomId == classRoomId.Value);
+        }
+
+        var names = await query
+            .Select(subject => subject.Name)
+            .Where(name => name != null && name != "")
+            .Distinct()
+            .OrderBy(name => name)
+            .Take(4)
+            .ToListAsync();
+
+        return string.Join("، ", names);
     }
 
     private static string GetFileType(string extension)

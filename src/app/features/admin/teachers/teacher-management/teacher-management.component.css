@@ -37,36 +37,68 @@
     border-color: #2563eb;
 }
 
-/* Toolbar Toolbar */
-.toolbar {
+/* Premium Toolbar */
+.premium-toolbar {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
     align-items: center;
 }
 
-.custom-select {
-    width: 200px;
-    border-color: #e5e7eb;
-    color: #4b5563;
-    font-weight: 600;
+@media (max-width: 768px) {
+    .premium-toolbar {
+        flex-direction: column;
+    }
 }
 
-.custom-select:focus {
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 0.25rem rgba(59, 130, 246, .25);
+.search-wrapper {
+    position: relative;
+    flex: 1;
+    width: 100%;
 }
 
-.search-box input {
-    border-color: #e5e7eb;
+.search-wrapper .search-icon {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #9ca3af;
+}
+
+.search-wrapper input {
+    padding-right: 40px;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
     background-color: #f9fafb;
     font-weight: 500;
 }
 
-.search-icon {
-    right: 15px;
-    color: #9ca3af;
+.search-wrapper input:focus {
+    background-color: #fff;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 0.25rem rgba(59, 130, 246, .25);
 }
 
-.search-box input:focus {
-    background-color: #fff;
+.filter-wrapper {
+    width: 250px;
+    flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+    .filter-wrapper {
+        width: 100%;
+    }
+}
+
+.filter-wrapper select {
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    font-weight: 600;
+    color: #4b5563;
+    cursor: pointer;
+}
+
+.filter-wrapper select:focus {
     border-color: #3b82f6;
     box-shadow: 0 0 0 0.25rem rgba(59, 130, 246, .25);
 }
@@ -190,3 +222,218 @@
     justify-content: center;
     align-items: center;
 }
+
+/* Premium Modal Styling */
+.modal-content {
+    border-radius: 2rem !important;
+    animation: modalSlideUp 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes modalSlideUp {
+    from { opacity: 0; transform: translateY(30px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.shadow-2xl {
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+}
+
+.modal-icon-premium {
+    display: flex;
+    justify-content: center;
+}
+
+.icon-circle {
+    width: 70px;
+    height: 70px;
+    background: linear-gradient(135deg, #3b82f6 0%, #2dd4bf 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.8rem;
+}
+
+.shadow-premium {
+    box-shadow: 0 10px 20px rgba(59, 130, 246, 0.3);
+}
+
+.title-underline {
+    width: 50px;
+    height: 4px;
+    background: linear-gradient(to right, #3b82f6, #2dd4bf);
+    border-radius: 2px;
+}
+
+.premium-label {
+    display: block;
+    margin-bottom: 0.6rem;
+    font-weight: 700;
+    color: #4b5563;
+    font-size: 0.95rem;
+}
+
+.input-wrapper {
+    position: relative;
+}
+
+.premium-input {
+    width: 100%;
+    padding: 0.9rem 1.2rem;
+    padding-right: 3.2rem;
+    background-color: #f8fafc;
+    border: 2px solid #f1f5f9;
+    border-radius: 1rem;
+    font-weight: 500;
+    color: #1e293b;
+    transition: all 0.3s ease;
+    font-size: 1rem;
+}
+
+.premium-input:focus {
+    outline: none;
+    background-color: #fff;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+}
+
+.input-icon {
+    position: absolute;
+    right: 1.2rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #94a3b8;
+    font-size: 1.1rem;
+    transition: color 0.3s ease;
+}
+
+.premium-input:focus + .input-icon {
+    color: #3b82f6;
+}
+
+/* Premium Switch */
+.premium-switch-card {
+    background-color: #f8fafc;
+    border: 2px solid #f1f5f9;
+    border-radius: 1rem;
+    padding: 1rem 1.2rem;
+    transition: all 0.3s ease;
+}
+
+.premium-switch-card:hover {
+    background-color: #eff6ff;
+    border-color: #dbeafe;
+}
+
+.form-check-input {
+    cursor: pointer;
+}
+
+/* Premium Buttons */
+.btn-premium-primary {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    border: none;
+    color: white;
+    font-weight: 700;
+    border-radius: 1rem;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-premium-primary:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 15px 30px rgba(59, 130, 246, 0.4) !important;
+    color: white;
+}
+
+/* ─── Mobile Teacher Cards ─── */
+.teacher-mobile-card {
+    background: #ffffff;
+    border: 1px solid #f1f5f9;
+    border-radius: 20px;
+    padding: 1.25rem;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.03);
+    transition: all 0.3s ease;
+}
+
+.teacher-mobile-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+}
+
+.avatar-sm {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+}
+
+.status-dot {
+    font-size: 0.72rem;
+    font-weight: 800;
+    padding: 4px 10px;
+    border-radius: 30px;
+    background: #f1f5f9;
+    color: #64748b;
+    cursor: pointer;
+}
+
+.status-dot.active {
+    background: #dcfce7;
+    color: #10b981;
+}
+
+.teacher-email {
+    word-break: break-all;
+    opacity: 0.8;
+}
+
+/* ─── Mobile Header & Buttons ─── */
+@media (max-width: 768px) {
+    .page-container { padding: 1.25rem 0.75rem 100px; }
+    
+    .page-title {
+        font-size: 1.8rem !important;
+        padding-right: 0.5rem;
+    }
+
+    .btn-add-teacher {
+        width: 100% !important;
+        height: 52px;
+        font-size: 1rem !important;
+    }
+
+    .premium-toolbar { padding: 0.5rem; }
+}
+
+/* ─── Custom Scrollbar ─── */
+.table-responsive::-webkit-scrollbar {
+    height: 6px;
+    width: 6px;
+}
+
+.table-responsive::-webkit-scrollbar-track {
+    background: #f8fafc;
+}
+
+.table-responsive::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 10px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+.text-gradient {
+    background: linear-gradient(135deg, #1e293b 0%, #475569 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}

@@ -20,10 +20,12 @@ public class GetStudentByIdQueryHandler : IRequestHandler<GetStudentByIdQuery, S
 
     public async Task<StudentDto?> Handle(GetStudentByIdQuery request, CancellationToken cancellationToken)
     {
-        var student = await _unitOfWork.Repository<Student>().GetByIdAsync(request.Id);
+        var spec = new StudentWithDetailsSpecification(request.Id);
+        var student = await _unitOfWork.Repository<Student>().GetEntityWithSpec(spec);
 
         if (student == null) return null;
 
+        var gradeLevel = student.ClassRoom?.GradeLevel;
         return new StudentDto
         {
             Id = student.Id,
@@ -31,7 +33,15 @@ public class GetStudentByIdQueryHandler : IRequestHandler<GetStudentByIdQuery, S
             Email = student.Email,
             Phone = student.Phone,
             ClassRoomId = student.ClassRoomId.GetValueOrDefault(),
-            QrCodeValue = student.QrCodeValue
+            GradeId = gradeLevel?.Id,
+            GradeLevelId = gradeLevel?.Id,
+            ClassRoomName = student.ClassRoom?.Name,
+            GradeName = gradeLevel?.Name,
+            GradeLevelName = gradeLevel?.Name,
+            ParentName = student.Parent?.FullName,
+            ParentId = student.ParentId,
+            QrCodeValue = student.QrCodeValue,
+            IsActive = student.IsActive
         };
     }
 }

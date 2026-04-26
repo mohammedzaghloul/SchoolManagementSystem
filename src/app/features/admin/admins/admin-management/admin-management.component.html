@@ -1,0 +1,103 @@
+<div class="admin-owner-page" dir="rtl">
+  <section class="hero-card">
+    <div>
+      <span class="eyebrow">صلاحيات مالك النظام</span>
+      <h1>إدارة المدراء</h1>
+      <p>
+        إنشاء حسابات Admin جديدة متاح فقط للحساب الأساسي:
+        <strong>{{ ownerEmail }}</strong>
+      </p>
+    </div>
+    <div class="hero-icon">
+      <i class="fas fa-user-shield"></i>
+    </div>
+  </section>
+
+  <!-- Owner Card (Mohammed Zaghloul) -->
+  <section class="owner-info-card">
+    <div class="owner-avatar">
+      <i class="fas fa-crown"></i>
+    </div>
+    <div class="owner-details">
+      <h2>محمد زغلول</h2>
+      <p class="owner-email">{{ ownerEmail }}</p>
+      <div class="owner-badges">
+        <span class="badge-owner"><i class="fas fa-shield-halved"></i> مالك النظام</span>
+        <span class="badge-active"><i class="fas fa-circle-check"></i> نشط</span>
+        <span class="badge-role"><i class="fas fa-user-gear"></i> SuperAdmin</span>
+      </div>
+    </div>
+    <div class="owner-actions">
+      <span class="lock-note"><i class="fas fa-lock"></i> لا يمكن حذفه</span>
+    </div>
+  </section>
+
+  <section *ngIf="!canCreateAdmins" class="locked-card">
+    <i class="fas fa-lock"></i>
+    <div>
+      <h2>هذه الصفحة للمالك فقط</h2>
+      <p>سجل الدخول بالحساب الأساسي حتى يظهر نموذج إنشاء مدير جديد.</p>
+    </div>
+  </section>
+
+  <section *ngIf="canCreateAdmins" class="form-card">
+    <div class="form-heading">
+      <div>
+        <h2>إنشاء مدير جديد</h2>
+        <p>سيتم إنشاء الحساب بدور Admin مباشرة من قاعدة البيانات.</p>
+      </div>
+      <span class="owner-badge">
+        <i class="fas fa-check-circle"></i>
+        مالك النظام
+      </span>
+    </div>
+
+    <form (ngSubmit)="createAdmin()" #adminForm="ngForm" class="admin-form">
+      <label>
+        <span>اسم المدير</span>
+        <input
+          type="text"
+          name="fullName"
+          [(ngModel)]="form.fullName"
+          placeholder="مثال: مدير فرع جديد"
+          required>
+      </label>
+
+      <label>
+        <span>البريد الإلكتروني</span>
+        <input
+          type="email"
+          name="email"
+          [(ngModel)]="form.email"
+          placeholder="admin@example.com"
+          required>
+      </label>
+
+      <label>
+        <span>كلمة المرور المؤقتة</span>
+        <input
+          type="text"
+          name="password"
+          [(ngModel)]="form.password"
+          minlength="6"
+          required>
+      </label>
+
+      <div *ngIf="error" class="alert-card error">
+        <i class="fas fa-circle-exclamation"></i>
+        <span>{{ error }}</span>
+      </div>
+
+      <div *ngIf="createdAdmin" class="alert-card success">
+        <i class="fas fa-circle-check"></i>
+        <span>تم إنشاء {{ createdAdmin.fullName }} كمدير للنظام.</span>
+      </div>
+
+      <button class="submit-btn" type="submit" [disabled]="submitting || adminForm.invalid">
+        <span *ngIf="!submitting">إنشاء المدير</span>
+        <span *ngIf="submitting">جاري الإنشاء...</span>
+        <i class="fas fa-arrow-left"></i>
+      </button>
+    </form>
+  </section>
+</div>

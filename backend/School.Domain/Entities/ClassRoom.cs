@@ -17,4 +17,5 @@ public class ClassRoom : BaseEntity
     public ICollection<Student> Students { get; set; } = new List<Student>();
     public ICollection<Session> Sessions { get; set; } = new List<Session>();
     public ICollection<Subject> Subjects { get; set; } = new List<Subject>();
+    public ICollection<Schedule> Schedules { get; set; } = new List<Schedule>();
 }

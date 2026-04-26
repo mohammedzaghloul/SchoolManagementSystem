@@ -102,6 +102,41 @@ public class AttendanceController : BaseApiController
         });
     }
 
+    private ActionResult? EnsureManualAttendanceEditIsOpen(School.Domain.Entities.Session session)
+    {
+        if (User.IsInRole("Admin"))
+        {
+            return null;
+        }
+
+        var now = SchoolClock.Now;
+        var sessionStart = session.SessionDate.Date.Add(session.StartTime);
+        if (now < sessionStart.AddMinutes(-AttendanceWindowOpensBeforeMinutes))
+        {
+            return Conflict(new
+            {
+                success = false,
+                canRecordAttendance = false,
+                attendanceWindowStatus = "upcoming",
+                message = $"ÙŠØ¨Ø¯Ø£ Ø§Ù„Ø±ØµØ¯ Ù…Ù† {sessionStart.AddMinutes(-AttendanceWindowOpensBeforeMinutes):hh:mm tt}."
+            });
+        }
+
+        var weekLock = GetAttendanceWeekLockTime(session.SessionDate);
+        if (now >= weekLock)
+        {
+            return Conflict(new
+            {
+                success = false,
+                canRecordAttendance = false,
+                attendanceWindowStatus = "locked",
+                message = $"ØªÙ… Ù‚ÙÙ„ ØªØ¹Ø¯ÙŠÙ„ Ø­Ø¶ÙˆØ± Ù‡Ø°Ø§ Ø§Ù„Ø£Ø³Ø¨ÙˆØ¹ ÙŠÙˆÙ… Ø§Ù„Ø¬Ù…Ø¹Ø© {weekLock:hh:mm tt}. Ø§Ù„ØªØ¹Ø¯ÙŠÙ„ Ù…ØªØ§Ø­ Ù„Ù„Ø£Ø¯Ù…Ù† ÙÙ‚Ø·."
+            });
+        }
+
+        return null;
+    }
+
     private ActionResult? EnsureQrBroadcastIsSupported(School.Domain.Entities.Session session)
     {
         if (string.Equals(session.AttendanceType ?? "QR", "QR", StringComparison.OrdinalIgnoreCase))
@@ -152,6 +187,12 @@ public class AttendanceController : BaseApiController
             windowEnd);
     }
 
+    private static DateTime GetAttendanceWeekLockTime(DateTime sessionDate)
+    {
+        var daysUntilFriday = ((int)DayOfWeek.Friday - (int)sessionDate.DayOfWeek + 7) % 7;
+        return sessionDate.Date.AddDays(daysUntilFriday).AddHours(12);
+    }
+
     private static string NormalizeManualAttendanceStatus(string? status, bool isPresent)
     {
         var normalized = status?.Trim();
@@ -186,19 +227,17 @@ public class AttendanceController : BaseApiController
     }
 
     [HttpPost("scan-qr")]
+    [Authorize(Roles = "Student")]
     public async Task<ActionResult<bool>> ScanQr(ScanQrCommand command)
     {
-        if (command.StudentId == 0)
+        var userEmail = User.FindFirstValue(ClaimTypes.Email);
+        var student = await _context.Students.FirstOrDefaultAsync(currentStudent => currentStudent.Email == userEmail);
+        if (student == null)
         {
-            var userEmail = User.FindFirstValue(ClaimTypes.Email);
-            var student = await _context.Students.FirstOrDefaultAsync(currentStudent => currentStudent.Email == userEmail);
-            if (student == null)
-            {
-                return Unauthorized("Student not found.");
-            }
-
-            command.StudentId = student.Id;
+            return Unauthorized(new { success = false, message = "تعذر تحديد الطالب الحالي." });
         }
+
+        command.StudentId = student.Id;
 
         try
         {
@@ -209,13 +248,17 @@ public class AttendanceController : BaseApiController
         }
         catch
         {
-            return BadRequest("Invalid QR Code format.");
+            return BadRequest(new { success = false, message = "صيغة رمز QR غير صحيحة." });
         }
 
         var result = await Mediator.Send(command);
         if (!result)
         {
-            return BadRequest("Invalid or expired QR token.");
+            return BadRequest(new
+            {
+                success = false,
+                message = "رمز QR غير صالح أو انتهت صلاحيته. اطلب من المعلم تحديث الرمز ثم أعد المحاولة."
+            });
         }
 
         return Ok(result);
@@ -252,6 +295,41 @@ public class AttendanceController : BaseApiController
             canRecordAttendance = true,
             attendanceWindowStatus = window.Status,
             attendanceWindowMessage = window.Message
+        });
+    }
+
+    [HttpGet("generate-flex-qr/{sessionId}")]
+    [Authorize(Roles = "Teacher,Admin")]
+    public async Task<ActionResult<string>> GenerateFlexibleQrToken(int sessionId)
+    {
+        var (session, error) = await GetManagedSessionAsync(sessionId);
+        if (error != null)
+        {
+            return error;
+        }
+
+        var windowError = EnsureAttendanceWindowIsOpen(session!);
+        if (windowError != null)
+        {
+            return windowError;
+        }
+
+        var token = _qrCodeService.GenerateQrToken(sessionId);
+        var window = DescribeAttendanceWindow(session!);
+
+        var attendanceType = session!.AttendanceType ?? "QR";
+        var isFlex = attendanceType.Equals("Flex", StringComparison.OrdinalIgnoreCase);
+
+        return Ok(new
+        {
+            Token = token,
+            canRecordAttendance = true,
+            attendanceWindowStatus = window.Status,
+            attendanceWindowMessage = window.Message,
+            attendanceType = attendanceType,
+            supportsManual = true, // Teachers can always manually override
+            supportsFace = isFlex || attendanceType.Equals("Face", StringComparison.OrdinalIgnoreCase),
+            supportsQr = isFlex || attendanceType.Equals("QR", StringComparison.OrdinalIgnoreCase)
         });
     }
 
@@ -491,9 +569,18 @@ public class AttendanceController : BaseApiController
             .Include(currentStudent => currentStudent.ClassRoom)
             .FirstOrDefaultAsync(currentStudent => currentStudent.Id == recognizedStudentId);
 
-        if (student == null)
+        if (false && student == null)
         {
             return BadRequest(new { success = false, message = "الطالب غير مسجل في النظام." });
+        }
+
+        if (student == null)
+        {
+            return BadRequest(new
+            {
+                success = false,
+                message = "البصمة التي تم التعرف عليها غير مرتبطة ببيانات الطلاب الحالية. أعد تدريب وجه الطالب الصحيح ثم حاول مرة أخرى."
+            });
         }
 
         if (session!.ClassRoomId > 0 && student.ClassRoomId > 0 && session.ClassRoomId != student.ClassRoomId)
@@ -592,7 +679,7 @@ public class AttendanceController : BaseApiController
             return error;
         }
 
-        var windowError = EnsureAttendanceWindowIsOpen(session!);
+        var windowError = EnsureManualAttendanceEditIsOpen(session!);
         if (windowError != null)
         {
             return windowError;

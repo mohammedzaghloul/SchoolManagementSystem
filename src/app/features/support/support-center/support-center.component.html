@@ -1,98 +1,77 @@
-<div class="support-page rtl-layout" dir="rtl">
-  <!-- Minimalist Hero Section -->
-  <header class="support-hero-minimal">
-    <div class="container py-5 text-center">
-      <div class="support-badge mb-3">مركز المساعدة</div>
-      <h1 class="display-5 fw-bold text-white mb-3">الدليل والمساعدة</h1>
-      <p class="lead text-white-50 mb-4">كيف يمكننا مساعدتك اليوم؟</p>
-      <button class="btn btn-primary rounded-pill px-4 py-2 fw-bold shadow-premium" (click)="startGuide()">
-        <i class="fas fa-play me-2"></i>
-        ابدأ الجولة التعليمية
-      </button>
-    </div>
-  </header>
-
-  <!-- Walkthrough Overlay (Matching Image 3) -->
-  <div class="guide-overlay" *ngIf="showGuide">
-    <div class="guide-container glass-card shadow-lg p-4">
-      <div class="guide-content text-center mb-4">
-        <h4 class="fw-bold mb-3">مرحباً بك في جولتنا!</h4>
-        <p class="text-white-50">هنا ستتعرف على كيفية استخدام كافة مميزات النظام بسهولة.</p>
-      </div>
-      
-      <div class="guide-actions">
-        <button class="guide-btn guide-btn-secondary" (click)="closeGuide()">
-            <i class="fas fa-times"></i>
-            إلغاء
+<div class="support-container" dir="rtl">
+    <!-- Header -->
+    <header class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="text-white mb-1" style="font-size:1.5rem; font-weight:700">مركز المساعدة</h1>
+            <p class="text-muted-dark small mb-0">نحن هنا لمساعدتك في أي وقت.</p>
+        </div>
+        <button class="btn btn-primary btn-sm px-4 rounded-pill fw-bold" (click)="startGuide()">
+            <i class="fas fa-play-circle me-2"></i> جولة تعريفية
         </button>
-        <button class="guide-btn guide-btn-primary" type="button">
-            التالي
-            <i class="fas fa-chevron-left"></i>
-        </button>
-      </div>
-    </div>
-  </div>
+    </header>
 
-  <main class="support-container mt-n5">
-    <!-- Quick Contact Cards -->
-    <div class="row g-4 mb-5">
-      <div class="col-md-6">
-        <div class="support-contact-card glass-card h-100 p-4">
-          <div class="d-flex align-items-center gap-3 mb-3">
-            <div class="icon-circle bg-primary-soft text-primary">
-              <i class="fas fa-envelope-open-text fs-4"></i>
+    <!-- FAQs + Contact -->
+    <div class="row g-4">
+        <!-- FAQs -->
+        <div class="col-lg-8">
+            <h6 class="fw-bold text-muted-dark small mb-3 text-uppercase">الأسئلة الشائعة</h6>
+            <div class="faq-list">
+                <div class="faq-item" *ngFor="let faq of faqs; let i = index">
+                    <div class="faq-header" (click)="toggleFaq(i)">
+                        <span class="fw-bold text-white" style="font-size:0.9rem">{{ faq.question }}</span>
+                        <i class="fas small" [ngClass]="openFaqIndex === i ? 'fa-chevron-up text-primary' : 'fa-chevron-down text-muted'"></i>
+                    </div>
+                    <div class="faq-content" *ngIf="openFaqIndex === i">{{ faq.answer }}</div>
+                </div>
             </div>
-            <h3 class="h5 mb-0">تواصل عبر البريد</h3>
-          </div>
-          <p class="text-muted small">نسعد باستلام استفساراتكم والرد عليها في أسرع وقت</p>
-          <a href="mailto:support&#64;school.com" class="btn btn-outline-primary btn-sm rounded-pill w-100 mt-2">support&#64;school.com</a>
         </div>
-      </div>
 
-      <div class="col-md-6">
-        <div class="support-contact-card glass-card h-100 p-4">
-          <div class="d-flex align-items-center gap-3 mb-3">
-            <div class="icon-circle bg-success-soft text-success">
-              <i class="fas fa-headset fs-4"></i>
+        <!-- Contact -->
+        <div class="col-lg-4">
+            <div class="d-flex flex-column gap-3">
+                <div class="contact-card text-center">
+                    <i class="fas fa-headset mb-3 fs-2 text-primary"></i>
+                    <h5 class="text-white fw-bold mb-2" style="font-size:1rem">تحتاج مساعدة مباشرة؟</h5>
+                    <p class="text-muted-dark small mb-3">فريق الدعم متواجد للرد على استفساراتك.</p>
+                    <a [routerLink]="['/chat']" class="btn btn-primary w-100 rounded-pill fw-bold btn-sm">
+                        <i class="fas fa-comments me-2"></i> ابدأ محادثة
+                    </a>
+                </div>
+                <div class="glass-card p-3">
+                    <h6 class="text-white fw-bold small mb-3">تواصل معنا</h6>
+                    <div class="d-flex flex-column gap-2">
+                        <div class="d-flex align-items-center gap-2 small text-muted-dark">
+                            <i class="fas fa-envelope text-primary small"></i>
+                            support&#64;school.com
+                        </div>
+                        <div class="d-flex align-items-center gap-2 small text-muted-dark">
+                            <i class="fas fa-phone text-primary small"></i>
+                            +20 123 456 789
+                        </div>
+                    </div>
+                </div>
             </div>
-            <h3 class="h5 mb-0">الدعم الهاتفي</h3>
-          </div>
-          <p class="text-muted small">فريقنا متاح لمساعدتكم هاتفياً خلال ساعات العمل</p>
-          <a href="tel:+201234567890" class="btn btn-outline-success btn-sm rounded-pill w-100 mt-2 text-ltr">+20 123 456 7890</a>
         </div>
-      </div>
     </div>
 
-    <!-- FAQ Section -->
-    <section class="faq-simple">
-      <h4 class="fw-bold mb-4 d-flex align-items-center gap-2">
-        <i class="fas fa-question-circle text-primary"></i>
-        أهم الأسئلة الشائعة
-      </h4>
-      
-      <div class="accordion accordion-flush bg-transparent border-0" id="supportFaq">
-        <div class="accordion-item bg-transparent border-bottom border-light" *ngFor="let faq of faqs; let i = index">
-          <h2 class="accordion-header">
-            <button class="accordion-button collapsed bg-transparent py-4 text-white" type="button" 
-                    [class.collapsed]="openFaqIndex !== i" (click)="toggleFaq(i)">
-              {{ faq.question }}
-            </button>
-          </h2>
-          <div class="accordion-collapse collapse" [class.show]="openFaqIndex === i">
-            <div class="accordion-body text-white-50 py-3">
-              {{ faq.answer }}
+    <!-- Guide Overlay -->
+    <div class="modal-overlay d-flex align-items-center justify-content-center" *ngIf="showGuide" (click)="closeGuide()">
+        <div class="guide-card" (click)="$event.stopPropagation()">
+            <div class="guide-icon mb-3">
+                <i class="fas" [class]="currentStep.icon"></i>
             </div>
-          </div>
+            <h4 class="text-white fw-bold mb-2">{{ currentStep.title }}</h4>
+            <p class="text-muted-dark small mb-4">{{ currentStep.description }}</p>
+            <div class="progress-bar mb-4">
+                <div class="progress" [style.width.%]="progressPercent"></div>
+            </div>
+            <div class="d-flex justify-content-between align-items-center">
+                <button class="btn btn-sm btn-outline-light rounded-pill px-3" (click)="prevStep()" [disabled]="isFirstStep">السابق</button>
+                <span class="text-muted-dark small">{{ currentStepIndex + 1 }} / {{ guideSteps.length }}</span>
+                <button class="btn btn-sm btn-primary rounded-pill px-3" (click)="nextStep()">
+                    {{ isLastStep ? 'إنهاء' : 'التالي' }}
+                </button>
+            </div>
         </div>
-      </div>
-    </section>
-
-    <!-- Nav Back -->
-    <div class="mt-5 pt-4 border-top border-dark text-center">
-      <a routerLink="/" class="text-decoration-none text-muted-dark small-hover">
-        <i class="fas fa-arrow-right me-2"></i>
-        <span>العودة للرئيسية</span>
-      </a>
     </div>
-  </main>
 </div>

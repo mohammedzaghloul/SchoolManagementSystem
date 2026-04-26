@@ -4,6 +4,14 @@ import { Message, Contact } from '../models/message.model';
 import { BehaviorSubject } from 'rxjs';
 import { AuthService } from './auth.service';
 
+export interface ChatHistoryPage {
+  items: Message[];
+  page: number;
+  size: number;
+  total: number;
+  hasMore: boolean;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -15,8 +23,8 @@ export class ChatService {
     return this.api.get<Contact[]>('/api/Chat/contacts');
   }
 
-  async getMessages(userId: string, page: number = 1, size: number = 100): Promise<Message[]> {
-    return this.api.get<Message[]>(`/api/Chat/history/${userId}`, { page, size });
+  async getMessages(userId: string, page: number = 1, size: number = 50): Promise<ChatHistoryPage | Message[]> {
+    return this.api.get<ChatHistoryPage | Message[]>(`/api/Chat/history/${userId}`, { page, size });
   }
 
   async sendMessage(receiverId: string, content: string, fileUrl?: string,

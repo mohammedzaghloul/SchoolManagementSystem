@@ -1,1 +1,134 @@
-/* styles */
+/* Take Exam - Compact Dark Violet Theme */
+.exam-container {
+    padding: 1.5rem;
+    min-height: 100vh;
+    background: var(--dark-bg);
+    font-family: 'Outfit', 'Tajawal', sans-serif;
+    color: #f8fafc;
+}
+
+/* Header & Timer */
+.exam-header {
+    background: var(--dark-card);
+    border: 1px solid var(--dark-border);
+    padding: 1.25rem 1.75rem;
+    border-radius: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.exam-timer {
+    background: rgba(139, 92, 246, 0.05);
+    padding: 0.75rem 1.5rem;
+    border-radius: 12px;
+    text-align: center;
+    border: 1px solid rgba(139, 92, 246, 0.2);
+}
+.exam-timer.warning {
+    border-color: #ef4444;
+    background: rgba(239, 68, 68, 0.08);
+    color: #ef4444;
+}
+.time { font-size: 1.5rem; font-weight: 800; display: block; }
+
+/* Progress */
+.exam-progress { margin-bottom: 1.5rem; }
+.progress-info { display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--dark-muted); margin-bottom: 0.5rem; }
+.progress-bar { height: 6px; background: rgba(255, 255, 255, 0.05); border-radius: 10px; overflow: hidden; }
+.progress-bar .progress {
+    height: 100%;
+    background: var(--primary);
+    box-shadow: 0 0 10px rgba(139, 92, 246, 0.4);
+    transition: width 0.4s ease;
+}
+
+/* Question Nav */
+.questions-nav { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.5rem; }
+.question-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    border: 1px solid var(--dark-border);
+    background: rgba(255, 255, 255, 0.02);
+    color: var(--dark-muted);
+    font-weight: 700;
+    font-size: 0.85rem;
+    transition: all 0.2s ease;
+}
+.question-btn.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: white;
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+}
+.question-btn.answered { border-color: #10b981; color: #10b981; }
+
+/* Question Card */
+.question-card {
+    background: var(--dark-card);
+    border: 1px solid var(--dark-border);
+    padding: 1.75rem;
+    border-radius: 20px;
+    margin-bottom: 1.5rem;
+}
+.question-marks {
+    background: rgba(139, 92, 246, 0.1);
+    color: #a78bfa;
+    padding: 3px 10px;
+    border-radius: 8px;
+    font-weight: 800;
+    font-size: 0.75rem;
+}
+.question-text p { font-size: 1rem; line-height: 1.8; }
+
+/* Options */
+.option-label {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--dark-border);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-bottom: 0.75rem;
+}
+.option-label:hover {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(139, 92, 246, 0.3);
+}
+.option-label input:checked { accent-color: var(--primary); }
+.option-label input:checked + .option-text { color: white; font-weight: 700; }
+
+/* Navigation */
+.question-navigation { display: flex; justify-content: space-between; }
+.btn-primary { background: var(--primary); color: white; padding: 0.75rem 2rem; border-radius: 12px; font-weight: 700; border: none; box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3); }
+.btn-success { background: #10b981; color: white; padding: 0.75rem 2rem; border-radius: 12px; font-weight: 700; border: none; }
+.btn-secondary { background: rgba(255, 255, 255, 0.04); border: 1px solid var(--dark-border); color: var(--dark-muted); padding: 0.75rem 2rem; border-radius: 12px; font-weight: 700; }
+
+/* Fullscreen Warning */
+.fullscreen-warning {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.95);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.warning-content {
+    background: var(--dark-card);
+    padding: 2.5rem;
+    border-radius: 20px;
+    text-align: center;
+    border: 1px solid #ef4444;
+}
+.warning-content i { font-size: 3rem; color: #ef4444; margin-bottom: 1.5rem; }
+
+@media (max-width: 768px) {
+    .exam-container { padding: 1rem; }
+    .exam-header { flex-direction: column; text-align: center; gap: 1rem; }
+}

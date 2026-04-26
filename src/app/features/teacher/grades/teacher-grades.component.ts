@@ -8,9 +8,13 @@ import {
   TeacherGradebookStudent
 } from '../../../core/services/grade.service';
 import { NotificationService } from '../../../core/services/notification.service';
-import { StudentService } from '../../../core/services/student.service';
+import { ClassRoomService } from '../../../core/services/classroom.service';
 import { SubjectService } from '../../../core/services/subject.service';
+import { AuthService } from '../../../core/services/auth.service';
+import { ClassRoom } from '../../../core/models/class.model';
 import { Subject } from '../../../core/models/subject.model';
+import { PaginatorComponent } from '../../../shared/components/paginator/paginator.component';
+import { ModalComponent } from '../../../shared/components/modal/modal.component';
 
 interface EditableGradeStudent extends TeacherGradebookStudent {
   score: number | null;
@@ -20,17 +24,19 @@ interface EditableGradeStudent extends TeacherGradebookStudent {
 @Component({
   selector: 'app-teacher-grades',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, PaginatorComponent, ModalComponent],
   templateUrl: './teacher-grades.component.html',
   styleUrls: ['./teacher-grades.component.css']
 })
 export class TeacherGradesComponent implements OnInit {
   readonly gradeTypes = ['واجب', 'اختبار', 'مشاركة', 'شفوي', 'تقييم'];
 
+  classes: ClassRoom[] = [];
   subjects: Subject[] = [];
   students: EditableGradeStudent[] = [];
   gradebook: TeacherGradebookResponse | null = null;
 
+  selectedClassRoomId: number | null = null;
   selectedSubjectId: number | null = null;
   selectedGradeType = 'واجب';
   selectedDate = this.getDateInputValue(new Date());
@@ -42,11 +48,18 @@ export class TeacherGradesComponent implements OnInit {
   loadErrorMessage = '';
   usingFallbackData = false;
 
+  showSuccessModal = false;
+  successModalMessage = '';
+
+  currentPage = 1;
+  pageSize = 100;
+
   constructor(
+    private classRoomService: ClassRoomService,
     private subjectService: SubjectService,
     private gradeService: GradeService,
-    private studentService: StudentService,
-    private notify: NotificationService
+    private notify: NotificationService,
+    private authService: AuthService
   ) {}
 
   async ngOnInit(): Promise<void> {
@@ -55,6 +68,37 @@ export class TeacherGradesComponent implements OnInit {
 
   get selectedSubject(): Subject | undefined {
     return this.subjects.find(subject => subject.id === this.selectedSubjectId);
+  }
+
+  get availableClasses(): ClassRoom[] {
+    const subjectClassIds = new Set(
+      this.subjects
+        .map(subject => Number(subject.classRoomId || 0))
+        .filter(classRoomId => classRoomId > 0)
+    );
+
+    if (!subjectClassIds.size) {
+      return this.classes;
+    }
+
+    const classesById = new Map(this.classes.map(classRoom => [Number(classRoom.id), classRoom]));
+
+    return Array.from(subjectClassIds)
+      .map(classRoomId => classesById.get(classRoomId) || {
+        id: classRoomId,
+        name: `الفصل ${classRoomId}`,
+        gradeLevelId: 0
+      })
+      .sort((first, second) => first.name.localeCompare(second.name, 'ar'));
+  }
+
+  get filteredSubjects(): Subject[] {
+    const classRoomId = Number(this.selectedClassRoomId || 0);
+    const subjects = classRoomId
+      ? this.subjects.filter(subject => Number(subject.classRoomId || 0) === classRoomId)
+      : this.subjects.filter(subject => !subject.classRoomId);
+
+    return this.getUniqueSubjects(subjects);
   }
 
   get filteredStudents(): EditableGradeStudent[] {
@@ -69,6 +113,19 @@ export class TeacherGradesComponent implements OnInit {
 
   get totalStudents(): number {
     return this.students.length;
+  }
+
+  get paginatedStudents(): EditableGradeStudent[] {
+    const start = (this.currentPage - 1) * this.pageSize;
+    return this.filteredStudents.slice(start, start + this.pageSize);
+  }
+
+  onPageChange(page: number) {
+    this.currentPage = page;
+  }
+
+  onFilterChange() {
+    this.currentPage = 1;
   }
 
   get enteredGradesCount(): number {
@@ -94,11 +151,20 @@ export class TeacherGradesComponent implements OnInit {
     this.loadErrorMessage = '';
 
     try {
-      const subjects = await this.subjectService.getTeacherSubjects(0);
-      this.subjects = (subjects || []).filter(subject => subject.isActive !== false);
+      const [classes, subjects] = await Promise.all([
+        this.loadTeacherClasses(),
+        this.loadTeacherSubjects()
+      ]);
 
-      if (!this.selectedSubjectId && this.subjects.length > 0) {
-        this.selectedSubjectId = this.subjects[0].id;
+      this.classes = classes;
+      this.subjects = subjects.filter(subject => subject.isActive !== false);
+
+      if (!this.selectedClassRoomId && this.availableClasses.length > 0) {
+        this.selectedClassRoomId = this.availableClasses[0].id;
+      }
+
+      if (!this.selectedSubjectId && this.filteredSubjects.length > 0) {
+        this.selectedSubjectId = this.filteredSubjects[0].id;
       }
 
       if (this.selectedSubjectId) {
@@ -116,6 +182,11 @@ export class TeacherGradesComponent implements OnInit {
     await this.loadGradebook();
   }
 
+  async onClassRoomChanged(): Promise<void> {
+    this.selectedSubjectId = this.filteredSubjects[0]?.id || null;
+    await this.loadGradebook();
+  }
+
   async loadGradebook(): Promise<void> {
     if (!this.selectedSubjectId) {
       this.gradebook = null;
@@ -125,6 +196,7 @@ export class TeacherGradesComponent implements OnInit {
       return;
     }
 
+    this.currentPage = 1;
     this.loadingGradebook = true;
     this.loadErrorMessage = '';
     this.usingFallbackData = false;
@@ -143,13 +215,10 @@ export class TeacherGradesComponent implements OnInit {
         notes: student.notes || ''
       }));
     } catch (error: any) {
-      const fallbackLoaded = await this.loadStudentsFallback(error);
-      if (!fallbackLoaded) {
-        this.gradebook = null;
-        this.students = [];
-        this.loadErrorMessage = this.getGradebookErrorMessage(error);
-        this.notify.error(this.loadErrorMessage);
-      }
+      this.gradebook = null;
+      this.students = [];
+      this.loadErrorMessage = this.getGradebookErrorMessage(error);
+      this.notify.error(this.loadErrorMessage);
     } finally {
       this.loadingGradebook = false;
     }
@@ -171,8 +240,8 @@ export class TeacherGradesComponent implements OnInit {
   }
 
   async saveGrades(): Promise<void> {
-    if (!this.selectedSubjectId) {
-      this.notify.warning('اختر المادة أولًا.');
+    if (!this.selectedClassRoomId || !this.selectedSubjectId) {
+      this.notify.warning('اختر الفصل والمادة أولًا.');
       return;
     }
 
@@ -205,6 +274,9 @@ export class TeacherGradesComponent implements OnInit {
       });
 
       this.notify.success(result.message || 'تم حفظ الدرجات بنجاح.');
+      this.successModalMessage = result.message || 'تم حفظ جميع التعديلات في قاعدة البيانات بنجاح.';
+      this.showSuccessModal = true;
+
       this.loadErrorMessage = '';
       await this.loadGradebook();
     } catch (error: any) {
@@ -225,55 +297,57 @@ export class TeacherGradesComponent implements OnInit {
     return `${year}-${month}-${day}`;
   }
 
-  private async loadStudentsFallback(error: any): Promise<boolean> {
-    if (error?.status !== 404) {
-      return false;
-    }
-
-    const subject = this.selectedSubject;
-    if (!subject?.classRoomId) {
-      return false;
-    }
-
+  private async loadTeacherClasses(): Promise<ClassRoom[]> {
     try {
-      const response = await this.studentService.getStudents({ classRoomId: subject.classRoomId });
-      const fallbackStudents = (response.items || [])
-        .filter(student => student.isActive !== false)
-        .map(student => ({
-          id: student.id,
-          fullName: student.fullName || 'طالب',
-          email: student.email || undefined,
-          existingGradeId: null,
-          score: null,
-          notes: '',
-          lastUpdatedAt: null
-        }));
-
-      this.gradebook = {
-        subjectId: subject.id,
-        subjectName: subject.name || 'المادة',
-        classRoomId: subject.classRoomId,
-        classRoomName: this.getFallbackClassRoomName(subject),
-        gradeType: this.selectedGradeType,
-        date: this.selectedDate,
-        students: fallbackStudents
-      };
-      this.students = fallbackStudents;
-      this.usingFallbackData = true;
-      this.notify.info('تم تحميل طلاب الفصل مباشرة لأن خدمة كشف الدرجات غير متاحة في الخادم الحالي.');
-      return true;
+      const classes = await this.classRoomService.getTeacherClasses(this.getNumericTeacherId());
+      return this.normalizeList<ClassRoom>(classes);
     } catch {
-      return false;
+      return [];
     }
   }
 
-  private getFallbackClassRoomName(subject: Subject): string {
-    const description = subject.description?.trim();
-    if (description) {
-      return description;
+  private async loadTeacherSubjects(): Promise<Subject[]> {
+    try {
+      const subjects = this.normalizeList(await this.subjectService.getTeacherSubjects(this.getNumericTeacherId()));
+      return subjects;
+    } catch {
+      return [];
+    }
+  }
+
+  private getNumericTeacherId(): number | undefined {
+    const id = Number(this.authService.getCurrentUser()?.id);
+    return Number.isFinite(id) && id > 0 ? id : undefined;
+  }
+
+  private normalizeList<T>(value: T[] | { data?: T[] } | null | undefined): T[] {
+    if (Array.isArray(value)) {
+      return value;
     }
 
-    return subject.classRoomId ? `الفصل ${subject.classRoomId}` : 'الفصل المرتبط بالمادة';
+    if (value && Array.isArray(value.data)) {
+      return value.data;
+    }
+
+    return [];
+  }
+
+  private getUniqueSubjects(subjects: Subject[]): Subject[] {
+    const seen = new Set<string>();
+
+    return subjects.filter(subject => {
+      const key = `${Number(subject.classRoomId || this.selectedClassRoomId || 0)}-${this.normalizeSubjectName(subject.name)}`;
+      if (seen.has(key)) {
+        return false;
+      }
+
+      seen.add(key);
+      return true;
+    });
+  }
+
+  private normalizeSubjectName(name: string | undefined): string {
+    return (name || '').trim().replace(/\s+/g, ' ').toLowerCase();
   }
 
   private getGradebookErrorMessage(error: any): string {

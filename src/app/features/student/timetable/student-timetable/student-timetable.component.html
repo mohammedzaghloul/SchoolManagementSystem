@@ -1,86 +1,67 @@
-<div class="timetable-container min-vh-100 dark-theme" [class.full-screen]="isFullScreen">
-    <!-- Top Bar -->
-    <div class="top-nav d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom border-dark">
-        <div class="user-info d-flex align-items-center gap-3">
-            <div class="avatar bg-primary text-white">
+<div class="timetable-container" [class.full-screen]="isFullScreen" dir="rtl">
+    <!-- Top Nav -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="d-flex align-items-center gap-2">
+            <div class="avatar bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold">
                 {{ studentName.charAt(0) || 'S' }}
             </div>
             <div>
-                <h5 class="mb-0 text-white fw-bold">{{ studentName }}</h5>
-                <small class="text-secondary">طالب - السنة الدراسية الحالية</small>
+                <h6 class="mb-0 text-white fw-bold small">{{ studentName }}</h6>
+                <span class="text-muted-dark tiny">الجدول الدراسي</span>
             </div>
         </div>
-        <div class="actions d-flex gap-3">
-             <!-- Cleaned up redundant icons as requested -->
-        </div>
-    </div>
-
-    <!-- Header -->
-    <div class="page-header d-flex justify-content-between align-items-center mb-4">
-        <h2 class="page-title text-white fw-bold">الجدول الدراسي</h2>
-
-        <div class="header-actions d-flex gap-2">
-            <button class="btn btn-primary-p text-white px-3 fw-bold rounded-pill" (click)="toggleFullScreen()">
+        
+        <div class="d-flex gap-2 align-items-center">
+            <div class="zoom-controls bg-white bg-opacity-10 rounded-pill d-flex align-items-center p-1 me-2">
+                <button class="btn btn-sm text-white px-2" (click)="zoomOut()"><i class="fas fa-minus"></i></button>
+                <span class="text-white small fw-bold px-2">{{ zoomLevel | percent:'1.0-0' }}</span>
+                <button class="btn btn-sm text-white px-2" (click)="zoomIn()"><i class="fas fa-plus"></i></button>
+            </div>
+            <button class="btn btn-outline-light btn-sm rounded-pill px-3 opacity-50" (click)="toggleFullScreen()" title="تكبير/تصغير الشاشة">
                 <i class="fas" [ngClass]="isFullScreen ? 'fa-compress' : 'fa-expand'"></i>
-                {{ isFullScreen ? 'الوضع العادي' : 'ملء الشاشة' }}
             </button>
-            <button class="btn btn-outline-info text-white px-3 fw-bold rounded-pill border-info" (click)="downloadTimetable()" [disabled]="loading">
-                <i class="fas fa-download me-1"></i>
-                تحميل الجدول
+            <button class="btn btn-primary btn-sm px-3 rounded-pill fw-bold" (click)="downloadTimetable()" [disabled]="loading">
+                <i class="fas fa-file-pdf me-1"></i> تحميل
             </button>
         </div>
     </div>
 
-    <!-- Error state -->
-    <div class="alert alert-danger mb-4" *ngIf="error">
-        {{ error }}
+    <!-- Page Header -->
+    <div class="mb-4">
+        <h2 class="page-title fw-bold mb-0 text-white">نظرة عامة على الأسبوع</h2>
+        <p class="text-muted-dark small mb-0">توزيع الحصص الأسبوعي المعتمد.</p>
     </div>
 
-    <!-- Loading state -->
-    <div class="text-center py-5" *ngIf="loading">
-        <div class="spinner-border text-primary" role="status"></div>
-        <p class="text-muted mt-2">جاري تحميل الجدول...</p>
-    </div>
-
-    <!-- Timetable Grid Wrapper -->
-    <div #timetableContent class="card bg-darker border-0 shadow-lg rounded-4 timetable-wrapper p-1" *ngIf="!loading && !error">
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-borderless timetable-grid w-100 text-center align-middle mb-0">
-                    <thead class="border-bottom border-darker">
-                        <tr>
-                            <th class="py-3 text-secondary border-end border-darker w-10">اليوم / الساعة</th>
-                            <th class="py-3 text-secondary" *ngFor="let time of timeSlots">{{ time }}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr *ngFor="let dayName of daysOfWeek; let first = first" [class.border-top]="!first"
-                            [class.border-darker]="!first">
-                            <td class="fw-bold text-white border-end border-darker py-4 small">{{ dayName }}</td>
-                            <td *ngFor="let time of timeSlots" class="timetable-cell">
-                                <ng-container *ngIf="timetableMatrix[dayName]?.[time]; else emptyCell">
-                                    <div class="subject-card text-white rounded-3 mx-auto p-2"
-                                        [ngClass]="getSubjectColor(timetableMatrix[dayName][time]!.subjectName)">
-                                        <div class="d-flex align-items-center justify-content-center gap-1">
-                                            <i class="fas" [ngClass]="getSubjectIcon(timetableMatrix[dayName][time]!.subjectName)"></i>
-                                            <div class="fw-bold">{{ timetableMatrix[dayName][time]!.subjectName }}</div>
-                                        </div>
-                                        <small>{{ timetableMatrix[dayName][time]!.className || 'N/A' }}</small>
-                                    </div>
-                                </ng-container>
-                                <ng-template #emptyCell>
-                                    -
-                                </ng-template>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Empty state when no sessions found -->
-            <div class="text-center py-5" *ngIf="sessions.length === 0">
-                <h5 class="text-secondary">لا توجد حصص مجدولة حالياً</h5>
-            </div>
+    <!-- Timetable Content -->
+    <div #timetableContent class="timetable-wrapper-premium" *ngIf="!loading && !error" [style.zoom]="zoomLevel">
+        <div class="table-outer">
+            <table class="table timetable-custom-grid mb-0 align-middle">
+                <thead>
+                    <tr>
+                        <th class="sticky-col">اليوم / الوقت</th>
+                        <th *ngFor="let time of timeSlots" class="time-header">{{ time }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngFor="let dayName of daysOfWeek">
+                        <td class="day-label-premium sticky-col">{{ dayName }}</td>
+                        <td *ngFor="let time of timeSlots">
+                            <div *ngIf="timetableMatrix[dayName]?.[time]" class="subject-card-premium mx-auto" 
+                                 [ngClass]="getSubjectColor(timetableMatrix[dayName][time]!.subjectName)">
+                                <div class="card-glow"></div>
+                                <div class="subject-info">
+                                    <i class="fas" [ngClass]="getSubjectIcon(timetableMatrix[dayName][time]!.subjectName)"></i>
+                                    <span class="subject-name">{{ timetableMatrix[dayName][time]!.subjectName }}</span>
+                                </div>
+                                <div class="class-room">{{ timetableMatrix[dayName][time]!.className || '—' }}</div>
+                            </div>
+                            <div *ngIf="!timetableMatrix[dayName]?.[time]" class="empty-cell">
+                                <span>—</span>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
     </div>
 </div>

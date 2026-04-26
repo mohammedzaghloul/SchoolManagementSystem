@@ -4,11 +4,12 @@ import { FormsModule } from '@angular/forms';
 import { GradeService } from '../../../core/services/grade.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { Grade } from '../../../core/models/grade.model';
+import { PaginatorComponent } from '../../../shared/components/paginator/paginator.component';
 
 @Component({
   selector: 'app-grades',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, PaginatorComponent],
   templateUrl: './grades.component.html',
   styleUrls: ['./grades.component.css']
 })
@@ -24,6 +25,10 @@ export class GradesComponent implements OnInit {
   highestSubject: Grade | null = null;
   lowestSubject: Grade | null = null;
   isDarkMode = true;
+
+  currentPage = 1;
+  pageSize = 5;
+  visibleGrades: (Grade & { evaluation?: { text: string, color: string } })[] = [];
 
   constructor(
     private gradeService: GradeService,
@@ -52,7 +57,22 @@ export class GradesComponent implements OnInit {
       return yearMatch && termMatch;
     });
 
+    this.currentPage = 1; // reset page when filtering
     this.calculateStats();
+    this.updateVisibleGrades();
+  }
+
+  updateVisibleGrades() {
+    const start = (this.currentPage - 1) * this.pageSize;
+    this.visibleGrades = this.filteredGrades.slice(start, start + this.pageSize).map(grade => ({
+      ...grade,
+      evaluation: this.getEvaluation(grade.value)
+    }));
+  }
+
+  onPageChange(page: number) {
+    this.currentPage = page;
+    this.updateVisibleGrades();
   }
 
   calculateStats() {

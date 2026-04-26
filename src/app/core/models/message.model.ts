@@ -34,5 +34,6 @@ export interface Contact {
   studentName?: string;
   role?: string;      // Student | Teacher | Parent
   className?: string;
+  subjectName?: string;
   isTyping?: boolean;
 }

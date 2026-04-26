@@ -1,5 +1,5 @@
 import { NgModule } from '@angular/core';
-import { RouterModule, Routes } from '@angular/router';
+import { PreloadAllModules, RouterModule, Routes } from '@angular/router';
 
 // Guards
 import { AuthGuard } from './core/guards/auth.guard';
@@ -13,6 +13,14 @@ const routes: Routes = [
         pathMatch: 'full'
     },
     {
+        path: 'forgot-password',
+        loadComponent: () => import('./features/auth/forgot-password/forgot-password.component').then(m => m.ForgotPasswordComponent)
+    },
+    {
+        path: 'reset-password',
+        loadComponent: () => import('./features/auth/reset-password/reset-password.component').then(m => m.ResetPasswordComponent)
+    },
+    {
         path: 'auth',
         canActivate: [NoAuthGuard],
         children: [
@@ -23,6 +31,10 @@ const routes: Routes = [
             {
                 path: 'forgot-password',
                 loadComponent: () => import('./features/auth/forgot-password/forgot-password.component').then(m => m.ForgotPasswordComponent)
+            },
+            {
+                path: 'reset-password',
+                loadComponent: () => import('./features/auth/reset-password/reset-password.component').then(m => m.ResetPasswordComponent)
             }
         ]
     },
@@ -63,6 +75,10 @@ const routes: Routes = [
             {
                 path: 'teachers',
                 loadComponent: () => import('./features/admin/teachers/teacher-management/teacher-management.component').then(m => m.TeacherManagementComponent)
+            },
+            {
+                path: 'admins',
+                loadComponent: () => import('./features/admin/admins/admin-management/admin-management.component').then(m => m.AdminManagementComponent)
             },
             {
                 path: 'grades',
@@ -122,7 +138,8 @@ const routes: Routes = [
             },
             {
                 path: 'classes',
-                loadComponent: () => import('./features/teacher/timetable/teacher-timetable/teacher-timetable.component').then(m => m.TeacherTimetableComponent)
+                redirectTo: 'timetable',
+                pathMatch: 'full'
             },
             {
                 path: 'timetable',
@@ -228,6 +245,11 @@ const routes: Routes = [
         loadComponent: () => import('./features/profile/user-profile/user-profile.component').then(m => m.UserProfileComponent)
     },
     {
+        path: 'notifications',
+        canActivate: [AuthGuard],
+        loadComponent: () => import('./features/notifications/notification-list/notification-list.component').then(m => m.NotificationListComponent)
+    },
+    {
         path: 'live/:id',
         canActivate: [AuthGuard],
         loadComponent: () => import('./features/live/live-classroom/live-classroom.component').then(m => m.LiveClassroomComponent)
@@ -244,7 +266,7 @@ const routes: Routes = [
 ];
 
 @NgModule({
-    imports: [RouterModule.forRoot(routes)],
+    imports: [RouterModule.forRoot(routes, { preloadingStrategy: PreloadAllModules })],
     exports: [RouterModule]
 })
 export class AppRoutingModule { }

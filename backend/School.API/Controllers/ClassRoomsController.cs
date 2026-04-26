@@ -4,6 +4,7 @@ using School.Application.Features.ClassRooms.Commands;
 using School.Application.Features.ClassRooms.Queries;
 using School.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace School.API.Controllers;
 
@@ -39,8 +40,38 @@ public class ClassRoomsController : BaseApiController
     [HttpGet("teacher/{teacherId?}")]
     public async Task<ActionResult<List<ClassRoomDto>>> GetTeacherClasses(int teacherId = 0)
     {
-        // For the demo, we return all as the teacher is linked to all classrooms in seed
-        var result = await Mediator.Send(new GetClassRoomsQuery()); 
+        var currentTeacher = await GetCurrentTeacherAsync();
+        var isAdmin = User.IsInRole("Admin");
+        var effectiveTeacherId = currentTeacher?.Id ?? (isAdmin ? teacherId : 0);
+
+        if (effectiveTeacherId <= 0)
+        {
+            return Ok(new List<ClassRoomDto>());
+        }
+
+        var hasDirectClassLinks = await _context.ClassRooms
+            .AsNoTracking()
+            .AnyAsync(classRoom =>
+                classRoom.TeacherId == effectiveTeacherId ||
+                classRoom.Subjects.Any(subject => subject.TeacherId == effectiveTeacherId));
+
+        var result = await _context.ClassRooms
+            .AsNoTracking()
+            .Where(classRoom => hasDirectClassLinks
+                ? classRoom.TeacherId == effectiveTeacherId ||
+                  classRoom.Subjects.Any(subject => subject.TeacherId == effectiveTeacherId)
+                : classRoom.Sessions.Any(session => session.TeacherId == effectiveTeacherId))
+            .OrderBy(classRoom => classRoom.GradeLevel != null ? classRoom.GradeLevel.Name : string.Empty)
+            .ThenBy(classRoom => classRoom.Name)
+            .Select(classRoom => new ClassRoomDto
+            {
+                Id = classRoom.Id,
+                Name = classRoom.Name ?? $"Class {classRoom.Id}",
+                GradeLevelId = classRoom.GradeLevelId.GetValueOrDefault(),
+                Capacity = classRoom.Capacity
+            })
+            .ToListAsync();
+
         return Ok(result);
     }
 
@@ -115,5 +146,24 @@ public class ClassRoomsController : BaseApiController
         }
 
         return Ok(new { message = "تم حذف الفصل الدراسي بنجاح." });
+    }
+
+    private async Task<School.Domain.Entities.Teacher?> GetCurrentTeacherAsync()
+    {
+        if (!User.IsInRole("Teacher"))
+        {
+            return null;
+        }
+
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var email = User.FindFirstValue(ClaimTypes.Email);
+        if (string.IsNullOrWhiteSpace(userId) && string.IsNullOrWhiteSpace(email))
+        {
+            return null;
+        }
+
+        return await _context.Teachers
+            .AsNoTracking()
+            .FirstOrDefaultAsync(teacher => teacher.UserId == userId || teacher.Email == email);
     }
 }

@@ -1,17 +1,19 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { GradeService } from '../../../../core/services/grade.service';
 import { GradeLevel } from '../../../../core/models/grade.model';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { ConfirmDialogComponent, ConfirmDialogData } from '../../../../shared/components/confirm-dialog/confirm-dialog.component';
 
 @Component({
     selector: 'app-grade-management',
     standalone: true,
-    imports: [CommonModule, FormsModule],
+    imports: [CommonModule, FormsModule, MatDialogModule],
     templateUrl: './grade-management.component.html',
     styleUrls: ['./grade-management.component.css']
 })
-export class GradeManagementComponent implements OnInit {
+export class GradeManagementComponent implements OnInit, OnDestroy {
     grades: GradeLevel[] = [];
     loading = false;
     submitting = false;
@@ -21,10 +23,17 @@ export class GradeManagementComponent implements OnInit {
     searchTerm = '';
     filteredGrades: GradeLevel[] = [];
 
-    constructor(private gradeService: GradeService) { }
+    constructor(
+        private gradeService: GradeService,
+        private dialog: MatDialog
+    ) { }
 
     async ngOnInit() {
         await this.loadGrades();
+    }
+
+    ngOnDestroy(): void {
+        document.body.classList.remove('modal-open-fix');
     }
 
     async loadGrades() {
@@ -55,42 +64,66 @@ export class GradeManagementComponent implements OnInit {
         this.isEditMode = false;
         this.currentGrade = { name: '', description: '' };
         this.showModal = true;
+        document.body.classList.add('modal-open-fix');
     }
 
     openEditModal(grade: GradeLevel) {
         this.isEditMode = true;
         this.currentGrade = { ...grade };
         this.showModal = true;
+        document.body.classList.add('modal-open-fix');
     }
 
     closeModal() {
         this.showModal = false;
+        document.body.classList.remove('modal-open-fix');
     }
 
     async saveGrade() {
+        if (!this.currentGrade.name) {
+            alert('يرجى إدخال اسم المستوى الدراسي');
+            return;
+        }
         this.submitting = true;
         try {
+            const payload = { ...this.currentGrade };
             if (this.isEditMode) {
-                await this.gradeService.updateGrade(this.currentGrade.id, this.currentGrade);
+                await this.gradeService.updateGrade(payload.id, payload);
             } else {
-                await this.gradeService.createGrade(this.currentGrade);
+                delete payload.id; // Clean up id if it exists
+                await this.gradeService.createGrade(payload);
             }
             await this.loadGrades();
             this.closeModal();
         } catch (err: any) {
-            alert('خطأ أثناء الحفظ');
+            alert('خطأ أثناء الحفظ: ' + (err.error?.message || err.message));
         } finally {
             this.submitting = false;
         }
     }
 
-    async deleteGrade(id: number) {
-        if (!confirm('هل أنت متأكد من حذف هذا المستوى؟')) return;
-        try {
-            await this.gradeService.deleteGrade(id);
-            this.grades = this.grades.filter(g => g.id !== id);
-        } catch (err) {
-            alert('خطأ أثناء الحذف');
-        }
+    deleteGrade(id: number) {
+        const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+            width: '400px',
+            data: {
+                title: 'تأكيد الحذف',
+                message: 'هل أنت متأكد من حذف هذا المستوى الدراسي؟ سيتم حذف كافة الارتباطات المرتبطة به.',
+                confirmText: 'حذف',
+                cancelText: 'إلغاء',
+                color: 'warn'
+            } as ConfirmDialogData
+        });
+
+        dialogRef.afterClosed().subscribe(async (result) => {
+            if (result) {
+                try {
+                    await this.gradeService.deleteGrade(id);
+                    this.grades = this.grades.filter(g => g.id !== id);
+                    this.applyFilter();
+                } catch (err: any) {
+                    alert('عفواً، لا يمكن حذف هذا المستوى لأنه مرتبط ببيانات أخرى (فصول أو طلاب).');
+                }
+            }
+        });
     }
 }

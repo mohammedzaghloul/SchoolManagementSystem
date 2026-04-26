@@ -1,7 +1,7 @@
 <div class="grades-page" dir="rtl">
   <section class="grades-hero">
     <div>
-      <span class="hero-badge">Teacher Gradebook</span>
+      <span class="hero-badge">درجات المدرس</span>
       <h1>رصد درجات الطلاب بواسطة المدرس</h1>
       <p>
         هذه الشاشة مخصصة للمدرس فقط لإدخال درجات طلاب مادته حسب نوع التقييم والتاريخ،
@@ -18,13 +18,30 @@
   <section class="toolbar-card">
     <div class="toolbar-grid">
       <label class="field">
+        <span>الفصل</span>
+        <select [(ngModel)]="selectedClassRoomId" (change)="onClassRoomChanged()" [disabled]="loadingSubjects || saving">
+          <option [ngValue]="null">اختر الفصل</option>
+          <option *ngFor="let classRoom of availableClasses" [ngValue]="classRoom.id">
+            {{ classRoom.name }}
+          </option>
+        </select>
+      </label>
+
+      <label class="field">
         <span>المادة</span>
-        <select [(ngModel)]="selectedSubjectId" (change)="onSelectionChanged()" [disabled]="loadingSubjects || saving">
-          <option [ngValue]="null">اختر المادة</option>
-          <option *ngFor="let subject of subjects" [ngValue]="subject.id">
+        <select
+          [(ngModel)]="selectedSubjectId"
+          (change)="onSelectionChanged()"
+          [disabled]="loadingSubjects || saving || !selectedClassRoomId"
+          [attr.disabled]="loadingSubjects || saving || !selectedClassRoomId ? true : null">
+          <option [ngValue]="null">{{ selectedClassRoomId ? 'اختر المادة' : 'اختر الفصل أولاً' }}</option>
+          <option *ngFor="let subject of filteredSubjects" [ngValue]="subject.id">
             {{ subject.name }}
           </option>
         </select>
+        <small *ngIf="!loadingSubjects && selectedClassRoomId && filteredSubjects.length === 0">
+          لا توجد مواد متاحة لهذا الفصل.
+        </small>
       </label>
 
       <label class="field">
@@ -41,7 +58,7 @@
 
       <label class="field search-field">
         <span>بحث سريع</span>
-        <input type="search" [(ngModel)]="searchTerm" placeholder="ابحث عن طالب بالاسم أو البريد">
+        <input type="search" [(ngModel)]="searchTerm" (ngModelChange)="onFilterChange()" placeholder="ابحث عن طالب بالاسم أو البريد">
       </label>
     </div>
 
@@ -55,6 +72,12 @@
       <i class="fas fa-circle-info"></i>
       <span>تم تحميل الطلاب من الفصل مباشرة لأن خدمة كشف الدرجات غير متاحة في الخادم الحالي.</span>
     </div>
+  </section>
+
+  <section class="empty-state choose-state" *ngIf="!loadingSubjects && !selectedSubjectId && !loadErrorMessage">
+    <i class="fas fa-book-open"></i>
+    <h2>اختر الفصل والمادة لبدء رصد الدرجات</h2>
+    <p>بعد اختيار الفصل ستظهر مواد هذا الفصل فقط بدون تكرار.</p>
   </section>
 
   <section class="summary-grid" *ngIf="selectedSubjectId && !loadErrorMessage">
@@ -107,53 +130,61 @@
         </button>
       </div>
 
-      <div class="table-responsive">
-        <table class="grades-table">
-          <thead>
-            <tr>
-              <th>الطالب</th>
-              <th>البريد</th>
-              <th>الدرجة</th>
-              <th>ملاحظات</th>
-              <th>آخر تحديث</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let student of filteredStudents; trackBy: trackByStudent">
-              <td>
-                <div class="student-cell">
-                  <div class="avatar">{{ student.fullName.charAt(0) }}</div>
-                  <div>
-                    <strong>{{ student.fullName }}</strong>
-                    <small>#{{ student.id }}</small>
-                  </div>
-                </div>
-              </td>
-              <td>{{ student.email || 'لا يوجد بريد' }}</td>
-              <td>
-                <input
-                  type="number"
-                  class="score-input"
-                  min="0"
-                  max="100"
-                  step="0.01"
-                  [ngModel]="student.score"
-                  (ngModelChange)="updateScore(student, $event)"
-                  [disabled]="saving">
-              </td>
-              <td>
-                <input
-                  type="text"
-                  class="notes-input"
-                  [(ngModel)]="student.notes"
-                  placeholder="ملاحظة مختصرة"
-                  [disabled]="saving">
-              </td>
-              <td>{{ student.lastUpdatedAt ? (student.lastUpdatedAt | date:'short') : 'جديد' }}</td>
-            </tr>
-          </tbody>
-        </table>
+      <div class="roster-grid">
+        <article class="grade-card" *ngFor="let student of paginatedStudents; trackBy: trackByStudent">
+          <div class="grade-card-main">
+            <div class="student-avatar">{{ student.fullName.charAt(0) }}</div>
+            <div class="student-info">
+              <h3>{{ student.fullName }}</h3>
+              <p *ngIf="student.email">{{ student.email }}</p>
+            </div>
+            <div class="student-meta-desktop" *ngIf="student.lastUpdatedAt">
+              <span class="meta-date">{{ student.lastUpdatedAt | date:'short' }}</span>
+            </div>
+          </div>
+
+          <div class="grade-card-inputs">
+            <label class="score-field">
+              <span>الدرجة:</span>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                step="0.01"
+                [ngModel]="student.score"
+                (ngModelChange)="updateScore(student, $event)"
+                [disabled]="saving">
+            </label>
+            <label class="notes-field">
+              <span>ملاحظات:</span>
+              <input
+                type="text"
+                [(ngModel)]="student.notes"
+                placeholder="أضف ملاحظة مختصرة..."
+                [disabled]="saving">
+            </label>
+          </div>
+        </article>
+      </div>
+
+      <div class="pagination-wrapper" *ngIf="filteredStudents.length > 0">
+        <app-paginator
+          [totalItems]="filteredStudents.length"
+          [pageSize]="pageSize"
+          [currentPage]="currentPage"
+          (pageChange)="onPageChange($event)">
+        </app-paginator>
       </div>
     </ng-container>
   </section>
+
+  <app-modal
+    [isOpen]="showSuccessModal"
+    title="تم حفظ الدرجات"
+    [message]="successModalMessage"
+    type="success"
+    confirmText="حسنًا"
+    (confirm)="showSuccessModal = false"
+    (closed)="showSuccessModal = false">
+  </app-modal>
 </div>

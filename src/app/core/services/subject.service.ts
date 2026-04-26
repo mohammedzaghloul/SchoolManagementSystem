@@ -33,7 +33,8 @@ export class SubjectService {
     return this.api.delete(`/api/Subjects/${id}`);
   }
 
-  async getTeacherSubjects(teacherId: number): Promise<Subject[]> {
-    return this.api.get<Subject[]>(`/api/Subject/teacher/${teacherId}`);
+  async getTeacherSubjects(teacherId?: number): Promise<Subject[]> {
+    const suffix = teacherId && teacherId > 0 ? `/${teacherId}` : '';
+    return this.api.get<Subject[]>(`/api/Subjects/teacher${suffix}`);
   }
 }

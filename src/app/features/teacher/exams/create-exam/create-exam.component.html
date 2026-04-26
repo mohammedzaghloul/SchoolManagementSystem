@@ -2,11 +2,12 @@
 <div class="create-exam-container" dir="rtl">
   <!-- Header -->
   <div class="page-header">
-    <div class="d-inline-flex align-items-center justify-content-center bg-primary-soft p-3 rounded-circle mb-3 shadow-sm">
-      <i class="fas" [class.fa-edit]="isEditMode" [class.fa-file-signature]="!isEditMode" class="text-primary fs-3"></i>
+    <div class="header-icon">
+      <i class="fas text-primary fs-3" [class.fa-edit]="isEditMode" [class.fa-file-signature]="!isEditMode"></i>
     </div>
     <h1 *ngIf="!isEditMode">إنشاء اختبار جديد</h1>
     <h1 *ngIf="isEditMode">تعديل الاختبار: {{ examForm.get('title')?.value }}</h1>
+    <p class="page-subtitle" *ngIf="!loading">قسّم بيانات الاختبار على خطوات واضحة، ثم أضف الأسئلة واحفظها للطلاب.</p>
     
     <div class="text-center py-4" *ngIf="loading">
       <div class="spinner-grow text-primary" role="status"></div>
@@ -36,6 +37,11 @@
     <div class="step-content animate-fade-in" *ngIf="currentStep === 1">
       <div class="form-section">
         <h3><i class="fas fa-info-circle text-primary"></i> معلومات الاختبار</h3>
+
+        <div class="dependency-alert" *ngIf="dependencyError">
+          <i class="fas fa-triangle-exclamation"></i>
+          <span>{{ dependencyError }}</span>
+        </div>
         
         <div class="form-group">
           <label>عنوان الاختبار <span class="required">*</span></label>
@@ -55,41 +61,47 @@
         <div class="form-row">
           <div class="form-group">
             <label>الفصل الدراسي <span class="required">*</span></label>
-            <select formControlName="classRoomId" class="form-control">
-              <option value="">اختر الفصل</option>
+            <select formControlName="classRoomId" class="form-control" [disabled]="dependenciesLoading" (change)="onClassRoomChange()">
+              <option value="">{{ dependenciesLoading ? 'جاري تحميل الفصول...' : 'اختر الفصل' }}</option>
               <option *ngFor="let class of classes" [value]="class.id">
                 {{ class.name }}
               </option>
             </select>
+            <p class="field-hint" *ngIf="!dependenciesLoading && classes.length === 0">
+              لا توجد فصول متاحة لهذا المدرس حالياً.
+            </p>
           </div>
 
           <div class="form-group">
             <label>المادة العلمية <span class="required">*</span></label>
-            <select formControlName="subjectId" class="form-control">
-              <option value="">اختر المادة</option>
-              <option *ngFor="let subject of subjects" [value]="subject.id">
+            <select
+              formControlName="subjectId"
+              class="form-control"
+              [disabled]="dependenciesLoading || !selectedClassRoomId"
+              [attr.disabled]="dependenciesLoading || !selectedClassRoomId ? true : null">
+              <option value="">
+                {{ dependenciesLoading ? 'جاري تحميل المواد...' : (selectedClassRoomId ? 'اختر المادة' : 'اختر الفصل أولاً') }}
+              </option>
+              <option *ngFor="let subject of filteredSubjects" [value]="subject.id">
                 {{ subject.name }}
               </option>
             </select>
+            <p class="field-hint" *ngIf="!dependenciesLoading && !selectedClassRoomId">
+              اختر الفصل أولاً لعرض مواده فقط.
+            </p>
+            <p class="field-hint" *ngIf="!dependenciesLoading && selectedClassRoomId && filteredSubjects.length === 0">
+              لا توجد مواد متاحة لهذا الفصل حالياً.
+            </p>
           </div>
         </div>
 
         <div class="form-group">
-          <label>نوع الاختبار</label>
-          <div class="radio-group">
-            <label class="radio">
-              <input type="radio" formControlName="type" value="midterm">
-              <span>منتصف الفصل</span>
-            </label>
-            <label class="radio">
-              <input type="radio" formControlName="type" value="final">
-              <span>نهائي</span>
-            </label>
-            <label class="radio">
-              <input type="radio" formControlName="type" value="quiz">
-              <span>اختبار قصير</span>
-            </label>
-          </div>
+          <label>نوع الاختبار <span class="required">*</span></label>
+          <select formControlName="type" class="form-control">
+            <option *ngFor="let type of examTypes" [value]="type.value">
+              {{ type.label }}
+            </option>
+          </select>
         </div>
       </div>
     </div>

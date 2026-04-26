@@ -1,64 +1,73 @@
-<div class="videos-container min-vh-100 dark-theme">
+<div class="videos-shell" dir="rtl">
     <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div class="d-flex align-items-center gap-3 w-100 scrollable-tabs">
-            <button *ngFor="let cat of categories" class="btn btn-sm rounded-pill px-4"
-                [class.btn-primary]="activeCategory === cat" [class.btn-outline-secondary]="activeCategory !== cat"
-                [class.text-white]="activeCategory !== cat" (click)="setCategory(cat)">
+    <header class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+        <div>
+            <p class="eyebrow mb-1">Media Library</p>
+            <h1 class="page-title mb-0">الحصص التعليمية المسجلة</h1>
+            <p class="text-muted-dark small mb-0 mt-1">مكتبة الفيديوهات والشروحات لمواد دراستك.</p>
+        </div>
+
+        <!-- Category Filter -->
+        <div class="category-filters d-flex gap-2 flex-wrap">
+            <button class="cat-pill" [class.active]="activeCategory === cat" *ngFor="let cat of categories"
+                (click)="setCategory(cat)">
                 {{ cat }}
             </button>
         </div>
+    </header>
 
-        <h3 class="mb-0 text-white fw-bold ms-auto text-nowrap ps-4">الفيديوهات التعليمية</h3>
-    </div>
-
-    <!-- Loading List -->
+    <!-- Loading -->
     <div class="text-center py-5" *ngIf="loading">
-        <div class="spinner-border text-primary" role="status"></div>
+        <div class="spinner-border text-primary spinner-border-sm"></div>
     </div>
 
-    <div class="alert alert-info text-center" *ngIf="!loading && filteredVideos.length === 0">
-        لا توجد فيديوهات متاحة لهذا التصنيف، أضف فيديوهات من حساب المدرس لتظهر هنا!
-    </div>
-
-    <!-- Video Grid -->
-    <div class="row g-4" *ngIf="!loading">
-        <div class="col-12 col-md-6 col-lg-4 animate-scale-in" *ngFor="let video of filteredVideos">
-            <div class="card h-100 border-0 shadow-sm video-card" (click)="playVideo(video)">
-                <div class="video-thumbnail position-relative rounded-top overflow-hidden">
-                    <img [src]="video.thumbnail || video.thumbnailUrl || 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&q=80&w=400&h=250'"
-                        alt="{{ video.title }}" class="w-100 h-100 object-fit-cover">
-                    <div class="play-overlay d-flex align-items-center justify-content-center">
-                        <div
-                            class="play-btn rounded-circle bg-white text-primary d-flex align-items-center justify-content-center shadow">
-                            <i class="fas fa-play"></i>
-                        </div>
+    <!-- Grid -->
+    <div class="videos-grid" *ngIf="!loading">
+        <div class="video-card" *ngFor="let video of filteredVideos" (click)="playVideo(video)">
+            <!-- Thumbnail -->
+            <div class="video-thumb">
+                <img [src]="video.thumbnailUrl || 'assets/images/video-placeholder.jpg'" [alt]="video.title"
+                    class="thumb-img" onerror="this.src='assets/images/video-placeholder.jpg'">
+                <div class="thumb-overlay">
+                    <div class="play-circle">
+                        <i class="fas fa-play ms-1"></i>
                     </div>
                 </div>
-                <div class="card-body bg-darker text-white rounded-bottom">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span class="badge bg-primary bg-opacity-25 text-primary">{{ video.subject }}</span>
-                        <small class="text-secondary"><i class="fas fa-eye mx-1"></i>{{ video.views || 0 }} مشاهدة</small>
-                    </div>
-                    <h5 class="card-title fw-bold text-truncate mb-3 mt-3">{{ video.title }}</h5>
-                    <p class="text-secondary small line-clamp-2">{{ video.description }}</p>
+                <span class="thumb-duration" *ngIf="video.duration">{{ video.duration }}</span>
+                <span class="thumb-subject">{{ video.subject }}</span>
+            </div>
+
+            <!-- Meta -->
+            <div class="video-meta">
+                <h5 class="video-title">{{ video.title }}</h5>
+                <div class="video-stats">
+                    <span><i class="far fa-eye me-1"></i>{{ video.views || 0 }} مشاهدة</span>
+                    <span><i class="far fa-calendar me-1"></i>{{ video.createdAt | date:'d MMM' }}</span>
                 </div>
             </div>
         </div>
+
+        <!-- Empty State -->
+        <div class="empty-videos" *ngIf="filteredVideos.length === 0">
+            <i class="fas fa-video-slash empty-icon"></i>
+            <p class="empty-title">لا توجد فيديوهات</p>
+            <p class="empty-sub">لم يتم رفع فيديوهات في هذا التصنيف بعد.</p>
+        </div>
+    </div>
+
+    <!-- Video Player Modal -->
+    <div class="player-overlay" *ngIf="showPlayer" (click)="showPlayer = false">
+        <div class="player-box" (click)="$event.stopPropagation()">
+            <div class="player-header">
+                <h5 class="player-title">{{ activeVideo?.title }}</h5>
+                <button class="player-close" (click)="showPlayer = false">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="ratio ratio-16x9">
+                <iframe [src]="selectedVideoUrl" frameborder="0" allowfullscreen allow="autoplay"></iframe>
+            </div>
+            <div class="player-subject-tag">{{ activeVideo?.subject }}</div>
+        </div>
     </div>
 </div>
-
-<!-- Video Player Overlay -->
-<div class="player-modal-backdrop" *ngIf="showPlayer" (click)="showPlayer = false; selectedVideoUrl = null">
-    <div class="player-window" (click)="$event.stopPropagation()">
-        <div class="player-header d-flex justify-content-between align-items-center p-3 bg-dark">
-            <h6 class="text-white mb-0 text-truncate">{{ activeVideo?.title }}</h6>
-            <button class="btn btn-sm btn-icon-close text-white" (click)="showPlayer = false; selectedVideoUrl = null">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-        <div class="ratio ratio-16x9">
-            <iframe *ngIf="selectedVideoUrl" [src]="selectedVideoUrl" allowfullscreen allow="autoplay"></iframe>
-        </div>
-    </div>
-</div>

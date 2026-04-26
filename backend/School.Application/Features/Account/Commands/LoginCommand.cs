@@ -7,6 +7,8 @@ public class LoginCommand : IRequest<string>
 {
     public string Email { get; set; } = null!;
     public string Password { get; set; } = null!;
+    public string? DeviceKey { get; set; }
+    public string? DeviceName { get; set; }
 }
 
 public class LoginCommandHandler : IRequestHandler<LoginCommand, string>

@@ -1,4 +1,4 @@
-<div class="page-container" [class.blur-background]="showModal || showPlayer">
+<div class="page-container" [class.blur-background]="showModal || showPlayer || showSuccessOverlay || showDeleteOverlay">
     <!-- Premium Header Area -->
     <div class="page-header d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3 mb-5 mt-2">
         <div class="animate-in-left">
@@ -6,7 +6,7 @@
                 <div class="header-icon-box bg-primary-soft rounded-4 p-2">
                     <i class="fas fa-video text-primary fs-4"></i>
                 </div>
-                <h2 class="page-title mb-0 fw-800">إدارة المحتوى المرئي</h2>
+                <h1 class="page-title mb-0 fw-800">إدارة المحتوى المرئي</h1>
             </div>
             <p class="text-muted mb-0 small ps-5">تنظيم ورفع الشروحات التعليمية لصفوفك الدراسية</p>
         </div>
@@ -85,11 +85,11 @@
                         <div class="d-flex align-items-center justify-content-between mb-4 px-1">
                             <div class="d-flex align-items-center gap-2">
                                 <i class="far fa-circle-play text-muted"></i>
-                                <span class="text-muted small fw-600">{{ video.views }} مشهادة</span>
+                                <span class="text-muted small fw-600">{{ video.views }} مشاهدة</span>
                             </div>
                             <div class="d-flex align-items-center gap-2">
                                 <i class="far fa-calendar-check text-muted"></i>
-                                <span class="text-muted small fw-600">2026/04</span>
+                                <span class="text-muted small fw-600">محتوى تعليمي</span>
                             </div>
                         </div>
 
@@ -125,7 +125,7 @@
                         <i class="fas" [class.fa-wand-magic-sparkles]="!isEditing" [class.fa-pen-to-square]="isEditing"></i>
                     </div>
                     <h5 class="modal-title fw-800 text-dark mb-0">
-                        {{ isEditing ? 'تعديل محتوى الفيديو' : 'رفع فيديو احترافي جديد' }}
+                        {{ isEditing ? 'تعديل محتوى الفيديو' : 'رفع فيديو جديد' }}
                     </h5>
                 </div>
             </div>
@@ -208,5 +208,34 @@
         <div class="ratio ratio-16x9">
             <iframe *ngIf="selectedVideoUrl" [src]="selectedVideoUrl" allowfullscreen allow="autoplay"></iframe>
         </div>
+    </div>
+</div>
+
+<div class="delete-overlay" *ngIf="showDeleteOverlay" (click)="cancelDeleteVideo()">
+    <div class="delete-toast-card" (click)="$event.stopPropagation()">
+        <div class="delete-icon">
+            <i class="fas fa-trash-can"></i>
+        </div>
+        <div class="delete-copy">
+            <span class="delete-eyebrow">تأكيد الحذف</span>
+            <h3>هل تريد حذف هذا الفيديو؟</h3>
+            <p>{{ pendingDeleteVideo?.title }}</p>
+        </div>
+        <div class="delete-actions">
+            <button type="button" class="btn-cancel-delete" (click)="cancelDeleteVideo()" [disabled]="deletingVideo">إلغاء</button>
+            <button type="button" class="btn-confirm-delete" (click)="confirmDeleteVideo()" [disabled]="deletingVideo">
+                {{ deletingVideo ? 'جاري الحذف...' : 'حذف الفيديو' }}
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="success-overlay" *ngIf="showSuccessOverlay">
+    <div class="success-content">
+        <div class="success-icon">
+            <i class="fas fa-check"></i>
+        </div>
+        <h2>{{ successOverlayTitle }}</h2>
+        <p>{{ successOverlayMessage }}</p>
     </div>
 </div>

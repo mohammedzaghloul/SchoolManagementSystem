@@ -13,7 +13,6 @@ import {
 } from '../../../../core/services/session.service';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { TeacherService } from '../../../../core/services/teacher.service';
-import { ClassRoomService } from '../../../../core/services/classroom.service';
 
 interface TimeSlotOption {
   key: string;
@@ -48,12 +47,17 @@ export class SessionScheduleManagementComponent implements OnInit {
   loading = false;
   generating = false;
   creatingSession = false;
+  deletingSessionId: number | null = null;
   loadingCreateMeta = false;
+  loadingTeacherSubjects = false;
   error = '';
   createError = '';
   lastGeneration: GenerateTermScheduleResult | null = null;
   lastCreatedSession: CreateAdminSessionResult | null = null;
   selectedTerm = 'all';
+
+  readonly pageSize = 15;
+  currentPage = 1;
   readonly termOptions = [
     { value: 'all', label: 'كل الترمات' },
     { value: 'الترم الأول', label: 'الترم الأول' },
@@ -84,7 +88,6 @@ export class SessionScheduleManagementComponent implements OnInit {
   constructor(
     private sessionService: SessionService,
     private teacherService: TeacherService,
-    private classRoomService: ClassRoomService,
     private notificationService: NotificationService
   ) {}
 
@@ -101,6 +104,32 @@ export class SessionScheduleManagementComponent implements OnInit {
 
   get lastGeneratedTermLabel(): string {
     return this.getTermLabel(this.lastGeneration?.term);
+  }
+
+  get totalPages(): number {
+    return Math.ceil(this.sessions.length / this.pageSize);
+  }
+
+  get pagedSessions(): AdminScheduleSessionItem[] {
+    const start = (this.currentPage - 1) * this.pageSize;
+    return this.sessions.slice(start, start + this.pageSize);
+  }
+
+  get pageNumbers(): (number | string)[] {
+    const total = this.totalPages;
+    const current = this.currentPage;
+    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+    const pages: (number | string)[] = [1];
+    if (current > 3) pages.push('...');
+    for (let i = Math.max(2, current - 1); i <= Math.min(total - 1, current + 1); i++) pages.push(i);
+    if (current < total - 2) pages.push('...');
+    pages.push(total);
+    return pages;
+  }
+
+  goToPage(page: number): void {
+    if (page < 1 || page > this.totalPages) return;
+    this.currentPage = page;
   }
 
   get selectedTimeSlot(): TimeSlotOption | null {
@@ -150,11 +179,61 @@ export class SessionScheduleManagementComponent implements OnInit {
     return subjects.sort((first, second) => String(first.name || '').localeCompare(String(second.name || ''), 'ar'));
   }
 
+  get classRoomSelectPlaceholder(): string {
+    if (!this.createForm.teacherId) {
+      return 'اختر المدرس أولًا';
+    }
+
+    if (this.loadingTeacherSubjects) {
+      return 'جاري تحميل فصول المدرس...';
+    }
+
+    if (this.filteredClassRooms.length === 0) {
+      return 'لا توجد فصول مرتبطة بهذا المدرس';
+    }
+
+    return 'اختر الفصل';
+  }
+
+  get teacherSelectPlaceholder(): string {
+    if (this.loadingCreateMeta) {
+      return 'جارٍ تحميل المدرسين...';
+    }
+
+    if (this.teachers.length === 0) {
+      return 'لا يوجد مدرسون نشطون';
+    }
+
+    return 'اختر المدرس';
+  }
+
+  get subjectSelectPlaceholder(): string {
+    if (!this.createForm.teacherId) {
+      return 'اختر المدرس أولًا';
+    }
+
+    if (this.loadingTeacherSubjects) {
+      return 'جاري تحميل مواد المدرس...';
+    }
+
+    if (this.filteredSubjects.length === 0) {
+      return this.createForm.classRoomId
+        ? 'لا توجد مواد لهذا الفصل'
+        : 'لا توجد مواد مرتبطة بهذا المدرس';
+    }
+
+    return 'اختر المادة';
+  }
+
   get createPreviewText(): string {
     const selectedTeacher = this.teachers.find(teacher => Number(teacher.id) === Number(this.createForm.teacherId));
     const selectedSubject = this.filteredSubjects.find(subject => Number(subject.id) === Number(this.createForm.subjectId));
     const selectedClassRoom = this.filteredClassRooms.find(classRoom => Number(classRoom.id) === Number(this.createForm.classRoomId));
     const selectedSlot = this.selectedTimeSlot;
+
+    if (this.loadingCreateMeta) {
+      return 'يتم تجهيز قوائم المدرسين والفصول في الخلفية. يمكنك مراجعة باقي الصفحة وسيظهر الاختيار فور اكتمال التحميل.';
+    }
 
     if (!selectedTeacher || !selectedSubject || !selectedClassRoom || !selectedSlot) {
       return 'اختر المدرس والمادة والفصل وموعد الحصة من القوائم الجاهزة ليظهر لك ملخص الإنشاء هنا.';
@@ -174,6 +253,7 @@ export class SessionScheduleManagementComponent implements OnInit {
         this.selectedTerm
       );
       this.sessions = this.overview.items || [];
+      this.currentPage = 1;
     } catch (error: any) {
       console.error('Failed to load schedule overview', error);
       this.error = error?.message || 'تعذر تحميل جدول الحصص الحالي.';
@@ -188,13 +268,11 @@ export class SessionScheduleManagementComponent implements OnInit {
     this.loadingCreateMeta = true;
 
     try {
-      const [teachers, classRooms] = await Promise.all([
-        this.teacherService.getTeachers(),
-        this.classRoomService.getAll()
-      ]);
+      const metadata = await this.sessionService.getAdminCreateMetadata();
+      const teachers = metadata.teachers || [];
+      const classRooms = metadata.classRooms || [];
 
       this.teachers = (teachers || [])
-        .filter(teacher => teacher.isActive !== false)
         .sort((first, second) => String(first.fullName || '').localeCompare(String(second.fullName || ''), 'ar'));
 
       this.classRooms = classRooms || [];
@@ -239,11 +317,20 @@ export class SessionScheduleManagementComponent implements OnInit {
     this.createForm.classRoomId = null;
 
     if (!this.createForm.teacherId) {
+      this.loadingTeacherSubjects = false;
       return;
     }
 
+    const teacherId = this.createForm.teacherId;
+    this.loadingTeacherSubjects = true;
+
     try {
-      const subjects = await this.teacherService.getTeacherSubjects(this.createForm.teacherId);
+      const subjects = await this.teacherService.getTeacherSubjects(teacherId);
+
+      if (this.createForm.teacherId !== teacherId) {
+        return;
+      }
+
       this.teacherSubjects = Array.isArray(subjects)
         ? subjects.filter(subject => subject?.isActive !== false)
         : [];
@@ -258,6 +345,10 @@ export class SessionScheduleManagementComponent implements OnInit {
     } catch (error: any) {
       console.error('Failed to load teacher subjects', error);
       this.createError = error?.message || 'تعذر تحميل المواد المرتبطة بهذا المدرس.';
+    } finally {
+      if (this.createForm.teacherId === teacherId) {
+        this.loadingTeacherSubjects = false;
+      }
     }
   }
 
@@ -329,6 +420,28 @@ export class SessionScheduleManagementComponent implements OnInit {
       this.notificationService.error(this.createError);
     } finally {
       this.creatingSession = false;
+    }
+  }
+
+  async deleteSession(session: AdminScheduleSessionItem): Promise<void> {
+    const confirmed = window.confirm(`حذف حصة ${session.subjectName} للمدرس ${session.teacherName}؟`);
+    if (!confirmed) {
+      return;
+    }
+
+    this.deletingSessionId = session.id;
+    this.error = '';
+
+    try {
+      await this.sessionService.deleteSession(session.id);
+      this.notificationService.success('تم حذف الحصة من جدول المدرس.');
+      await this.loadOverview();
+    } catch (error: any) {
+      console.error('Failed to delete session', error);
+      this.error = error?.message || 'تعذر حذف الحصة الآن.';
+      this.notificationService.error(this.error);
+    } finally {
+      this.deletingSessionId = null;
     }
   }
 

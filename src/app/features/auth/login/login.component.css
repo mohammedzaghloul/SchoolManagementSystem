@@ -3,7 +3,7 @@
 :host {
     display: block;
     min-height: 100vh;
-    background-color: #f0f2f5;
+    background-color: #eef2f6;
     font-family: 'Cairo', sans-serif;
     color: #333;
 }
@@ -13,13 +13,13 @@
     display: flex;
     min-height: 100vh;
     direction: rtl;
-    /* Arabic support */
-    background: white;
-    padding: 20px;
+    padding: 24px;
     align-items: center;
     justify-content: center;
-    background-color: #eef2f6;
-    /* Outer gray background from mockup */
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.78), rgba(238, 242, 246, 0.9)),
+        #eef2f6;
+    overflow: hidden;
 }
 
 /* Left Column */
@@ -28,55 +28,114 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    padding: 40px;
+    padding: 44px;
     background-color: #ffffff;
     border-radius: 16px 0 0 16px;
-    /* Rounded corners on left side */
     height: 90vh;
-    box-shadow: -10px 0px 30px rgba(0, 0, 0, 0.05);
-    /* Slight shadow to separate from background */
+    min-height: 620px;
+    box-shadow: -10px 0 30px rgba(15, 23, 42, 0.06);
 }
 
 .login-form-container {
     width: 100%;
-    max-width: 400px;
+    max-width: 420px;
 }
 
 /* Header */
 .login-header {
     text-align: center;
-    margin-bottom: 30px;
+    margin-bottom: 28px;
 }
 
-.logo-circle {
-    width: 60px;
-    height: 45px;
-    color: #3b82f6;
-    /* Blue matching the mockup */
+.brand-lockup {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    direction: ltr;
+}
+
+.brand-mark {
+    width: 64px;
+    height: 64px;
+    border-radius: 18px;
+    background: linear-gradient(145deg, #111827, #172033);
     display: flex;
     justify-content: center;
     align-items: center;
-    font-size: 45px;
-    margin: 0 auto 10px;
+    box-shadow: 0 18px 38px rgba(15, 23, 42, 0.16);
+    flex: 0 0 auto;
 }
 
-.login-header h2 {
+.brand-mark svg {
+    width: 52px;
+    height: 52px;
+    display: block;
+}
+
+.brand-text {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    line-height: 1;
+}
+
+.brand-name {
+    color: #111827;
     font-size: 24px;
-    font-weight: 700;
-    color: #1f2937;
-    margin: 0;
+    font-weight: 900;
+    letter-spacing: 0;
+}
+
+.brand-subtitle {
+    color: #2563eb;
+    font-size: 14px;
+    font-weight: 900;
+    letter-spacing: 0;
+    margin-top: 5px;
+}
+
+.login-kicker {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 26px;
+    padding: 4px 12px;
+    border-radius: 999px;
+    background: #f4f0ff;
+    color: #6d28d9;
+    font-size: 12px;
+    font-weight: 800;
+    margin-bottom: 10px;
+}
+
+.login-header h1 {
+    font-size: 24px;
+    font-weight: 900;
+    color: #1f2937 !important;
+    margin: 0 0 8px;
+}
+
+.login-header p {
+    margin: 0 auto;
+    max-width: 360px;
+    color: #64748b;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.8;
 }
 
 /* Form Styles */
 .form-group {
-    margin-bottom: 20px;
+    margin-bottom: 18px;
 }
 
 .form-group label {
     display: block;
     font-size: 13px;
-    font-weight: 600;
-    color: #4b5563;
+    font-weight: 800;
+    color: #475569;
     margin-bottom: 8px;
     text-align: right;
 }
@@ -90,34 +149,49 @@
 .input-icon {
     position: absolute;
     right: 16px;
-    color: #6b7280;
+    color: #7c8798;
     font-size: 16px;
     pointer-events: none;
+    z-index: 1;
 }
 
 .form-control {
     width: 100%;
-    padding: 12px 45px 12px 16px;
-    /* Icon on the right */
+    min-height: 52px;
+    padding: 13px 46px 13px 16px;
     font-size: 14px;
     font-family: 'Cairo', sans-serif;
     color: #1f2937;
-    background-color: #ffffff;
-    border: 1px solid #d1d5db;
-    border-radius: 8px;
-    transition: all 0.2s ease;
+    background-color: #f8fafc;
+    border: 1px solid #dbe3ef;
+    border-radius: 12px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.form-control::placeholder {
+    color: #94a3b8;
+    opacity: 1;
 }
 
 /* Specific padding for password to accommodate toggle button on left */
 .password-input {
-    padding-left: 45px;
+    padding-left: 48px;
 }
 
 .form-control:focus {
     outline: none;
     background-color: #ffffff;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    border-color: #8b5cf6;
+    box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.14);
+}
+
+.form-control:hover:not(:focus) {
+    border-color: #c7d2fe;
+}
+
+.form-control[readonly] {
+    background-color: #eef2f7;
+    color: #64748b;
 }
 
 .form-control.is-invalid {
@@ -134,31 +208,39 @@
 /* Toggle Password Button */
 .toggle-password-btn {
     position: absolute;
-    left: 10px;
-    background: none;
+    left: 9px;
+    width: 36px;
+    height: 36px;
+    display: grid;
+    place-items: center;
+    background: transparent;
     border: none;
-    color: #9ca3af;
+    border-radius: 10px;
+    color: #8b95a5;
     cursor: pointer;
-    padding: 8px;
-    transition: color 0.2s;
+    padding: 0;
+    transition: color 0.2s ease, background-color 0.2s ease;
 }
 
-.toggle-password-btn:hover {
-    color: #4b5563;
+.toggle-password-btn:hover,
+.toggle-password-btn:focus-visible {
+    color: #6d28d9;
+    background: #f3f0ff;
+    outline: none;
 }
 
 /* Forgot Password */
 .forgot-password {
     text-align: right;
-    margin-top: -10px;
-    margin-bottom: 24px;
+    margin-top: -6px;
+    margin-bottom: 22px;
 }
 
 .forgot-password a {
-    color: #3b82f6;
+    color: #2563eb;
     font-size: 13px;
     text-decoration: none;
-    font-weight: 600;
+    font-weight: 800;
 }
 
 .forgot-password a:hover {
@@ -168,39 +250,48 @@
 /* Button */
 .btn-primary {
     width: 100%;
+    min-height: 54px;
     padding: 12px;
-    background-color: #3b82f6;
+    background: linear-gradient(135deg, #7c3aed, #2563eb) !important;
     color: #ffffff;
     border: none;
-    border-radius: 8px;
-    font-size: 15px;
-    font-weight: 700;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 900;
     font-family: 'Cairo', sans-serif;
     cursor: pointer;
-    transition: all 0.2s ease;
+    box-shadow: 0 14px 28px rgba(124, 58, 237, 0.22) !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
 }
 
 .btn-primary:hover:not(:disabled) {
-    background-color: #2563eb;
+    transform: translateY(-1px);
+    box-shadow: 0 18px 34px rgba(124, 58, 237, 0.28) !important;
 }
 
 .btn-primary:disabled {
-    background-color: #9ca3af;
+    background: #9ca3af !important;
     cursor: not-allowed;
+    box-shadow: none !important;
+    transform: none;
 }
 
 /* Support Link */
 .support-link {
     text-align: center;
-    margin-top: 24px;
+    margin-top: 22px;
     font-size: 13px;
     color: #6b7280;
 }
 
+.support-link p {
+    margin: 0;
+}
+
 .support-link a {
-    color: #3b82f6;
+    color: #2563eb;
     text-decoration: none;
-    font-weight: 600;
+    font-weight: 800;
 }
 
 .alert-danger {
@@ -216,6 +307,73 @@
     gap: 8px;
 }
 
+.otp-panel {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    background: linear-gradient(135deg, #eff6ff, #f8fafc);
+    border: 1px solid #bfdbfe;
+    border-radius: 14px;
+    padding: 14px;
+    margin: 6px 0 18px;
+}
+
+.otp-panel__icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 14px;
+    display: grid;
+    place-items: center;
+    color: #1d4ed8;
+    background: #dbeafe;
+    flex: 0 0 auto;
+}
+
+.otp-panel h3 {
+    margin: 0 0 4px;
+    color: #1e3a8a;
+    font-size: 15px;
+    font-weight: 800;
+}
+
+.otp-panel p {
+    margin: 0;
+    color: #475569;
+    font-size: 12px;
+    line-height: 1.7;
+}
+
+.otp-info {
+    background: #ecfdf5;
+    color: #047857;
+    border: 1px solid #a7f3d0;
+    border-radius: 12px;
+    padding: 10px 12px;
+    font-size: 13px;
+    margin-bottom: 16px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.otp-input {
+    letter-spacing: 8px;
+    text-align: center;
+    font-size: 18px;
+    font-weight: 800;
+}
+
+.change-device-btn {
+    margin-top: 8px;
+    border: 0;
+    background: transparent;
+    color: #2563eb;
+    font-family: 'Cairo', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
 /* Right Column (Image Hero) */
 .login-right {
     flex: 1.2;
@@ -226,11 +384,10 @@
     flex-direction: column;
     justify-content: flex-end;
     height: 90vh;
-    /* Match the height */
+    min-height: 620px;
     border-radius: 0 16px 16px 0;
-    /* Match layout roundness */
     overflow: hidden;
-    box-shadow: 10px 0px 30px rgba(0, 0, 0, 0.05);
+    box-shadow: 10px 0 30px rgba(15, 23, 42, 0.06);
 }
 
 /* Gradient Overlay - Deeper Blue matching mockup */
@@ -263,6 +420,7 @@
 .overlay-content h2 {
     font-size: 28px;
     font-weight: 700;
+    color: #ffffff !important;
     margin: 0 0 8px 0;
 }
 
@@ -274,13 +432,76 @@
 
 /* Responsive */
 @media (max-width: 900px) {
+    .login-wrapper {
+        padding: 20px;
+    }
+
     .login-right {
         display: none;
     }
 
     .login-left {
-        border-radius: 16px;
+        width: 100%;
+        max-width: 520px;
+        border-radius: 22px;
         height: auto;
-        padding: 40px 20px;
+        min-height: auto;
+        padding: 38px 20px;
+        box-shadow: 0 20px 48px rgba(15, 23, 42, 0.08);
+    }
+}
+
+@media (max-width: 520px) {
+    .login-wrapper {
+        min-height: 100dvh;
+        padding: 12px;
+    }
+
+    .login-left {
+        padding: 30px 18px;
+        border-radius: 18px;
+    }
+
+    .login-header {
+        margin-bottom: 24px;
+    }
+
+    .brand-lockup {
+        gap: 10px;
+    }
+
+    .brand-mark {
+        width: 56px;
+        height: 56px;
+        border-radius: 16px;
+    }
+
+    .brand-mark svg {
+        width: 46px;
+        height: 46px;
+    }
+
+    .brand-name {
+        font-size: 22px;
+    }
+
+    .brand-subtitle {
+        font-size: 13px;
+    }
+
+    .login-header h1 {
+        font-size: 22px;
+    }
+
+    .login-header p {
+        font-size: 12px;
+    }
+
+    .form-control {
+        min-height: 50px;
+    }
+
+    .btn-primary {
+        min-height: 52px;
     }
 }

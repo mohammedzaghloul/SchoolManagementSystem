@@ -1,102 +1,125 @@
-<!-- features/student/exams/take-exam/take-exam.component.html -->
 <div class="exam-container" dir="rtl" *ngIf="!loading && exam">
-  <!-- Header -->
-  <div class="exam-header">
-    <div class="exam-info">
-      <h1>{{ exam.title }}</h1>
-      <p>{{ exam.subjectName || exam.subjectId }} - {{ exam.classRoomName || exam.classRoomId }}</p>
+    <!-- Header -->
+    <header class="exam-header">
+        <div>
+            <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-3 py-2 mb-2">الاختبار النهائي</span>
+            <h1 class="fw-bold text-white mb-1">{{ exam.title }}</h1>
+            <p class="text-muted-dark mb-0">{{ exam.subjectName }} — {{ exam.classRoomName }}</p>
+        </div>
+
+        <div class="exam-timer shadow-lg" [class.warning]="timeRemaining < 300">
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <i class="far fa-clock text-primary"></i>
+                <span class="text-muted-dark small fw-bold">الوقت المتبقي</span>
+            </div>
+            <span class="time">{{ formattedTime }}</span>
+        </div>
+    </header>
+
+    <!-- Progress & Nav -->
+    <div class="row g-4 mb-5">
+        <div class="col-lg-8">
+            <div class="exam-progress glass-card p-4">
+                <div class="progress-info mb-3">
+                    <span class="fw-bold">التقدم في الإجابة</span>
+                    <span class="badge bg-white bg-opacity-10 text-white">{{ getProgress() | number:'1.0-0' }}%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress" [style.width.%]="getProgress()"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="glass-card p-4 h-100">
+                <span class="d-block text-muted-dark small fw-bold mb-3">خريطة الأسئلة</span>
+                <div class="questions-nav mb-0">
+                    <button *ngFor="let q of exam.questions; let i = index" 
+                        class="question-btn"
+                        [class.active]="i === currentQuestionIndex" 
+                        [class.answered]="answers.get(q.id) !== null"
+                        (click)="currentQuestionIndex = i">
+                        {{ i + 1 }}
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <div class="exam-timer" [class.warning]="timeRemaining < 300">
-      <i class="far fa-clock"></i>
-      <span class="time">{{ formattedTime }}</span>
-      <div class="timer-progress">
-        <div class="progress-bar" [style.width.%]="timeProgress"></div>
-      </div>
-    </div>
-  </div>
+    <!-- Question Card -->
+    <div class="question-card" *ngIf="exam.questions && exam.questions[currentQuestionIndex]">
+        <div class="question-header border-bottom border-white border-opacity-10 pb-4 mb-5">
+            <div class="d-flex align-items-center gap-3">
+                <div class="p-3 rounded-circle bg-primary bg-opacity-10 text-primary fw-bold">
+                    Q{{ currentQuestionIndex + 1 }}
+                </div>
+                <h3 class="fw-bold text-white mb-0">السؤال رقم {{ currentQuestionIndex + 1 }}</h3>
+            </div>
+            <span class="question-marks">قيمة السؤال: {{ exam.questions[currentQuestionIndex].marks }} درجة</span>
+        </div>
 
-  <!-- Progress Bar -->
-  <div class="exam-progress">
-    <div class="progress-info">
-      <span>تقدمك في الاختبار</span>
-      <span>{{ getProgress() | number:'1.0-0' }}%</span>
-    </div>
-    <div class="progress-bar">
-      <div class="progress" [style.width.%]="getProgress()"></div>
-    </div>
-  </div>
+        <div class="question-text mb-5">
+            <p class="text-white">{{ exam.questions[currentQuestionIndex].text }}</p>
+        </div>
 
-  <!-- Questions Navigation -->
-  <div class="questions-nav">
-    <button *ngFor="let q of exam.questions; let i = index" class="question-btn"
-      [class.active]="i === currentQuestionIndex" [class.answered]="answers.get(q.id) !== null"
-      (click)="currentQuestionIndex = i">
-      {{ i + 1 }}
-    </button>
-  </div>
-
-  <!-- Current Question -->
-  <div class="question-card" *ngIf="exam.questions && exam.questions[currentQuestionIndex]">
-    <div class="question-header">
-      <h3>سؤال {{ currentQuestionIndex + 1 }} من {{ exam.questions.length }}</h3>
-      <span class="question-marks">{{ exam.questions[currentQuestionIndex].marks }} درجة</span>
+        <div class="question-options">
+            <div class="option" *ngFor="let choice of exam.questions[currentQuestionIndex].choices">
+                <label class="option-label">
+                    <input type="radio" 
+                        [name]="'q' + exam.questions[currentQuestionIndex].id"
+                        [checked]="answers.get(exam.questions[currentQuestionIndex].id) === choice.id"
+                        (change)="onAnswerChange(exam.questions[currentQuestionIndex].id, choice.id)">
+                    <span class="option-text text-muted-dark fs-5">{{ choice.text }}</span>
+                </label>
+            </div>
+        </div>
     </div>
 
-    <div class="question-text">
-      <p>{{ exam.questions[currentQuestionIndex].text }}</p>
+    <!-- Footer Nav -->
+    <div class="question-navigation">
+        <button class="btn btn-secondary rounded-pill px-5 py-3 fw-bold" 
+            (click)="currentQuestionIndex = currentQuestionIndex - 1"
+            [disabled]="currentQuestionIndex === 0">
+            <i class="fas fa-chevron-right me-2"></i> السابق
+        </button>
+
+        <div class="d-flex gap-3">
+            <button class="btn btn-primary rounded-pill px-5 py-3 fw-bold shadow-lg" 
+                (click)="currentQuestionIndex = currentQuestionIndex + 1"
+                *ngIf="exam.questions && currentQuestionIndex < exam.questions.length - 1">
+                السؤال التالي <i class="fas fa-chevron-left ms-2"></i>
+            </button>
+
+            <button class="btn btn-success rounded-pill px-5 py-3 fw-bold shadow-lg" 
+                (click)="onSubmit()"
+                *ngIf="exam.questions && currentQuestionIndex === exam.questions.length - 1" 
+                [disabled]="submitting">
+                <i class="fas me-2" [ngClass]="submitting ? 'fa-spinner fa-spin' : 'fa-cloud-arrow-up'"></i>
+                {{ submitting ? 'جاري التسليم...' : 'تسليم الاختبار النهائي' }}
+            </button>
+        </div>
     </div>
-
-    <!-- Multiple Choice -->
-    <div class="question-options">
-      <div class="option" *ngFor="let choice of exam.questions[currentQuestionIndex].choices">
-        <label class="option-label">
-          <input type="radio" [name]="'q' + exam.questions[currentQuestionIndex].id"
-            [checked]="answers.get(exam.questions[currentQuestionIndex].id) === choice.id"
-            (change)="onAnswerChange(exam.questions[currentQuestionIndex].id, choice.id)">
-          <span class="option-text">{{ choice.text }}</span>
-        </label>
-      </div>
-    </div>
-
-  </div>
-
-  <!-- Navigation Buttons -->
-  <div class="question-navigation">
-    <button class="btn-secondary" (click)="currentQuestionIndex = currentQuestionIndex - 1"
-      [disabled]="currentQuestionIndex === 0">
-      <i class="fas fa-arrow-right"></i>
-      السابق
-    </button>
-
-    <button class="btn-primary" (click)="currentQuestionIndex = currentQuestionIndex + 1"
-      *ngIf="exam.questions && currentQuestionIndex < exam.questions.length - 1">
-      التالي
-      <i class="fas fa-arrow-left"></i>
-    </button>
-
-    <button class="btn-success" (click)="onSubmit()"
-      *ngIf="exam.questions && currentQuestionIndex === exam.questions.length - 1" [disabled]="submitting">
-      <i class="fas" [ngClass]="submitting ? 'fa-spinner fa-spin' : 'fa-check'"></i>
-      {{ submitting ? 'جاري التسليم...' : 'تسليم الاختبار' }}
-    </button>
-  </div>
 </div>
 
-<!-- Loading State -->
-<div class="loading-state" *ngIf="loading">
-  <div class="spinner"></div>
-  <p>جاري تحميل الاختبار...</p>
+<!-- Loading -->
+<div class="loading-state vh-100 d-flex flex-column align-items-center justify-content-center bg-dark text-white" *ngIf="loading">
+    <div class="spinner-border text-primary mb-4" style="width: 4rem; height: 4rem;"></div>
+    <h4 class="fw-bold">جاري تحميل أوراق الأسئلة...</h4>
+    <p class="text-muted-dark">يرجى الانتظار، لا تغلق الصفحة.</p>
 </div>
 
-<!-- Fullscreen Warning -->
+<!-- Anti-Cheat Warning -->
 <div class="fullscreen-warning" *ngIf="fullscreenWarning">
-  <div class="warning-content">
-    <i class="fas fa-exclamation-triangle"></i>
-    <h3>تنبيه</h3>
-    <p>تم تسجيل محاولة الخروج من الاختبار. الرجاء البقاء في صفحة الاختبار.</p>
-    <button class="btn-primary" (click)="fullscreenWarning = false; enableFullscreen()">
-      فهمت، متابعة الاختبار
-    </button>
-  </div>
+    <div class="warning-content shadow-lg">
+        <div class="p-4 rounded-circle bg-danger bg-opacity-10 text-danger d-inline-flex mb-4">
+            <i class="fas fa-triangle-exclamation"></i>
+        </div>
+        <h2 class="fw-bold text-white mb-3">محاولة خروج مكتشفة!</h2>
+        <p class="text-muted-dark fs-5 mb-5">
+            تم تسجيل محاولة للخروج من نافذة الاختبار. <br>
+            نظام المراقبة الذكي يسجل جميع التحركات لضمان نزاهة التقييم.
+        </p>
+        <button class="btn btn-primary btn-lg rounded-pill px-5 py-3 fw-bold" (click)="fullscreenWarning = false; enableFullscreen()">
+            العودة للاختبار الآن
+        </button>
+    </div>
 </div>

@@ -1,342 +1,293 @@
+/* Student Dashboard - Premium Dark Violet Theme */
 .student-dashboard {
-    padding: 20px;
-    font-family: 'Tajawal', sans-serif;
-    background: transparent;
+    padding: 1.25rem;
     min-height: 100vh;
-    animation: fadeIn 0.3s ease;
+    background: var(--dark-bg);
+    font-family: 'Outfit', 'Tajawal', sans-serif;
+    color: #f8fafc;
 }
 
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(8px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* Welcome Section */
-.welcome-section {
+/* ───── Welcome Banner ───── */
+.welcome-banner {
+    background: var(--dark-card);
+    border: 1px solid var(--dark-border);
+    border-radius: 18px;
+    padding: 1.25rem 1.75rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 16px;
-    padding: 24px;
-    margin-bottom: 20px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+    gap: 1rem;
 }
 
-.welcome-section h1 {
+.welcome-eyebrow {
+    color: var(--primary);
+    font-size: 0.75rem;
+    font-weight: 800;
+    margin-bottom: 0.25rem;
+}
+
+.welcome-name {
     font-size: 1.5rem;
     font-weight: 800;
-    color: #1f2937;
-    margin: 0 0 4px;
+    color: #fff;
+    margin-bottom: 0.25rem;
 }
 
-.welcome-section p {
-    color: #6b7280;
-    margin: 0;
-}
+.welcome-sub { font-size: 0.85rem; }
 
-/* Attendance Donut */
-.status-circle {
+/* Attendance Ring */
+.attendance-ring {
     position: relative;
-    width: 80px;
-    height: 80px;
-    text-align: center;
+    width: 70px;
+    height: 70px;
+    flex-shrink: 0;
 }
 
-.status-circle svg {
+.attendance-ring svg {
+    width: 70px;
+    height: 70px;
     transform: rotate(-90deg);
-    width: 80px;
-    height: 80px;
 }
 
-.percentage {
+.ring-inner {
     position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-weight: 800;
-    font-size: 1rem;
-    color: #10b981;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
 }
 
-/* Quick Actions */
+.ring-pct { font-size: 0.95rem; font-weight: 800; color: #10b981; line-height: 1; }
+.ring-label { font-size: 0.55rem; color: var(--dark-muted); font-weight: 700; }
+
+/* ───── Next Session Banner ───── */
+.next-session-banner {
+    background: rgba(139, 92, 246, 0.05);
+    border: 1px solid rgba(139, 92, 246, 0.18);
+    border-radius: 14px;
+    padding: 1rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.ns-pulse {
+    width: 10px;
+    height: 10px;
+    background: var(--primary);
+    border-radius: 50%;
+    box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.4);
+    animation: ns-pulse 2s infinite;
+    flex-shrink: 0;
+}
+
+@keyframes ns-pulse {
+    0% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.4); }
+    70% { box-shadow: 0 0 0 10px rgba(139, 92, 246, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0); }
+}
+
+.ns-content { flex-grow: 1; }
+.ns-eyebrow { font-size: 0.7rem; color: var(--primary); font-weight: 800; display: block; }
+.ns-title { font-size: 1rem; font-weight: 800; color: #fff; margin: 2px 0; }
+.ns-meta { font-size: 0.8rem; color: var(--dark-muted); display: flex; gap: 1rem; flex-wrap: wrap; }
+.ns-countdown { color: var(--primary); font-weight: 700; }
+
+/* ───── Quick Actions ───── */
 .quick-actions {
-    margin-bottom: 24px;
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 0.75rem;
 }
 
-.action-btn {
+.quick-btn {
+    background: var(--dark-card);
+    border: 1px solid var(--dark-border);
+    border-radius: 14px;
+    padding: 1rem 0.5rem;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 8px;
-    padding: 16px;
-    background: white;
-    border: 1px solid #e5e7eb;
-    border-radius: 12px;
-    cursor: pointer;
-    font-family: 'Tajawal', sans-serif;
-    font-size: 0.85rem;
-    color: #374151;
-    transition: all 0.2s;
-    min-width: 90px;
-}
-
-.action-btn i {
-    font-size: 1.4rem;
-    color: #9ca3af;
-}
-
-.action-btn.primary {
-    background: #3b82f6;
-    color: white;
-    border-color: #3b82f6;
-}
-
-.action-btn.primary i {
-    color: white;
-}
-
-.action-btn:hover {
-    border-color: #3b82f6;
-    color: #3b82f6;
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.12);
-}
-
-.action-btn.primary:hover {
-    background: #2563eb;
-}
-
-/* Cards */
-.schedule-card,
-.grades-card,
-.exams-card {
-    background: transparent;
-    border-radius: 16px;
-    padding: 20px;
-    margin-bottom: 20px;
-}
-
-.schedule-card h3,
-.grades-card h3,
-.exams-card h3 {
-    font-weight: 700;
-    font-size: 1rem;
-    margin-bottom: 16px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-/* Schedule Items */
-.schedule-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 0;
-    border-bottom: 1px solid #f9fafb;
-}
-
-.schedule-item .time {
-    color: #6b7280;
-    font-size: 0.8rem;
-    min-width: 100px;
-}
-
-.schedule-item .subject {
-    font-weight: 700;
-    flex: 1;
-}
-
-.schedule-item .teacher {
-    color: #9ca3af;
-    font-size: 0.8rem;
-}
-
-.status-badge {
-    font-size: 0.7rem;
-    font-weight: 700;
-    padding: 3px 10px;
-    border-radius: 20px;
-    background: #f3f4f6;
-    color: #6b7280;
-}
-
-.status-badge.completed {
-    background: #d1fae5;
-    color: #065f46;
-}
-
-/* Grade Items */
-.grade-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 0;
-    border-bottom: 1px solid #f9fafb;
-}
-
-.grade-item .subject {
-    font-weight: 600;
-}
-
-.score {
-    font-size: 1.2rem;
-    font-weight: 800;
-    color: #3b82f6;
-}
-
-.max {
-    color: #9ca3af;
-}
-
-.view-all {
-    display: block;
-    text-align: center;
-    margin-top: 12px;
-    font-size: 0.85rem;
-    color: #3b82f6;
+    gap: 0.5rem;
     text-decoration: none;
-    font-weight: 600;
-}
-
-.view-all:hover {
-    text-decoration: underline;
-}
-
-/* Exam Items */
-.exam-item {
-    padding: 14px;
-    border: 1px solid #e5e7eb;
-    border-radius: 12px;
-    margin-bottom: 12px;
-}
-
-.exam-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 6px;
-}
-
-.exam-header h4 {
-    font-size: 0.95rem;
-    font-weight: 700;
-    margin: 0;
-}
-
-.exam-header .date {
+    color: var(--dark-muted);
     font-size: 0.75rem;
-    color: #6b7280;
+    font-weight: 700;
+    transition: all 0.2s ease;
+    position: relative;
 }
 
-.exam-item p {
-    color: #9ca3af;
-    font-size: 0.82rem;
-    margin-bottom: 10px;
+.quick-btn:hover {
+    border-color: rgba(139, 92, 246, 0.3);
+    background: rgba(139, 92, 246, 0.05);
+    color: #fff;
+    transform: translateY(-2px);
 }
 
-.exam-footer {
+.qb-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--c) 10%, transparent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    color: var(--c);
+    border: 1px solid color-mix(in srgb, var(--c) 20%, transparent);
+}
+
+.qb-badge {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    background: #ef4444;
+    color: #fff;
+    font-size: 0.55rem;
+    font-weight: 800;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ───── Content Panels ───── */
+.content-panel {
+    background: var(--dark-card);
+    border: 1px solid var(--dark-border);
+    border-radius: 16px;
+    padding: 1.25rem;
+}
+
+.panel-header {
     display: flex;
     justify-content: space-between;
-    color: #6b7280;
-    font-size: 0.78rem;
-}
-
-.exam-footer i {
-    margin-left: 4px;
-}
-
-.next-session-card {
-    padding: 16px;
-    border-right: 4px solid #10b981;
-}
-
-.next-session-card h3 {
-    margin: 0;
-    font-size: 1.1rem;
-    font-weight: 800;
-}
-
-.btn-scan-compact {
-    background: #10b981;
-    color: white;
-    border: none;
-    border-radius: 12px;
-    padding: 10px 15px;
-    display: flex;
-    flex-direction: column;
     align-items: center;
-    gap: 4px;
+}
+
+.panel-header h3 {
+    font-size: 0.9rem !important;
+    font-weight: 800 !important;
+    color: #fff !important;
+    margin: 0 !important;
+}
+
+.count-badge {
+    background: rgba(139, 92, 246, 0.1);
+    color: #a78bfa;
+    font-size: 0.7rem;
+    font-weight: 800;
+    padding: 2px 8px;
+    border-radius: 6px;
+}
+
+.panel-link {
+    color: var(--primary);
+    font-size: 0.75rem;
     font-weight: 700;
+    text-decoration: none;
+}
+
+/* ───── Session Rows ───── */
+.session-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.6rem 0.75rem;
+    border-radius: 10px;
+    margin-bottom: 0.4rem;
+    background: rgba(255,255,255,0.02);
+}
+
+.session-time {
+    color: var(--primary);
     font-size: 0.8rem;
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    font-weight: 800;
+    min-width: 55px;
 }
 
-.small-text {
-    font-size: 0.75rem !important;
+.session-info { display: flex; flex-direction: column; flex-grow: 1; }
+.session-subject { font-size: 0.875rem; font-weight: 700; color: #fff; }
+.session-teacher { font-size: 0.7rem; }
+
+.session-status { font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 6px; }
+.status-done { background: rgba(100,116,139,0.1); color: #64748b; }
+.status-upcoming { background: rgba(139, 92, 246, 0.1); color: #a78bfa; }
+
+/* ───── Grade Rows ───── */
+.grade-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.grade-row:last-child { border-bottom: none; }
+.grade-subject { font-size: 0.85rem; color: #fff; font-weight: 600; }
+.grade-score { font-weight: 800; font-size: 0.9rem; }
+
+/* ───── Exam Rows ───── */
+.exam-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.exam-row:last-child { border-bottom: none; }
+.exam-subject { font-size: 0.85rem; color: #fff; font-weight: 600; }
+.exam-date { font-size: 0.75rem; }
+
+/* ───── Announcements ───── */
+.announcement-card {
+    background: var(--dark-card);
+    border: 1px solid var(--dark-border);
+    border-radius: 14px;
+    padding: 1rem 1.25rem;
+    border-right: 3px solid var(--primary);
 }
 
-@media (max-width: 768px) {
-    .student-dashboard {
-        padding: 10px; /* Reduced from 20px */
-    }
+.ann-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+.ann-badge { background: rgba(139,92,246,0.1); color: #a78bfa; font-size: 0.7rem; font-weight: 800; padding: 2px 8px; border-radius: 6px; }
+.ann-date { font-size: 0.7rem; }
+.ann-title { font-size: 0.9rem; font-weight: 800; color: #fff; margin-bottom: 0.25rem; }
+.ann-body { font-size: 0.8rem; line-height: 1.5; margin: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 
-    .welcome-section {
-        padding: 12px;
-        justify-content: space-between;
-    }
+/* ───── Empty Mini ───── */
+.empty-mini { text-align: center; color: var(--dark-muted); font-size: 0.8rem; padding: 1.5rem 0; }
 
-    .welcome-section h1 {
-        font-size: 1.2rem;
-    }
+/* ───── Responsive ───── */
+@media (max-width: 991px) {
+    .quick-actions { grid-template-columns: repeat(3, 1fr); }
+}
 
-    .status-circle {
-        width: 55px;
-        height: 55px;
+@media (max-width: 600px) {
+    .student-dashboard { padding: 0.75rem 0.75rem 100px; }
+    .welcome-banner { 
+        flex-direction: column; 
+        text-align: center; 
+        padding: 1.5rem 1rem;
     }
-
-    .status-circle svg {
-        width: 55px;
-        height: 55px;
-    }
-
-    .schedule-card,
-    .grades-card,
-    .exams-card {
-        padding: 12px;
-        margin-bottom: 15px;
-    }
-
-    .action-btn {
-        padding: 8px 4px !important;
-        gap: 4px !important;
-    }
+    .welcome-name { font-size: 1.25rem; }
+    .attendance-ring { margin-top: 10px; }
     
-    .action-btn i {
-        font-size: 1.2rem !important;
+    .quick-actions { 
+        grid-template-columns: repeat(3, 1fr); 
+        gap: 0.5rem; 
     }
+    .quick-btn { padding: 0.75rem 0.25rem; font-size: 0.65rem; }
+    .qb-icon { width: 36px; height: 36px; font-size: 0.9rem; }
 
-    .schedule-item .time {
-        min-width: 75px;
-        font-size: 0.7rem;
+    .next-session-banner { 
+        flex-direction: column; 
+        align-items: center; 
+        text-align: center;
+        padding: 1.25rem 1rem;
     }
-}
-
-/* For very small devices */
-@media (max-width: 400px) {
-    .welcome-section {
-        padding: 12px;
-    }
-    
-    .quick-actions {
-        gap: 8px;
-    }
+    .ns-meta { justify-content: center; }
 }

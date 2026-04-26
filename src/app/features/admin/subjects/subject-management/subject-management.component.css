@@ -9,8 +9,164 @@
     to { opacity: 1; transform: translateY(0); }
 }
 
+/* ─── Grade Level Tabs ─── */
+.grade-tabs-wrap {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding: 4px 2px 16px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    flex-wrap: nowrap;
+}
+.grade-tabs-wrap::-webkit-scrollbar { display: none; }
+
+.grade-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    border: 2px solid #e5e7eb;
+    border-radius: 50px;
+    background: #fff;
+    color: #64748b;
+    font-family: 'Tajawal', sans-serif;
+    font-weight: 700;
+    font-size: 0.88rem;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: all 0.22s ease;
+    box-shadow: 0 2px 6px rgba(15,23,42,0.04);
+    flex-shrink: 0;
+}
+.grade-tab:hover:not(.active) {
+    border-color: #c7d2fe;
+    color: #4f46e5;
+    background: #eef2ff;
+    transform: translateY(-1px);
+}
+.grade-tab.active {
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    border-color: transparent;
+    color: #fff;
+    box-shadow: 0 8px 20px rgba(79, 70, 229, 0.35);
+    transform: translateY(-2px);
+}
+.grade-tab i { font-size: 0.85rem; }
+.grade-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 6px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 800;
+    background: rgba(0,0,0,0.1);
+    color: inherit;
+}
+.grade-tab.active .grade-count {
+    background: rgba(255,255,255,0.25);
+    color: #fff;
+}
+
 .page-title {
     color: #1f2937;
+}
+
+.class-focus-panel {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    padding: 1.25rem;
+    border-radius: 24px;
+    background: linear-gradient(135deg, #eef6ff, #ffffff);
+    border: 1px solid #dbeafe;
+    box-shadow: 0 18px 40px rgba(37, 99, 235, 0.08);
+}
+
+.class-focus-panel h3 {
+    margin: 0.25rem 0;
+    color: #172554;
+    font-weight: 900;
+}
+
+.class-focus-panel p {
+    margin: 0;
+    color: #64748b;
+    font-weight: 700;
+}
+
+.panel-label {
+    display: inline-flex;
+    padding: 0.25rem 0.75rem;
+    border-radius: 999px;
+    background: #dbeafe;
+    color: #1d4ed8;
+    font-size: 0.78rem;
+    font-weight: 800;
+}
+
+.panel-actions {
+    min-width: min(22rem, 100%);
+}
+
+.premium-toolbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(12rem, 0.3fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    border-radius: 20px;
+    background: #ffffff;
+    border: 1px solid #edf2f7;
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.05);
+}
+
+.search-wrapper {
+    position: relative;
+}
+
+.search-icon {
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #94a3b8;
+}
+
+.search-wrapper .form-control {
+    padding-right: 2.75rem;
+}
+
+.pagination-bar {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+.pagination-bar button {
+    border: 0;
+    border-radius: 999px;
+    padding: 0.65rem 1.2rem;
+    background: #eff6ff;
+    color: #2563eb;
+    font-weight: 800;
+}
+
+.pagination-bar button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.pagination-bar span {
+    color: #475569;
+    font-weight: 800;
 }
 
 /* Add Button */
@@ -109,4 +265,13 @@
     background-color: #fff;
     border-color: #3b82f6;
     box-shadow: 0 0 0 0.25rem rgba(59, 130, 246, 0.15);
+}
+
+@media (max-width: 768px) {
+    .class-focus-panel,
+    .premium-toolbar {
+        grid-template-columns: 1fr;
+        flex-direction: column;
+        align-items: stretch;
+    }
 }

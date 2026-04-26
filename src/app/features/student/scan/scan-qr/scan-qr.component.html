@@ -1,107 +1,122 @@
-<div class="scan-container dark-theme" dir="rtl">
+<div class="scan-container" dir="rtl">
   <div class="container-fluid px-0">
-    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-4">
-      <div>
-        <span class="badge badge-live rounded-pill px-3 py-2 mb-2 d-inline-flex align-items-center gap-2">
-          <i class="fas fa-qrcode"></i>
-          بوابة الحضور بالـ QR
+    <!-- Header -->
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-4 mb-5">
+      <div class="header-content">
+        <span class="badge badge-live rounded-pill px-3 py-2 mb-3 d-inline-flex align-items-center gap-2">
+          <i class="fas fa-qrcode blink"></i>
+          بوابة الحضور الذكي
         </span>
-        <h1 class="page-title text-white fw-bold mb-2">سجل حضورك من الكاميرا</h1>
-        <p class="text-muted-dark mb-0">افتح الماسح ثم وجّه الكاميرا إلى رمز الحصة المتاحة للمسح لتسجيل الحضور مباشرة.</p>
+        <h1 class="page-title fw-bold mb-2">سجل حضورك من الكاميرا</h1>
+        <p class="text-muted-dark fs-5">افتح الماسح ثم وجّه الكاميرا إلى رمز الحصة المتاحة للمسح.</p>
       </div>
 
       <button
         type="button"
-        class="btn btn-primary px-4 py-3 fw-bold d-inline-flex align-items-center gap-2"
+        class="btn btn-primary btn-lg rounded-pill px-5 py-3 fw-bold shadow-lg d-inline-flex align-items-center gap-3 transition-all"
         (click)="toggleScanner()"
         [disabled]="loading || scanning">
-        <i class="fas" [ngClass]="cameraActive ? 'fa-stop-circle' : 'fa-camera'"></i>
-        <span>{{ cameraActive ? 'إيقاف الكاميرا' : 'فتح الكاميرا' }}</span>
+        <i class="fas" [ngClass]="cameraActive ? 'fa-stop-circle' : 'fa-camera-retro'"></i>
+        <span>{{ cameraActive ? 'إيقاف الكاميرا' : 'فتح الكاميرا الآن' }}</span>
       </button>
     </div>
 
-    <div class="row g-4 mb-4">
+    <div class="row g-4">
+      <!-- Main Content -->
       <div class="col-12 col-xl-8">
-        <div class="card dark-card border-0 shadow-sm h-100">
-          <div class="card-body p-4">
-            <div class="d-flex flex-column flex-md-row justify-content-between gap-3 mb-4">
-              <div>
-                <div class="d-flex align-items-center gap-2 mb-2">
-                  <div class="status-icon">
-                    <i class="fas" [ngClass]="displayedSession ? 'fa-bolt' : 'fa-clock'"></i>
-                  </div>
-                  <div>
-                    <h2 class="text-white h4 mb-1">{{ sessionHeadline }}</h2>
-                    <p class="text-muted-dark mb-0">{{ statusMessageText }}</p>
-                    <small class="text-warning d-block mt-2" *ngIf="sessionAvailabilityNote">{{ sessionAvailabilityNote }}</small>
+        <div class="card dark-card h-100">
+          <div class="card-body p-4 p-md-5">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-start gap-4 mb-5">
+              <div class="d-flex align-items-center gap-4">
+                <div class="status-icon shadow-lg">
+                  <i class="fas" [ngClass]="displayedSession ? 'fa-bolt-lightning' : 'fa-clock-rotate-left'"></i>
+                </div>
+                <div>
+                  <h2 class="text-white fw-bold h3 mb-1">{{ sessionHeadline }}</h2>
+                  <p class="text-muted-dark mb-0">{{ statusMessageText }}</p>
+                  <div class="mt-2" *ngIf="sessionAvailabilityNote">
+                    <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-20 rounded-pill px-3 py-1">
+                      {{ sessionAvailabilityNote }}
+                    </span>
                   </div>
                 </div>
               </div>
 
-              <div class="text-md-end" *ngIf="scanSession?.canMarkWithQr">
-                <span class="badge badge-live rounded-pill px-3 py-2">
-                  <i class="fas fa-circle blink me-1"></i>
+              <div *ngIf="scanSession?.canMarkWithQr" class="ms-md-auto">
+                <span class="badge badge-live rounded-pill px-4 py-2 shadow-sm">
+                  <i class="fas fa-circle blink me-2"></i>
                   متاحة للمسح
                 </span>
               </div>
             </div>
 
-            <div class="row g-3 mb-4" *ngIf="displayedSession; else noActiveSession">
+            <!-- Session Info -->
+            <div class="row g-3 mb-5" *ngIf="displayedSession; else noActiveSession">
               <div class="col-md-6">
-                <div class="info-tile h-100">
-                  <span class="tile-label">المادة</span>
+                <div class="info-tile">
+                  <span class="tile-label">المادة الدراسية</span>
                   <strong class="tile-value">{{ displayedSession.subjectName || displayedSession.title || 'حصة دراسية' }}</strong>
-                  <small class="text-muted-dark">{{ displayedSession.classRoomName || 'الفصل غير محدد' }}</small>
+                  <div class="mt-1 opacity-75 small">
+                    <i class="fas fa-location-dot me-1"></i>
+                    {{ displayedSession.classRoomName || 'الفصل غير محدد' }}
+                  </div>
                 </div>
               </div>
               <div class="col-md-6">
-                <div class="info-tile h-100">
+                <div class="info-tile">
                   <span class="tile-label">المعلم وطريقة الرصد</span>
                   <strong class="tile-value">{{ displayedSession.teacherName || 'غير محدد' }}</strong>
-                  <small class="text-muted-dark">{{ getAttendanceTypeLabel(displayedSession.attendanceType) }}</small>
-                  <small class="text-muted-dark d-block" *ngIf="displayedSession.attendanceWindowLabel">{{ displayedSession.attendanceWindowLabel }}</small>
+                  <div class="mt-1 opacity-75 small">
+                    <i class="fas fa-fingerprint me-1"></i>
+                    {{ getAttendanceTypeLabel(displayedSession.attendanceType) }}
+                  </div>
                 </div>
               </div>
             </div>
 
             <ng-template #noActiveSession>
-              <div class="info-tile mb-4" *ngIf="nextSession; else noUpcomingSession">
+              <div class="info-tile mb-5 text-center py-4" *ngIf="nextSession; else noUpcomingSession">
+                <i class="fas fa-calendar-check text-primary fs-2 mb-3 d-block"></i>
                 <span class="tile-label">أقرب حصة قادمة</span>
                 <strong class="tile-value">{{ nextSession.subjectName || nextSession.title || 'حصة قادمة' }}</strong>
-                <small class="text-muted-dark">
-                  {{ nextSession.classRoomName || 'الفصل غير محدد' }} ·
-                  {{ nextSession.startTime ? (nextSession.startTime | date:'EEEE h:mm a') : 'الوقت غير محدد' }}
-                </small>
+                <p class="text-muted-dark mt-2 mb-0">
+                  {{ nextSession.classRoomName }} · 
+                  {{ nextSession.startTime | date:'EEEE h:mm a' }}
+                </p>
               </div>
             </ng-template>
 
             <ng-template #noUpcomingSession>
-              <div class="empty-panel mb-4">
-                <i class="fas fa-calendar-xmark"></i>
-                <span>لا توجد حصة نشطة أو قريبة متاحة للمسح حاليًا.</span>
+              <div class="empty-panel mb-5 p-5 text-center">
+                <i class="fas fa-calendar-xmark fs-1 mb-3 text-warning opacity-50"></i>
+                <p class="text-muted-dark fs-5 mb-0">لا توجد حصة نشطة أو قريبة متاحة للمسح حاليًا.</p>
               </div>
             </ng-template>
 
-            <div class="alert alert-danger d-flex align-items-center gap-2" *ngIf="error">
-              <i class="fas fa-circle-exclamation"></i>
-              <span>{{ error }}</span>
+            <!-- Alerts -->
+            <div class="alert alert-danger rounded-4 border-0 shadow-sm d-flex align-items-center gap-3 p-3 mb-4" *ngIf="error">
+              <i class="fas fa-triangle-exclamation fs-4"></i>
+              <span class="fw-medium">{{ error }}</span>
             </div>
 
-            <div class="alert alert-success d-flex align-items-center gap-2" *ngIf="success && !error">
-              <i class="fas fa-circle-check"></i>
-              <span>تم تسجيل حضورك بنجاح.</span>
+            <div class="alert alert-success rounded-4 border-0 shadow-sm d-flex align-items-center gap-3 p-3 mb-4" *ngIf="success && !error">
+              <i class="fas fa-check-double fs-4"></i>
+              <span class="fw-medium">تم تسجيل حضورك بنجاح!</span>
             </div>
 
-            <div class="scanner-panel">
-              <div class="scanner-wrapper mx-auto mb-3">
-                <div class="scanner-frame d-flex align-items-center justify-content-center">
+            <!-- Scanner Section -->
+            <div class="scanner-panel text-center">
+              <div class="scanner-wrapper mx-auto mb-4">
+                <div class="scanner-frame d-flex align-items-center justify-content-center overflow-hidden">
                   <div id="reader" class="reader-surface w-100 h-100" *ngIf="cameraActive"></div>
 
-                  <div class="scanner-placeholder text-center px-3" *ngIf="!cameraActive">
-                    <i class="fas fa-qrcode scanner-icon fs-1 text-white mb-3"></i>
-                    <h3 class="text-white h5 mb-2">الماسح جاهز</h3>
-                    <p class="text-muted-dark mb-0">
-                      {{ canStartScanner ? 'اضغط فتح الكاميرا لبدء المسح.' : scannerBlockedMessage }}
+                  <div class="scanner-placeholder" *ngIf="!cameraActive">
+                    <div class="placeholder-icon-wrap mb-3">
+                      <i class="fas fa-qrcode fs-1 text-white-50"></i>
+                    </div>
+                    <h3 class="text-white fw-bold h5">الماسح جاهز</h3>
+                    <p class="text-muted-dark small mb-0 px-4">
+                      {{ canStartScanner ? 'اضغط "بدء المسح" لتفعيل الكاميرا وتوجيهها للكود' : scannerBlockedMessage }}
                     </p>
                   </div>
 
@@ -113,61 +128,71 @@
                 </div>
               </div>
 
-              <div class="text-center">
-                <button
-                  type="button"
-                  class="btn btn-outline-light px-4 py-2 fw-bold"
-                  (click)="toggleScanner()"
-                  [disabled]="loading || scanning">
-                  <i class="fas me-2" [ngClass]="cameraActive ? 'fa-stop' : 'fa-play'"></i>
-                  {{ cameraActive ? 'إيقاف المسح' : 'بدء المسح' }}
-                </button>
-              </div>
+              <button
+                type="button"
+                class="btn btn-outline-light rounded-pill px-5 py-3 fw-bold transition-all"
+                (click)="toggleScanner()"
+                [disabled]="loading || scanning">
+                <i class="fas me-2" [ngClass]="cameraActive ? 'fa-stop' : 'fa-play'"></i>
+                {{ cameraActive ? 'إيقاف المسح' : 'بدء المسح الآن' }}
+              </button>
             </div>
           </div>
         </div>
       </div>
 
+      <!-- Sidebar -->
       <div class="col-12 col-xl-4">
-        <div class="d-flex flex-column gap-3 h-100">
-          <div class="card dark-card border-0 shadow-sm">
+        <div class="d-flex flex-column gap-4 h-100">
+          <!-- Stats -->
+          <div class="card dark-card">
             <div class="card-body p-4">
-              <h3 class="text-white h5 mb-3">ملخص حضورك</h3>
+              <div class="d-flex justify-content-between align-items-center mb-4">
+                <h3 class="text-white h5 fw-bold mb-0">ملخص إحصائياتك</h3>
+                <i class="fas fa-chart-line text-primary"></i>
+              </div>
 
               <div class="stats-mini-grid">
                 <div class="mini-stat">
-                  <span class="tile-label">الإجمالي</span>
+                  <span class="tile-label">إجمالي الحصص</span>
                   <strong>{{ lastAttendance?.total ?? 0 }}</strong>
                 </div>
                 <div class="mini-stat success">
-                  <span class="tile-label">حاضر</span>
+                  <span class="tile-label">أيام الحضور</span>
                   <strong>{{ lastAttendance?.present ?? 0 }}</strong>
                 </div>
                 <div class="mini-stat danger">
-                  <span class="tile-label">غائب</span>
+                  <span class="tile-label">أيام الغياب</span>
                   <strong>{{ lastAttendance?.absent ?? 0 }}</strong>
                 </div>
                 <div class="mini-stat warning">
-                  <span class="tile-label">متأخر</span>
+                  <span class="tile-label">مرات التأخير</span>
                   <strong>{{ lastAttendance?.late ?? 0 }}</strong>
                 </div>
               </div>
 
-              <div class="rate-box mt-3">
-                <span class="tile-label">معدل الحضور</span>
-                <strong class="text-white">{{ lastAttendance?.attendanceRate ?? 0 }}%</strong>
+              <div class="rate-box mt-4">
+                <span class="tile-label text-white text-opacity-75">معدل الانضباط العام</span>
+                <strong class="text-white d-block">{{ lastAttendance?.attendanceRate ?? 0 }}%</strong>
+                <div class="progress mt-3 bg-white bg-opacity-20" style="height: 6px;">
+                  <div class="progress-bar bg-white" [style.width.%]="lastAttendance?.attendanceRate || 0"></div>
+                </div>
               </div>
             </div>
           </div>
 
-          <div class="card dark-card border-0 shadow-sm flex-grow-1">
+          <!-- Guidelines -->
+          <div class="card dark-card flex-grow-1">
             <div class="card-body p-4">
-              <h3 class="text-white h5 mb-3">إرشادات سريعة</h3>
-              <ul class="guidelines-list mb-0">
-                <li>افتح الكاميرا فقط أثناء وجود حصة QR أو نافذة رصد QR ما زالت مفتوحة.</li>
-                <li>وجّه الكاميرا إلى الرمز الذي يعرضه المعلم داخل نفس الحصة أو ضمن نافذة الرصد المتاحة.</li>
-                <li>إذا تم تسجيل الحضور مسبقًا ستظهر لك رسالة توضيحية بدل التكرار.</li>
-                <li>لو لم توجد حصة متاحة الآن ستجد وقت أقرب حصة قادمة هنا.</li>
+              <div class="d-flex align-items-center gap-2 mb-4">
+                <i class="fas fa-lightbulb text-warning"></i>
+                <h3 class="text-white h5 fw-bold mb-0">كيفية استخدام البوابة</h3>
+              </div>
+              <ul class="guidelines-list">
+                <li>افتح الكاميرا فقط أثناء وجود حصة مفعلة من قِبل المعلم.</li>
+                <li>تأكد من توجيه الكاميرا بشكل مستقيم نحو كود QR المعروض.</li>
+                <li>في حال نجاح المسح ستسمع صوت تأكيد وتظهر لك رسالة نجاح.</li>
+                <li>لا تحاول تكرار المسح لنفس الحصة لتجنب رسائل الخطأ.</li>
               </ul>
             </div>
           </div>

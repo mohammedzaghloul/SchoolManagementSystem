@@ -42,13 +42,15 @@ export class DashboardComponent implements OnInit {
 
     try {
       const data = await this.dashboardService.getAdminStats();
-      this.stats.totalStudents = data.totalStudents;
-      this.stats.totalTeachers = data.totalTeachers;
-      this.stats.totalClasses = data.totalClasses;
-      this.stats.attendanceRate = data.attendanceRate || '—';
-      this.stats.monthlyRevenue = data.monthlyRevenue || 0;
-      this.stats.pendingFees = data.pendingFees || 0;
-      this.recentStudents = data.recentStudents || [];
+      if (data) {
+        this.stats.totalStudents = data.totalStudents || 0;
+        this.stats.totalTeachers = data.totalTeachers || 0;
+        this.stats.totalClasses = data.totalClasses || 0;
+        this.stats.attendanceRate = data.attendanceRate || '—';
+        this.stats.monthlyRevenue = data.monthlyRevenue || 0;
+        this.stats.pendingFees = data.pendingFees || 0;
+        this.recentStudents = data.recentStudents || [];
+      }
     } catch (err: any) {
       console.error('Dashboard load error:', err);
       this.error = 'حدث خطأ في تحميل بيانات لوحة التحكم.';

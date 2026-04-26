@@ -152,6 +152,26 @@ public class VideosController : BaseApiController
         return Ok(existing);
     }
 
+    [HttpPost("{id:int}/view")]
+    public async Task<IActionResult> IncrementViews(int id)
+    {
+        var video = await _context.Videos.FirstOrDefaultAsync(currentVideo => currentVideo.Id == id);
+        if (video == null)
+        {
+            return NotFound(new { message = "الفيديو غير موجود." });
+        }
+
+        if (!User.IsInRole("Teacher") && !User.IsInRole("Admin") && video.IsHidden)
+        {
+            return Forbid();
+        }
+
+        video.Views += 1;
+        await _context.SaveChangesAsync();
+
+        return Ok(new { views = video.Views });
+    }
+
     [HttpDelete("{id}")]
     [Authorize(Roles = "Teacher,Admin")]
     public async Task<IActionResult> DeleteVideo(int id)

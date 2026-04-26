@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
+import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { StudentService } from '../../../../core/services/student.service';
@@ -74,6 +74,16 @@ import { NotificationService } from '../../../../core/services/notification.serv
           </div>
         </div>
       </div>
+
+      <div class="success-overlay" *ngIf="showSuccessOverlay">
+        <div class="success-content">
+          <div class="success-overlay-icon">
+            <i class="fas fa-check"></i>
+          </div>
+          <h2>{{ successOverlayTitle }}</h2>
+          <p>{{ successOverlayMessage }}</p>
+        </div>
+      </div>
     </div>
   `,
     styles: [`
@@ -102,10 +112,56 @@ import { NotificationService } from '../../../../core/services/notification.serv
       z-index: 10;
     }
     .fade-in { animation: fadeIn 0.5s ease; }
+    .success-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(255,255,255,0.82);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1200;
+      animation: fadeIn 0.35s ease;
+    }
+    .success-content {
+      width: min(30rem, calc(100% - 2rem));
+      padding: 3rem 2rem;
+      border-radius: 2rem;
+      background: rgba(255,255,255,0.98);
+      border: 1px solid rgba(15,23,42,0.08);
+      box-shadow: 0 30px 60px rgba(15,23,42,0.16);
+      text-align: center;
+      animation: liftUp 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .success-overlay-icon {
+      width: 5rem;
+      height: 5rem;
+      margin: 0 auto 1.25rem;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, #16a34a, #059669);
+      color: #fff;
+      font-size: 2rem;
+      box-shadow: 0 18px 36px rgba(22,163,74,0.28);
+    }
+    .success-content h2 {
+      margin: 0 0 0.75rem;
+      color: #172033;
+      font-size: clamp(1.9rem, 4vw, 2.4rem);
+      font-weight: 900;
+    }
+    .success-content p {
+      margin: 0;
+      color: #667085;
+      font-size: 1.05rem;
+      line-height: 1.9;
+    }
     @keyframes fadeIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+    @keyframes liftUp { from { opacity: 0; transform: translateY(24px) scale(0.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
   `]
 })
-export class TrainFaceComponent implements OnInit {
+export class TrainFaceComponent implements OnInit, OnDestroy {
     @ViewChild('videoElement') videoElement!: ElementRef<HTMLVideoElement>;
     @ViewChild('canvasElement') canvasElement!: ElementRef<HTMLCanvasElement>;
 
@@ -115,6 +171,11 @@ export class TrainFaceComponent implements OnInit {
     isUploading = false;
     isTrained = false;
     stream: MediaStream | null = null;
+    showSuccessOverlay = false;
+    successOverlayTitle = 'تم الحفظ بنجاح!';
+    successOverlayMessage = 'تم تحديث بصمة الطالب في قاعدة البيانات بنجاح.';
+
+    private successOverlayTimer: ReturnType<typeof setTimeout> | null = null;
 
     constructor(
         private route: ActivatedRoute,
@@ -130,6 +191,15 @@ export class TrainFaceComponent implements OnInit {
             return;
         }
         await this.loadStudent();
+    }
+
+    ngOnDestroy(): void {
+        if (this.successOverlayTimer) {
+            clearTimeout(this.successOverlayTimer);
+            this.successOverlayTimer = null;
+        }
+
+        this.stopCamera();
     }
 
     async loadStudent() {
@@ -180,6 +250,7 @@ export class TrainFaceComponent implements OnInit {
 
             this.isTrained = true;
             this.stopCamera();
+            this.flashSuccessOverlay();
             this.notification.success('تم تدريب الوجه بنجاح');
         } catch (err: any) {
             this.notification.error(err?.message || 'فشل التدريب');
@@ -191,5 +262,17 @@ export class TrainFaceComponent implements OnInit {
     reset() {
         this.isTrained = false;
         this.startCamera();
+    }
+
+    private flashSuccessOverlay(): void {
+        if (this.successOverlayTimer) {
+            clearTimeout(this.successOverlayTimer);
+        }
+
+        this.showSuccessOverlay = true;
+        this.successOverlayTimer = setTimeout(() => {
+            this.showSuccessOverlay = false;
+            this.successOverlayTimer = null;
+        }, 2600);
     }
 }

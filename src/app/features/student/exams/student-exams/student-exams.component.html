@@ -1,199 +1,114 @@
-<div class="student-exams-container min-vh-100 dark-theme">
-    <!-- Premium Header -->
-    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center mb-5 gap-3">
-        <div class="text-start animate-fade-in order-2 order-sm-1">
-            <h2 class="text-white fw-800 mb-1">مركز الاختبارات والتقييم</h2>
-            <p class="text-secondary small mb-0">تتبع مسار نجاحك وأدائك في الاختبارات المقررة</p>
+<div class="student-exams-container" dir="rtl">
+    <!-- Header -->
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-4">
+        <div>
+            <h2 class="page-title fw-bold mb-0 text-white">الاختبارات والتقييمات</h2>
+            <p class="text-muted-dark small mb-0">مركز التقييمات المخصصة لك.</p>
         </div>
-        <div class="order-1 order-sm-2 ms-sm-auto">
-            <div class="icon-circle bg-primary bg-opacity-25 text-primary rounded-circle p-3 shadow-premium">
-                <i class="fas fa-file-invoice fs-4"></i>
-            </div>
-        </div>
-    </div>
 
-    <!-- Dynamic Segmented Navigation -->
-    <div class="d-flex justify-content-center mb-5 animate-scale-in">
-        <div class="nav nav-tabs border-0">
-            <button class="nav-link fw-800 px-4 py-2-5"
-                [class.active-tab]="activeTab === 'ongoing'" (click)="setTab('ongoing')">
-                <i class="fas fa-circle-play me-1 small"></i> الجارية
-            </button>
-            <button class="nav-link fw-800 px-4 py-2-5"
-                [class.active-tab]="activeTab === 'upcoming'" (click)="setTab('upcoming')">
-                <i class="fas fa-calendar-alt me-1 small"></i> القادمة
-            </button>
-            <button class="nav-link fw-800 px-4 py-2-5"
-                [class.active-tab]="activeTab === 'completed'" (click)="setTab('completed')">
-                <i class="fas fa-circle-check me-1 small"></i> المكتملة
-            </button>
+        <div class="nav-tabs d-flex">
+            <button class="nav-link" [class.active-tab]="activeTab === 'ongoing'" (click)="setTab('ongoing')">الجارية</button>
+            <button class="nav-link" [class.active-tab]="activeTab === 'upcoming'" (click)="setTab('upcoming')">القادمة</button>
+            <button class="nav-link" [class.active-tab]="activeTab === 'completed'" (click)="setTab('completed')">المكتملة</button>
         </div>
     </div>
 
-    <!-- Premium Loading State -->
-    <div class="text-center py-10" *ngIf="loading">
-        <div class="spinner-grow text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
-        <p class="mt-4 text-secondary fw-800 opacity-75">جاري جلب أوراق الأسئلة...</p>
+    <!-- Loading -->
+    <div class="text-center py-5" *ngIf="loading">
+        <div class="spinner-border text-primary spinner-border-sm"></div>
     </div>
 
-    <!-- Multi-State Empty Reveal -->
-    <div *ngIf="!loading && ((activeTab === 'ongoing' && ongoingExams.length === 0) || 
+    <!-- Empty -->
+    <div class="glass-card text-center py-4" *ngIf="!loading && ((activeTab === 'ongoing' && ongoingExams.length === 0) || 
                             (activeTab === 'upcoming' && upcomingExams.length === 0) || 
                             (activeTab === 'completed' && completedExams.length === 0))">
-        <div class="empty-state animate-fade-in bg-white bg-opacity-5 rounded-25 border border-white border-opacity-5 text-center p-5">
-            <i class="fas fa-file-circle-xmark empty-icon fs-1 text-secondary mb-3"></i>
-            <h4 class="text-white fw-800 mb-2">لا توجد اختبارات في هذه الفئة</h4>
-            <p class="text-secondary opacity-75 mx-auto" style="max-width: 400px;">
-                راجع جدولك الدراسي بانتظام لتكون على دراية بأي تقييمات جديدة قادمة.
-            </p>
-        </div>
+        <p class="text-muted-dark small mb-0">لا توجد اختبارات متاحة حالياً في هذه القائمة.</p>
     </div>
 
-    <!-- High-Performance Exam Cards Grid -->
-    <div class="row g-4 d-flex justify-content-end text-end" dir="rtl" *ngIf="!loading">
-        <!-- Ongoing Exams (Action Priority) -->
+    <!-- Exam Grid -->
+    <div class="row g-3" *ngIf="!loading">
+        <!-- Ongoing Exams -->
         <ng-container *ngIf="activeTab === 'ongoing'">
-            <div class="col-12 col-md-6 col-lg-4" *ngFor="let exam of ongoingExams">
-                <div class="card h-100 exam-card rounded-25 p-4 border-0 animate-scale-in">
-                    <div class="d-flex justify-content-between align-items-start mb-4">
-                        <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3 py-2 fw-800 x-small border border-success border-opacity-10">
-                            <i class="fas fa-circle fs-xxxs me-2"></i> متاح الآن للحل
-                        </span>
-                        <div class="bg-primary bg-opacity-10 rounded-15 p-2 px-3 fw-800 text-primary small">
-                            {{ exam.totalMarks }} درجة
+            <div class="col-md-6 col-lg-4" *ngFor="let exam of ongoingExams">
+                <div class="card exam-card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-2 py-1 small">نشط</span>
+                            <div class="text-primary small fw-bold">{{ exam.totalMarks }} درجة</div>
                         </div>
-                    </div>
-
-                    <h4 class="fw-800 mb-2">{{ exam.title }}</h4>
-                    <div class="mb-4 d-flex">
-                        <span class="subject-badge">{{ exam.subjectName || exam.subject || 'المادة الدراسية' }}</span>
-                    </div>
-
-                    <div class="bg-white bg-opacity-5 rounded-20 p-3 mb-4">
-                        <div class="row g-2">
-                            <div class="col-6">
-                                <div class="text-secondary fw-700 x-small mb-1"><i class="far fa-clock me-1"></i> المدة</div>
-                                <div class="fw-800 small">{{ exam.duration || 45 }} دقيقة</div>
-                            </div>
-                            <div class="col-6 border-start border-white border-opacity-10">
-                                <div class="text-secondary fw-700 x-small mb-1"><i class="far fa-file-text me-1"></i> الأسئلة</div>
-                                <div class="fw-800 small">{{ exam.questions?.length || 15 }} سؤال</div>
+                        <h4 class="text-white">{{ exam.title }}</h4>
+                        <div class="mb-3"><span class="subject-badge">{{ exam.subjectName }}</span></div>
+                        
+                        <div class="stats-box mb-3">
+                            <div class="row g-0 text-center">
+                                <div class="col-6 small text-muted-dark">المدة: <span class="text-white fw-bold">{{ exam.duration }} د</span></div>
+                                <div class="col-6 small text-muted-dark border-start border-white border-opacity-10">الأسئلة: <span class="text-white fw-bold">{{ exam.questions?.length || 0 }}</span></div>
                             </div>
                         </div>
+                        <button [routerLink]="['/student/exams/take', exam.id]" class="btn pro-btn btn-primary w-100 text-white">ابدأ الآن</button>
                     </div>
-
-                    <button [routerLink]="['/student/exams/take', exam.id]"
-                        class="btn pro-btn pro-btn-primary w-100 text-white shadow-premium">
-                        ابدأ التقييم الآن <i class="fas fa-arrow-left ms-2"></i>
-                    </button>
                 </div>
             </div>
         </ng-container>
 
+        <!-- Upcoming Exams -->
         <ng-container *ngIf="activeTab === 'upcoming'">
-            <div class="col-12 col-md-6 col-lg-4" *ngFor="let exam of upcomingExams">
-                <div class="card h-100 exam-card rounded-25 p-4 border-0 animate-scale-in">
-                    <div class="d-flex justify-content-between align-items-start mb-4">
-                        <span class="badge bg-warning bg-opacity-10 text-warning rounded-pill px-3 py-2 fw-800 x-small border border-warning border-opacity-10">
-                            <i class="far fa-hourglass-half me-1"></i> يُفتح قريباً
-                        </span>
-                        <div class="bg-dark bg-opacity-25 rounded-15 p-2 px-3 fw-800 text-white-50 small">
-                           {{ exam.maxScore }} درجة
+            <div class="col-md-6 col-lg-4" *ngFor="let exam of upcomingExams">
+                <div class="card exam-card">
+                    <div class="card-body">
+                        <div class="badge bg-warning bg-opacity-10 text-warning px-2 py-1 small mb-3">قريباً</div>
+                        <h4 class="text-white">{{ exam.title }}</h4>
+                        <div class="mb-3"><span class="subject-badge bg-info bg-opacity-10 text-info">{{ exam.subjectName }}</span></div>
+                        <div class="stats-box text-center small">
+                            <div class="text-primary fw-bold mb-1">{{ exam.timeUntil }}</div>
+                            <div class="text-muted-dark">يبدأ: {{ exam.startTime | date:'h:mm a - d MMM' }}</div>
                         </div>
                     </div>
-
-                    <h4 class="fw-800 mb-2">{{ exam.title }}</h4>
-                    <p class="text-primary small mb-3 fw-800">{{ exam.subjectName || exam.subject }}</p>
-
-                    <div class="timing-info p-3 rounded-20 bg-white bg-opacity-5 mb-4 border border-white border-opacity-10" dir="rtl">
-                        <div class="text-center mb-3">
-                            <span class="badge bg-primary bg-opacity-25 text-primary p-2 px-3 rounded-pill fw-800 animate-pulse">
-                                {{ exam.timeUntil }}
-                            </span>
-                        </div>
-                        <div class="d-flex justify-content-between align-items-center mb-2 flex-nowrap">
-                            <span class="text-secondary small fw-700 text-nowrap me-2">موعد البدء:</span>
-                            <span class="text-white small fw-800 text-nowrap">{{ exam.startTime | date:'h:mm a - dd/MM' }}</span>
-                        </div>
-                        <div class="d-flex justify-content-between align-items-center flex-nowrap border-top border-white border-opacity-5 pt-2">
-                            <span class="text-secondary small fw-700 text-nowrap me-2">موعد الإغلاق:</span>
-                            <span class="text-danger small fw-800 text-nowrap">{{ exam.endTime | date:'h:mm a - dd/MM' }}</span>
-                        </div>
-                    </div>
-
-                    <button class="btn btn-outline-secondary w-100 pro-btn rounded-pill" disabled>
-                        <i class="fas fa-clock-rotate-left me-2 opacity-50"></i>
-                        يغلق في {{ exam.endTime | date:'shortTime' }}
-                    </button>
                 </div>
             </div>
         </ng-container>
 
-        <!-- Completed Exams (Recognition State) -->
+        <!-- Completed Exams -->
         <ng-container *ngIf="activeTab === 'completed'">
-            <div class="col-12 col-md-6 col-lg-4" *ngFor="let exam of completedExams">
-                <div class="card h-100 exam-card rounded-25 p-4 border-0 animate-scale-in">
-                    <div class="d-flex justify-content-between align-items-start mb-4">
-                        <span class="badge bg-secondary bg-opacity-10 text-secondary rounded-pill px-3 py-2 fw-800 x-small">مكتمل</span>
-                        <div class="bg-success bg-opacity-10 rounded-15 p-2 px-3 fw-800 text-success small">
-                           تم الحل
+            <div class="col-md-6 col-lg-4" *ngFor="let exam of completedExams">
+                <div class="card exam-card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="badge bg-white bg-opacity-10 text-muted small">مكتمل</span>
+                            <div class="text-success small fw-bold"><i class="fas fa-check-circle"></i></div>
                         </div>
+                        <h4 class="text-white mb-1">{{ exam.title }}</h4>
+                        <p class="text-muted-dark small mb-3">{{ exam.subjectName }}</p>
+                        <button class="btn btn-outline-light btn-sm w-100 rounded-pill" (click)="viewResult(exam)">النتيجة</button>
                     </div>
-
-                    <h4 class="fw-800 mb-2">{{ exam.title }}</h4>
-                    <p class="text-secondary small mb-4 fw-700">{{ exam.subjectName || exam.subject }}</p>
-
-                    <button class="btn btn-dark w-100 pro-btn bg-opacity-25 border-0 text-white hover-lift" (click)="viewResult(exam)">
-                        <i class="fas fa-chart-line me-2"></i> عرض بطاقة النتيجة
-                    </button>
                 </div>
             </div>
         </ng-container>
     </div>
 
-    <!-- Student Score Card Modal (Premium Overlay) -->
-    <div class="result-modal-overlay d-flex align-items-center justify-content-center" *ngIf="showScoreCard" (click)="closeScoreCard()">
-        <div class="result-modal-content p-4" (click)="$event.stopPropagation()">
-            <div class="modal-top text-center mb-4">
-                <div class="success-icon animate-bounce-soft mb-2">
-                    <i class="fas fa-award text-warning"></i>
+    <!-- Score Modal - Premium Redesign -->
+    <div class="result-modal-overlay" *ngIf="showScoreCard" (click)="closeScoreCard()">
+        <div class="premium-result-card shadow-lg animate-slide-up" (click)="$event.stopPropagation()">
+            <div class="result-header">
+                <div class="success-icon-wrap">
+                    <i class="fas fa-trophy"></i>
                 </div>
-                <h2 class="fw-900 text-white mb-1 w-100">بطاقة النتيجة النهائية</h2>
-                <p class="text-secondary small w-100">نحن فخورون بأدائك المتميز</p>
+                <h4 class="text-white mt-3 mb-1">نتيجة الاختبار</h4>
+                <p class="text-muted-dark small">{{ selectedExam?.title }}</p>
+            </div>
+            
+            <div class="result-body">
+                <div class="score-display">
+                    <span class="current-score">{{ selectedExam?.score }}</span>
+                    <span class="score-divider">/</span>
+                    <span class="max-score">{{ selectedExam?.maxScore }}</span>
+                </div>
+                <div class="subject-name-pill">{{ selectedExam?.subjectName }}</div>
             </div>
 
-            <div class="exam-info-card p-3 rounded-20 bg-white bg-opacity-5 border border-white border-opacity-10 mb-4 text-end" dir="rtl">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <div class="text-secondary tiny fw-bold">اسم الاختبار:</div>
-                    <div class="text-white small fw-800">{{ selectedExam?.title }}</div>
-                </div>
-                <div class="d-flex justify-content-between align-items-center">
-                    <div class="text-secondary tiny fw-bold">المادة الدراسية:</div>
-                    <div class="text-primary small fw-800">{{ selectedExam?.subjectName || selectedExam?.subject }}</div>
-                </div>
+            <div class="result-footer">
+                <button class="btn pro-btn btn-primary w-100" (click)="closeScoreCard()">إغلاق</button>
             </div>
-
-            <div class="score-display-wrap text-center py-3 mb-3 w-100">
-                <div class="big-score-text fw-900 text-white">
-                    <span>{{ selectedExam?.score }}</span>
-                    <span class="opacity-25 ms-2">/ {{ selectedExam?.maxScore }}</span>
-                </div>
-                <div class="progress-wrap mx-auto mt-2" style="max-width: 180px;">
-                    <div class="progress bg-white bg-opacity-10 rounded-pill" style="height: 8px;">
-                        <div class="progress-bar bg-success rounded-pill shadow-glow" 
-                             [style.width]="((selectedExam?.score || 0) / (selectedExam?.maxScore || 1) * 100) + '%'"></div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="notes-wrap p-3 rounded-20 bg-primary bg-opacity-10 border border-primary border-opacity-10 mb-4 w-100 text-end" dir="rtl" *ngIf="selectedExam?.notes">
-                <div class="text-primary tiny fw-bold mb-1"><i class="fas fa-comment ms-2"></i> تعليق المعلم:</div>
-                <div class="text-white-50 small fs-7 lh-base">{{ selectedExam?.notes }}</div>
-            </div>
-
-            <button class="btn pro-btn pro-btn-primary w-100 py-2-5 rounded-pill fw-900 shadow-premium mt-1" (click)="closeScoreCard()">
-                شكراً لك <i class="fas fa-close ms-2"></i>
-            </button>
         </div>
     </div>
 </div>

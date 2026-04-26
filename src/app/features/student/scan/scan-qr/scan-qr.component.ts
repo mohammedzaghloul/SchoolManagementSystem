@@ -194,6 +194,14 @@ export class ScanQrComponent implements OnInit, OnDestroy {
       return 'تم تسجيل حضورك بالفعل في الحصة المتاحة للمسح الآن.';
     }
 
+    if (this.activeSession && !this.activeSession.canMarkWithQr && !this.activeSession.attendanceRecorded) {
+      return 'نافذة الرصد للحصة الجارية غير مفتوحة الآن.';
+    }
+
+    if (this.scanSession && !this.scanSession.canMarkWithQr && !this.scanSession.attendanceRecorded) {
+      return 'نافذة الرصد لهذه الحصة غير مفتوحة الآن.';
+    }
+
     if (this.activeSession && !this.activeSession.canMarkWithQr) {
       return `الحصة الجارية الآن لا تدعم QR. طريقة الرصد الحالية: ${this.getAttendanceTypeLabel(this.activeSession.attendanceType)}`;
     }

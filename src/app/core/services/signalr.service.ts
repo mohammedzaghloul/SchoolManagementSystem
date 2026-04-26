@@ -213,7 +213,7 @@ export class SignalRService {
         accessTokenFactory: () => this.auth.getToken() || ''
       })
       .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
-      .configureLogging(signalR.LogLevel.Information)
+      .configureLogging(signalR.LogLevel.Warning)
       .build();
 
     this.hubConnection.keepAliveIntervalInMilliseconds = 15000;

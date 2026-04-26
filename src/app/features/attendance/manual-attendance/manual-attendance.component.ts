@@ -8,6 +8,9 @@ import { AuthService } from '../../../core/services/auth.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { SessionService } from '../../../core/services/session.service';
 
+import { PaginatorComponent } from '../../../shared/components/paginator/paginator.component';
+import { ModalComponent } from '../../../shared/components/modal/modal.component';
+
 type AttendanceStatus = 'Present' | 'Absent' | 'Late' | 'Unrecorded';
 
 interface TeacherSessionOption {
@@ -50,13 +53,16 @@ interface SessionRosterResponse {
 @Component({
   selector: 'app-manual-attendance',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, PaginatorComponent, ModalComponent],
   templateUrl: './manual-attendance.component.html',
   styleUrls: ['./manual-attendance.component.css']
 })
 export class ManualAttendanceComponent implements OnInit {
   sessions: TeacherSessionOption[] = [];
   students: RosterStudent[] = [];
+
+  currentPage = 1;
+  pageSize = 100;
 
   selectedSessionId: number | null = null;
   selectedDate = this.getDateInputValue(new Date());
@@ -71,6 +77,11 @@ export class ManualAttendanceComponent implements OnInit {
   loadingRoster = false;
   saving = false;
   lastSavedAt: Date | null = null;
+  showSuccessOverlay = false;
+  successOverlayTitle = 'تم الحفظ بنجاح!';
+  successOverlayMessage = 'تم تحديث سجل حضور الطلاب في قاعدة البيانات بنجاح.';
+
+  private successOverlayTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
     private attendanceService: AttendanceService,
@@ -155,6 +166,19 @@ export class ManualAttendanceComponent implements OnInit {
     });
   }
 
+  get paginatedStudents(): RosterStudent[] {
+    const start = (this.currentPage - 1) * this.pageSize;
+    return this.filteredStudents.slice(start, start + this.pageSize);
+  }
+
+  onPageChange(page: number): void {
+    this.currentPage = page;
+  }
+
+  onFilterChange(): void {
+    this.currentPage = 1;
+  }
+
   async loadSessions(): Promise<void> {
     this.loadingSessions = true;
 
@@ -189,6 +213,7 @@ export class ManualAttendanceComponent implements OnInit {
 
     if (this.selectedSessionId) {
       await this.loadSessionRoster();
+      this.flashSuccessOverlay();
     }
   }
 
@@ -316,6 +341,10 @@ export class ManualAttendanceComponent implements OnInit {
     }
   }
 
+  getStatusDropdownClass(status: AttendanceStatus): string {
+    return this.getStatusChipClass(status);
+  }
+
   formatTime(value?: string): string {
     if (!value) {
       return '—';
@@ -380,5 +409,17 @@ export class ManualAttendanceComponent implements OnInit {
     const month = String(value.getMonth() + 1).padStart(2, '0');
     const day = String(value.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
+  }
+
+  private flashSuccessOverlay(): void {
+    if (this.successOverlayTimer) {
+      clearTimeout(this.successOverlayTimer);
+    }
+
+    this.showSuccessOverlay = true;
+    this.successOverlayTimer = setTimeout(() => {
+      this.showSuccessOverlay = false;
+      this.successOverlayTimer = null;
+    }, 2600);
   }
 }

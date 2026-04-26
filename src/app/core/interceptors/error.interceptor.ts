@@ -37,6 +37,9 @@ export class ErrorInterceptor implements HttpInterceptor {
             case 404:
               errorMessage = 'المورد المطلوب غير موجود';
               break;
+            case 409:
+              errorMessage = error.error?.message || 'لا يمكن تنفيذ العملية بسبب وجود بيانات مرتبطة';
+              break;
             case 500:
               errorMessage = 'خطأ داخلي في الخادم';
               break;
@@ -45,9 +48,18 @@ export class ErrorInterceptor implements HttpInterceptor {
           }
         }
 
-        this.toastr.error(errorMessage, 'خطأ');
+        if (!this.shouldSuppressToast(req)) {
+          this.toastr.error(errorMessage, 'خطأ');
+        }
         return throwError(() => error);
       })
     );
+  }
+
+  private shouldSuppressToast(req: HttpRequest<any>): boolean {
+    return req.url.includes('/api/auth/login') ||
+      req.url.includes('/api/Account/login') ||
+      req.url.includes('/api/auth/verify-login-otp') ||
+      req.url.includes('/api/auth/request-login-otp');
   }
 }

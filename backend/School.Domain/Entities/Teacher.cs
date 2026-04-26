@@ -12,5 +12,6 @@ public class Teacher : BaseEntity
     public ICollection<ClassRoom> ClassRooms { get; set; } = new List<ClassRoom>();
     public ICollection<Subject> Subjects { get; set; } = new List<Subject>();
     public ICollection<Session> Sessions { get; set; } = new List<Session>();
+    public ICollection<Schedule> Schedules { get; set; } = new List<Schedule>();
     public ICollection<Exam> Exams { get; set; } = new List<Exam>();
 }

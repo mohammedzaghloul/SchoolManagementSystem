@@ -7,6 +7,8 @@ namespace School.Infrastructure.Data;
 
 public class SchoolDbContextSeed
 {
+    private const string SystemOwnerAdminEmail = "mohammedzaghloul0123@gmail.com";
+    private const string DefaultAdminPassword = "Admin@123";
     private const int MinimumTeacherCount = 10;
     private const int MinimumClassRoomCount = 24;
     private const int MinimumStudentCount = 1000;
@@ -34,6 +36,23 @@ public class SchoolDbContextSeed
         "دينا خالد"
     ];
 
+    private static readonly string[] DemoStudentFirstNames =
+    [
+        "أحمد", "محمد", "يوسف", "عمر", "مالك", "آدم", "كريم", "ياسين",
+        "سليم", "زياد", "مروان", "حمزة", "ليلى", "ملك", "جنى", "نور",
+        "سارة", "مريم", "رنا", "هنا", "تاليا", "حبيبة", "فريدة", "لارا"
+    ];
+    private static readonly string[] DemoStudentFamilyNames =
+    [
+        "محمود", "أحمد", "خالد", "حسن", "إبراهيم", "مصطفى", "عادل", "سامي",
+        "عبدالله", "سمير", "فؤاد", "نبيل", "شريف", "صلاح", "منير", "طارق"
+    ];
+    private static readonly string[] DemoStudentMiddleNames =
+    [
+        "علي", "عامر", "هاني", "سعيد", "وائل", "رامي", "أيمن", "باسم",
+        "كامل", "جمال", "ماجد", "وليد", "فاروق", "حسام", "ناصر", "رضا"
+    ];
+
     public static async Task SeedAsync(SchoolDbContext context, UserManager<ApplicationUser> userManager, RoleManager<IdentityRole> roleManager)
     {
         // 0. Ensure schema is updated (Safeguard for new columns)
@@ -44,6 +63,13 @@ public class SchoolDbContextSeed
             await context.Database.ExecuteSqlRawAsync("IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[Subjects]') AND name = 'IsActive') ALTER TABLE [Subjects] ADD [IsActive] bit NOT NULL DEFAULT 1;");
             await context.Database.ExecuteSqlRawAsync("IF EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[Subjects]') AND name = 'Term') UPDATE [Subjects] SET [Term] = N'الترم الأول' WHERE [Term] IS NULL;");
         } catch { /* Ignore if already exists or table not ready */ }
+
+        var useCleanSeed = Environment.GetEnvironmentVariable("SCHOOL_USE_LEGACY_SEED") != "1";
+        if (useCleanSeed)
+        {
+            await CleanSchoolSeed.SeedAsync(context, userManager, roleManager);
+            return;
+        }
 
         // 1. Seed Roles
         var roles = new List<string> { "Admin", "Teacher", "Student", "Parent" };
@@ -67,7 +93,7 @@ public class SchoolDbContextSeed
                 EmailConfirmed = true
             };
 
-            var result = await userManager.CreateAsync(adminUser, "Admin@123");
+            var result = await userManager.CreateAsync(adminUser, DefaultAdminPassword);
             if (result.Succeeded)
             {
                 await userManager.AddToRoleAsync(adminUser, "Admin");
@@ -288,7 +314,10 @@ public class SchoolDbContextSeed
         }
 
         await EnsureScaledAttendanceDemoDataAsync(context);
+        await EnsureStudentSubjectAssignmentsAsync(context);
+        await EnsureRequestedTestAccountsAsync(context, userManager);
         await EnsureScheduledSessionsAsync(context);
+        await EnsureSampleWeeklySchedulesAsync(context);
         await EnsureCriticalWednesdaySessionsAsync(context);
 
         // 9. Seed Sessions (Last 14 days + Today + Upcoming)
@@ -772,6 +801,7 @@ public class SchoolDbContextSeed
         var classRooms = await EnsureScaledClassRoomsAsync(context, gradeLevels, teachers);
         await EnsureScaledSubjectsAsync(context, classRooms, teachers);
         await EnsureScaledStudentsAsync(context, classRooms);
+        await BackfillDemoStudentNamesAsync(context);
     }
 
     private static async Task<List<Teacher>> EnsureScaledTeacherPoolAsync(SchoolDbContext context)
@@ -989,10 +1019,11 @@ public class SchoolDbContextSeed
                     continue;
                 }
 
+                var sequenceInClass = currentCount + 1;
                 var index = currentStudentCount + newStudents.Count + 1;
                 newStudents.Add(new Student
                 {
-                    FullName = $"طالب تجريبي {index:0000}",
+                    FullName = BuildDemoStudentName(sequenceInClass + (classRoom.Id * DemoStudentFirstNames.Length)),
                     Phone = $"0105{index:000000}",
                     BirthDate = DateTime.Today.AddYears(-(9 + (index % 5))).AddDays(-(index % 240)),
                     QrCodeValue = $"DEMO-QR-{index:0000}-{Guid.NewGuid():N}",
@@ -1011,6 +1042,74 @@ public class SchoolDbContextSeed
 
         context.Students.AddRange(newStudents);
         await context.SaveChangesAsync();
+    }
+
+    private static async Task BackfillDemoStudentNamesAsync(SchoolDbContext context)
+    {
+        var demoStudents = await context.Students
+            .OrderBy(student => student.ClassRoomId)
+            .ThenBy(student => student.Id)
+            .ToListAsync();
+
+        var sequenceByClassRoomId = new Dictionary<int, int>();
+        var renamedCount = 0;
+        foreach (var student in demoStudents)
+        {
+            if (!IsSeedGeneratedStudentName(student.FullName) &&
+                !(string.IsNullOrWhiteSpace(student.Email) && IsDemoCatalogStudentName(student.FullName)))
+            {
+                continue;
+            }
+
+            var classRoomId = student.ClassRoomId ?? 0;
+            sequenceByClassRoomId.TryGetValue(classRoomId, out var sequenceInClass);
+            sequenceInClass++;
+            sequenceByClassRoomId[classRoomId] = sequenceInClass;
+
+            student.FullName = BuildDemoStudentName(sequenceInClass + (classRoomId * DemoStudentFirstNames.Length));
+            renamedCount++;
+        }
+
+        if (renamedCount > 0)
+        {
+            await context.SaveChangesAsync();
+        }
+    }
+
+    private static string BuildDemoStudentName(int index)
+    {
+        var firstName = DemoStudentFirstNames[(index - 1) % DemoStudentFirstNames.Length];
+        var middleName = DemoStudentMiddleNames[((index - 1) / DemoStudentFirstNames.Length) % DemoStudentMiddleNames.Length];
+        var familyName = DemoStudentFamilyNames[((index - 1) / (DemoStudentFirstNames.Length * DemoStudentMiddleNames.Length)) % DemoStudentFamilyNames.Length];
+        return $"{firstName} {middleName} {familyName}";
+    }
+
+    private static bool IsSeedGeneratedStudentName(string? fullName)
+    {
+        if (string.IsNullOrWhiteSpace(fullName))
+        {
+            return true;
+        }
+
+        var parts = fullName.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return fullName.Contains("تجريبي") ||
+            fullName.Contains("ØªØ¬Ø±ÙŠØ¨ÙŠ") ||
+            fullName.StartsWith("طالب ") ||
+            (parts.Length >= 3 && parts[^1].Length == 3 && parts[^1].All(char.IsDigit));
+    }
+
+    private static bool IsDemoCatalogStudentName(string? fullName)
+    {
+        if (string.IsNullOrWhiteSpace(fullName))
+        {
+            return false;
+        }
+
+        var parts = fullName.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length == 3 &&
+            DemoStudentFirstNames.Contains(parts[0]) &&
+            DemoStudentMiddleNames.Contains(parts[1]) &&
+            DemoStudentFamilyNames.Contains(parts[2]);
     }
 
     private static async Task EnsureCriticalWednesdaySessionsAsync(SchoolDbContext context)
@@ -1128,6 +1227,156 @@ public class SchoolDbContextSeed
         await context.SaveChangesAsync();
     }
 
+    private static async Task EnsureStudentSubjectAssignmentsAsync(SchoolDbContext context)
+    {
+        var students = await context.Students
+            .Where(student => student.ClassRoomId.HasValue)
+            .Select(student => new { student.Id, student.ClassRoomId })
+            .ToListAsync();
+
+        if (students.Count == 0)
+        {
+            return;
+        }
+
+        var subjects = await context.Subjects
+            .Where(subject => subject.IsActive && subject.ClassRoomId.HasValue)
+            .Select(subject => new { subject.Id, subject.ClassRoomId })
+            .ToListAsync();
+
+        if (subjects.Count == 0)
+        {
+            return;
+        }
+
+        var existingKeys = await context.StudentSubjects
+            .Select(item => new { item.StudentId, item.SubjectId })
+            .ToListAsync();
+
+        var keySet = existingKeys
+            .Select(item => $"{item.StudentId}:{item.SubjectId}")
+            .ToHashSet();
+
+        var newAssignments = new List<StudentSubject>();
+
+        foreach (var student in students)
+        {
+            var classroomSubjectIds = subjects
+                .Where(subject => subject.ClassRoomId == student.ClassRoomId)
+                .Select(subject => subject.Id)
+                .Distinct()
+                .ToList();
+
+            foreach (var subjectId in classroomSubjectIds)
+            {
+                var key = $"{student.Id}:{subjectId}";
+                if (keySet.Add(key))
+                {
+                    newAssignments.Add(new StudentSubject
+                    {
+                        StudentId = student.Id,
+                        SubjectId = subjectId
+                    });
+                }
+            }
+        }
+
+        if (newAssignments.Count == 0)
+        {
+            return;
+        }
+
+        context.StudentSubjects.AddRange(newAssignments);
+        await context.SaveChangesAsync();
+    }
+
+    private static async Task EnsureSampleWeeklySchedulesAsync(SchoolDbContext context)
+    {
+        var existingSaturdaySchedule = await context.Schedules.AnyAsync(schedule => schedule.DayOfWeek == DayOfWeek.Saturday);
+        if (existingSaturdaySchedule)
+        {
+            return;
+        }
+
+        var subject = await context.Subjects
+            .Where(item => item.IsActive && item.TeacherId.HasValue && item.ClassRoomId.HasValue)
+            .OrderBy(item => item.Id)
+            .FirstOrDefaultAsync();
+
+        if (subject == null)
+        {
+            return;
+        }
+
+        var startDate = DateTime.Today.Date.AddDays(-14);
+        var endDate = DateTime.Today.Date.AddMonths(3);
+
+        var schedule = new Schedule
+        {
+            Title = $"Weekly {subject.Name} Saturday Class",
+            TeacherId = subject.TeacherId!.Value,
+            SubjectId = subject.Id,
+            ClassRoomId = subject.ClassRoomId!.Value,
+            DayOfWeek = DayOfWeek.Saturday,
+            StartTime = new TimeSpan(10, 0, 0),
+            EndTime = new TimeSpan(11, 0, 0),
+            AttendanceType = "Manual",
+            TermStartDate = startDate,
+            TermEndDate = endDate,
+            IsActive = true
+        };
+
+        context.Schedules.Add(schedule);
+        await context.SaveChangesAsync();
+
+        var existingSessionDates = await context.Sessions
+            .Where(session => session.ClassRoomId == schedule.ClassRoomId)
+            .Where(session => session.SubjectId == schedule.SubjectId)
+            .Where(session => session.SessionDate >= startDate && session.SessionDate <= endDate)
+            .Select(session => new { session.SessionDate, session.StartTime, session.EndTime })
+            .ToListAsync();
+
+        var existingKeys = existingSessionDates
+            .Select(item => $"{item.SessionDate:yyyyMMdd}:{item.StartTime:c}:{item.EndTime:c}")
+            .ToHashSet();
+
+        var generatedSessions = new List<Session>();
+
+        for (var date = startDate; date <= endDate; date = date.AddDays(1))
+        {
+            if (date.DayOfWeek != schedule.DayOfWeek)
+            {
+                continue;
+            }
+
+            var key = $"{date:yyyyMMdd}:{schedule.StartTime:c}:{schedule.EndTime:c}";
+            if (!existingKeys.Add(key))
+            {
+                continue;
+            }
+
+            generatedSessions.Add(new Session
+            {
+                Title = schedule.Title,
+                SessionDate = date,
+                StartTime = schedule.StartTime,
+                EndTime = schedule.EndTime,
+                AttendanceType = schedule.AttendanceType,
+                TeacherId = schedule.TeacherId,
+                ClassRoomId = schedule.ClassRoomId,
+                SubjectId = schedule.SubjectId,
+                ScheduleId = schedule.Id
+            });
+        }
+
+        if (generatedSessions.Count > 0)
+        {
+            context.Sessions.AddRange(generatedSessions);
+            schedule.SessionsGeneratedUntil = endDate;
+            await context.SaveChangesAsync();
+        }
+    }
+
     private static async Task EnsureAttendanceRecordsAsync(SchoolDbContext context)
     {
         var referenceWednesday = GetReferenceWednesday();
@@ -1204,6 +1453,250 @@ public class SchoolDbContextSeed
 
         context.Attendances.AddRange(newAttendances);
         await context.SaveChangesAsync();
+    }
+
+    private static async Task EnsureRequestedTestAccountsAsync(SchoolDbContext context, UserManager<ApplicationUser> userManager)
+    {
+        var classRoom = await context.ClassRooms
+            .OrderBy(currentClassRoom => currentClassRoom.Id)
+            .FirstOrDefaultAsync();
+
+        var adminUser = await EnsureSeedUserAsync(
+            userManager,
+            SystemOwnerAdminEmail,
+            "محمد زغلول",
+            "Admin",
+            DefaultAdminPassword);
+
+        var teacherUser = await EnsureSeedUserAsync(
+            userManager,
+            "mozaghloul0123@gmail.com",
+            "أحمد محروس - اختبار Gmail",
+            "Teacher",
+            "Teacher@123");
+
+        var parentUser = await EnsureSeedUserAsync(
+            userManager,
+            "mohammedzaghloul9000@gmail.com",
+            "ولي أمر تجريبي",
+            "Parent",
+            "Parent@123");
+
+        var firstStudentUser = await EnsureSeedUserAsync(
+            userManager,
+            "mohammedzaghloul8000@gmail.com",
+            "يوسف محمد علي",
+            "Student",
+            "Student@123");
+
+        var secondStudentUser = await EnsureSeedUserAsync(
+            userManager,
+            "mohammedzaghloul7000@gmail.com",
+            "مريم أحمد حسن",
+            "Student",
+            "Student@123");
+
+        if (adminUser.EmailConfirmed == false)
+        {
+            adminUser.EmailConfirmed = true;
+            await userManager.UpdateAsync(adminUser);
+        }
+
+        var teacher = await context.Teachers
+            .FirstOrDefaultAsync(currentTeacher =>
+                currentTeacher.UserId == teacherUser.Id ||
+                currentTeacher.Email == teacherUser.Email);
+
+        if (teacher == null)
+        {
+            teacher = new Teacher
+            {
+                UserId = teacherUser.Id,
+                FullName = teacherUser.FullName,
+                Email = teacherUser.Email,
+                Phone = "01001001001",
+                IsActive = true
+            };
+            context.Teachers.Add(teacher);
+            await context.SaveChangesAsync();
+        }
+        else
+        {
+            teacher.UserId = teacherUser.Id;
+            teacher.FullName = teacherUser.FullName;
+            teacher.Email = teacherUser.Email;
+            teacher.IsActive = true;
+            await context.SaveChangesAsync();
+        }
+
+        teacherUser.TeacherId = teacher.Id;
+        await userManager.UpdateAsync(teacherUser);
+
+        var parent = await context.Parents
+            .FirstOrDefaultAsync(currentParent =>
+                currentParent.UserId == parentUser.Id ||
+                currentParent.Email == parentUser.Email);
+
+        if (parent == null)
+        {
+            parent = new Parent
+            {
+                UserId = parentUser.Id,
+                FullName = parentUser.FullName,
+                Email = parentUser.Email ?? "mohammedzaghloul9000@gmail.com",
+                Phone = "01009009000",
+                Address = "حساب اختبار OTP"
+            };
+            context.Parents.Add(parent);
+            await context.SaveChangesAsync();
+        }
+        else
+        {
+            parent.UserId = parentUser.Id;
+            parent.FullName = parentUser.FullName;
+            parent.Email = parentUser.Email ?? parent.Email;
+            await context.SaveChangesAsync();
+        }
+
+        parentUser.ParentId = parent.Id;
+        await userManager.UpdateAsync(parentUser);
+
+        await EnsureSeedStudentAsync(context, userManager, firstStudentUser, parent.Id, classRoom?.Id, "01008008000");
+        await EnsureSeedStudentAsync(context, userManager, secondStudentUser, parent.Id, classRoom?.Id, "01007007000");
+
+        if (classRoom != null && !await context.Subjects.AnyAsync(subject => subject.TeacherId == teacher.Id))
+        {
+            context.Subjects.Add(new Subject
+            {
+                Name = "الرياضيات - اختبار Gmail",
+                Code = $"GMATH-{teacher.Id}",
+                Description = "مادة تجريبية لحسابات Gmail واختبارات الدرجات والحضور.",
+                TeacherId = teacher.Id,
+                ClassRoomId = classRoom.Id,
+                Term = "الفصل الأول",
+                IsActive = true
+            });
+            await context.SaveChangesAsync();
+        }
+    }
+
+    private static async Task<ApplicationUser> EnsureSeedUserAsync(
+        UserManager<ApplicationUser> userManager,
+        string email,
+        string fullName,
+        string role,
+        string password)
+    {
+        var normalizedEmail = email.Trim().ToLowerInvariant();
+        var user = await userManager.FindByEmailAsync(normalizedEmail);
+
+        if (user == null)
+        {
+            user = new ApplicationUser
+            {
+                UserName = normalizedEmail,
+                Email = normalizedEmail,
+                FullName = fullName,
+                EmailConfirmed = true,
+                DeviceId = role == "Student" ? Guid.NewGuid().ToString() : null
+            };
+
+            var createResult = await userManager.CreateAsync(user, password);
+            if (!createResult.Succeeded)
+            {
+                throw new InvalidOperationException($"Unable to create seed user {normalizedEmail}: {string.Join(", ", createResult.Errors.Select(error => error.Description))}");
+            }
+        }
+
+        user.UserName = normalizedEmail;
+        user.Email = normalizedEmail;
+        user.FullName = fullName;
+        user.EmailConfirmed = true;
+
+        if (role != "Student")
+        {
+            user.StudentId = null;
+            user.DeviceId = null;
+        }
+
+        if (role != "Teacher")
+        {
+            user.TeacherId = null;
+        }
+
+        if (role != "Parent")
+        {
+            user.ParentId = null;
+        }
+
+        if (role == "Student")
+        {
+            user.DeviceId ??= Guid.NewGuid().ToString();
+        }
+
+        var currentRoles = await userManager.GetRolesAsync(user);
+        foreach (var currentRole in currentRoles.Where(currentRole => !string.Equals(currentRole, role, StringComparison.OrdinalIgnoreCase)))
+        {
+            await userManager.RemoveFromRoleAsync(user, currentRole);
+        }
+
+        if (!await userManager.IsInRoleAsync(user, role))
+        {
+            await userManager.AddToRoleAsync(user, role);
+        }
+
+        var resetToken = await userManager.GeneratePasswordResetTokenAsync(user);
+        await userManager.ResetPasswordAsync(user, resetToken, password);
+
+        await userManager.UpdateAsync(user);
+        return user;
+    }
+
+    private static async Task EnsureSeedStudentAsync(
+        SchoolDbContext context,
+        UserManager<ApplicationUser> userManager,
+        ApplicationUser studentUser,
+        int parentId,
+        int? classRoomId,
+        string phone)
+    {
+        var student = await context.Students
+            .FirstOrDefaultAsync(currentStudent =>
+                currentStudent.UserId == studentUser.Id ||
+                currentStudent.Email == studentUser.Email);
+
+        if (student == null)
+        {
+            student = new Student
+            {
+                UserId = studentUser.Id,
+                FullName = studentUser.FullName,
+                Email = studentUser.Email,
+                Phone = phone,
+                ClassRoomId = classRoomId,
+                ParentId = parentId,
+                QrCodeValue = Guid.NewGuid().ToString(),
+                IsActive = true
+            };
+            context.Students.Add(student);
+            await context.SaveChangesAsync();
+        }
+        else
+        {
+            student.UserId = studentUser.Id;
+            student.FullName = studentUser.FullName;
+            student.Email = studentUser.Email;
+            student.Phone = string.IsNullOrWhiteSpace(student.Phone) ? phone : student.Phone;
+            student.ClassRoomId ??= classRoomId;
+            student.ParentId = parentId;
+            student.QrCodeValue ??= Guid.NewGuid().ToString();
+            student.IsActive = true;
+            await context.SaveChangesAsync();
+        }
+
+        studentUser.StudentId = student.Id;
+        studentUser.DeviceId ??= Guid.NewGuid().ToString();
+        await userManager.UpdateAsync(studentUser);
     }
 
     private static async Task BackfillTeacherAccountsAsync(SchoolDbContext context, UserManager<ApplicationUser> userManager)

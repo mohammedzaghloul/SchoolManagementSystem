@@ -1,192 +1,162 @@
-/* Dark Theme Overrides specifically for this module wrapper if global dark mode isn't purely active 
-   Note: Realistically this wrapper takes full height to emulate the screenshot's dark UI.
-*/
-.dark-theme {
-    background-color: #121421 !important;
-    /* Deep space dark */
-    font-family: 'Tajawal', sans-serif;
-    padding: 20px;
-    direction: rtl;
-}
-
-.bg-darker {
-    background-color: #181c2f !important;
-}
-
-.border-dark {
-    border-color: #2a2e45 !important;
-}
-
-.border-darker {
-    border-color: #23273e !important;
-}
-
-.text-white {
-    color: #ffffff !important;
-}
-
-.text-secondary {
-    color: #8f95b2 !important;
-}
-
-/* Avatar & Top Nav */
-.avatar {
-    width: 45px;
-    height: 45px;
-    border-radius: 50%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-.btn-icon {
-    width: 40px;
-    height: 40px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background-color: #1a1d2d;
-    border: 1px solid #2a2e45;
-}
-
-.btn-icon:hover {
-    background-color: #23273e;
-}
-
-/* Search Box Focus */
-.search-box input:focus {
-    box-shadow: none;
-    border-color: #3b82f6 !important;
-}
-
-/* Timetable Grid */
-.timetable-grid th {
-    font-size: 0.9rem;
-    font-weight: 600;
-}
-
-.timetable-grid td {
-    vertical-align: middle;
-    color: #434865;
-    /* Fading dash colors for empty slots */
-}
-
-.subject-card {
-    min-width: 100px;
-    max-width: 130px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-    transition: transform 0.2s;
-    cursor: pointer;
-}
-
-.subject-card:hover {
-    transform: scale(1.05);
-}
-
-.subject-card small {
-    opacity: 0.8;
-    font-size: 0.75rem;
-}
-
-/* Specific Subject Colors Matching Mockup - Vibrant versions */
-.bg-blue {
-    background: linear-gradient(135deg, #3b82f6, #1d4ed8) !important;
-}
-
-.bg-green {
-    background: linear-gradient(135deg, #10b981, #059669) !important;
-}
-
-.bg-purple {
-    background: linear-gradient(135deg, #a855f7, #7c3aed) !important;
-}
-
-.bg-teal {
-    background: linear-gradient(135deg, #14b8a6, #0d9488) !important;
-}
-
-.bg-dark-gray {
-    background: linear-gradient(135deg, #64748b, #475569) !important;
-}
-
-.bg-gray-blue {
-    background: linear-gradient(135deg, #94a3b8, #64748b) !important;
-}
-
-/* دراسات/دين */
-.bg-gray-blue {
-    background-color: #334155 !important;
-}
-
-/* نشاط */
-.bg-oxford {
-    background-color: #1f2937 !important;
-    border: 1px solid #374151;
-}
-
-/* حاسب آلي */
-
-.btn-primary-p {
-    background-color: #3b82f6 !important;
-    border: none;
-    font-size: 0.9rem;
-    padding: 8px 16px;
+.timetable-container {
+    padding: 2.2rem;
+    min-height: 100vh;
+    background: radial-gradient(circle at top right, rgba(99, 102, 241, 0.08), transparent 40%),
+                radial-gradient(circle at bottom left, rgba(168, 85, 247, 0.06), transparent 40%),
+                var(--dark-bg);
+    font-family: 'Cairo', sans-serif;
 }
 
 .timetable-container.full-screen {
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 10000;
-    padding: 12px;
-    overflow-y: auto;
+    inset: 0;
+    z-index: 2000;
+    padding: 2.2rem;
+    overflow: auto;
+    background: var(--dark-bg);
 }
 
-@media (max-width: 768px) {
-    .dark-theme {
-        padding: 10px;
+.page-title {
+    font-size: 2.4rem;
+    font-weight: 900;
+    letter-spacing: -0.5px;
+}
+
+/* Header UI */
+.zoom-controls {
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(8px);
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6) !important;
+    border: none !important;
+    box-shadow: 0 8px 16px rgba(99, 102, 241, 0.3) !important;
+    font-weight: 800 !important;
+}
+
+/* Timetable Premium Structure */
+.timetable-wrapper-premium {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 32px;
+    padding: 1.5rem;
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.2);
+}
+
+.table-outer {
+    overflow-x: auto;
+    border-radius: 20px;
+}
+
+.timetable-custom-grid {
+    background: transparent !important;
+    border-collapse: separate;
+    border-spacing: 10px;
+}
+
+.timetable-custom-grid th, .timetable-custom-grid td {
+    background: transparent !important;
+    color: #fff;
+    border: none !important;
+}
+
+.time-header {
+    background: rgba(255, 255, 255, 0.03) !important;
+    padding: 1.25rem 1rem !important;
+    border-radius: 14px;
+    font-size: 0.85rem;
+    font-weight: 800;
+    color: #94a3b8 !important;
+    min-width: 100px;
+}
+
+.day-label-premium {
+    background: rgba(99, 102, 241, 0.1) !important;
+    padding: 1.25rem 1rem !important;
+    border-radius: 14px;
+    font-weight: 900;
+    color: #a5b4fc !important;
+    min-width: 110px;
+    text-align: center;
+}
+
+/* Sticky Column for Day Labels */
+.sticky-col {
+    position: sticky;
+    right: 0;
+    z-index: 10;
+}
+
+/* Subject Card Redesign */
+.subject-card-premium {
+    position: relative;
+    padding: 1rem;
+    border-radius: 18px;
+    min-width: 130px;
+    max-width: 160px;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+}
+
+.subject-card-premium:hover {
+    transform: translateY(-5px) scale(1.02);
+    box-shadow: 0 20px 30px rgba(0, 0, 0, 0.25);
+}
+
+.card-glow {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.25), transparent);
+    pointer-events: none;
+}
+
+.subject-info {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.subject-info i { font-size: 0.9rem; }
+.subject-name { font-size: 0.9rem; font-weight: 800; }
+.class-room { font-size: 0.75rem; font-weight: 600; opacity: 0.8; }
+
+.empty-cell {
+    background: rgba(255, 255, 255, 0.01);
+    padding: 1.5rem;
+    border-radius: 14px;
+    color: rgba(255, 255, 255, 0.1);
+    font-size: 1.2rem;
+}
+
+/* Subject Colors */
+.bg-blue   { background: linear-gradient(135deg, #3b82f6, #2563eb) !important; }
+.bg-green  { background: linear-gradient(135deg, #10b981, #059669) !important; }
+.bg-purple { background: linear-gradient(135deg, #8b5cf6, #7c3aed) !important; }
+.bg-teal   { background: linear-gradient(135deg, #14b8a6, #0d9488) !important; }
+.bg-amber  { background: linear-gradient(135deg, #f59e0b, #d97706) !important; }
+.bg-rose   { background: linear-gradient(135deg, #f43f5e, #e11d48) !important; }
+.bg-indigo { background: linear-gradient(135deg, #6366f1, #4f46e5) !important; }
+
+/* Mobile View Adjustments */
+@media (max-width: 991px) {
+    .timetable-container { padding: 1.5rem 1rem 100px; }
+    .page-title { font-size: 1.8rem; }
+    
+    .timetable-wrapper-premium {
+        padding: 0.75rem;
+        border-radius: 20px;
     }
 
-    .user-info h5 {
-        font-size: 0.9rem;
+    .subject-card-premium {
+        min-width: 110px;
+        padding: 0.75rem;
     }
+}
 
-    .page-title {
-        font-size: 1.2rem;
-    }
-
-    .header-actions button {
-        font-size: 0.8rem;
-        padding: 6px 12px !important;
-    }
-
-    .page-header {
-        flex-direction: row; /* Match header horizontal if we can */
-        justify-content: space-between !important;
-        align-items: center !important;
-        gap: 10px;
-    }
-
-    .timetable-grid th,
-    .timetable-grid td {
-        padding: 6px 2px !important;
-        font-size: 0.7rem;
-    }
-
-    .subject-card {
-        min-width: 65px;
-        padding: 6px 2px !important;
-        border-radius: 6px !important;
-    }
-
-    .subject-card div {
-        font-size: 0.7rem;
-        line-height: 1.1;
-    }
-
-    .subject-card small {
-        font-size: 0.6rem;
-    }
+@media (max-width: 576px) {
+    .top-header { flex-direction: column; align-items: flex-start !important; gap: 1rem; }
 }

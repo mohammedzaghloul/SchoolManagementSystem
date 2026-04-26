@@ -43,6 +43,10 @@
                 <i class="fas fa-chalkboard-teacher"></i>
                 <span>إدارة المدرسين</span>
             </a>
+            <a *ngIf="canCreateAdmins()" routerLink="/admin/admins" routerLinkActive="active" class="nav-item">
+                <i class="fas fa-user-shield"></i>
+                <span>إدارة المدراء</span>
+            </a>
             <a routerLink="/admin/payments" routerLinkActive="active" class="nav-item">
                 <i class="fas fa-file-invoice-dollar"></i>
                 <span>المصروفات والفواتير</span>
@@ -131,16 +135,16 @@
         <ng-container *ngIf="hasRole('Parent')">
             <div class="nav-label">متابعة الأبناء</div>
             <a routerLink="/parent/dashboard" routerLinkActive="active" class="nav-item">
-                <i class="fas fa-home"></i>
-                <span>الرئيسية</span>
+                <i class="fas fa-children"></i>
+                <span>متابعة الأبناء</span>
             </a>
             <a routerLink="/parent/payments" routerLinkActive="active" class="nav-item">
                 <i class="fas fa-file-invoice-dollar"></i>
-                <span>دفع المصروفات</span>
+                <span>المصروفات والفواتير</span>
             </a>
             <a routerLink="/chat" routerLinkActive="active" class="nav-item" (click)="resetChatBadge()">
                 <i class="far fa-comments"></i>
-                <span>التواصل مع المدرسين</span>
+                <span>التواصل مع المدرسة</span>
                 <span class="chat-badge" *ngIf="unreadChatCount > 0">{{ unreadChatCount }}</span>
             </a>
         </ng-container>

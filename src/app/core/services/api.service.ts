@@ -30,7 +30,7 @@ export class ApiService {
     console.error('API Error:', error);
 
     let errorMessage = 'حدث خطأ في الاتصال بالخادم';
-    const serverMessage = this.extractServerErrorMessage(error?.error);
+    const serverMessage = error?.status >= 500 ? null : this.extractServerErrorMessage(error?.error);
 
     if (error.error instanceof ErrorEvent) {
       // Client-side error
@@ -49,6 +49,9 @@ export class ApiService {
           break;
         case 404:
           errorMessage = serverMessage || 'المورد المطلوب غير موجود';
+          break;
+        case 409:
+          errorMessage = serverMessage || 'لا يمكن تنفيذ العملية بسبب وجود بيانات مرتبطة';
           break;
         case 500:
           errorMessage = serverMessage || 'خطأ داخلي في الخادم';

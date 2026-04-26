@@ -1,82 +1,189 @@
 .student-exams-container {
-    padding: 2rem;
-    background: #0f172a;
+    padding: 2.2rem;
+    min-height: 100vh;
+    background: radial-gradient(circle at top right, rgba(99, 102, 241, 0.08), transparent 40%),
+                radial-gradient(circle at bottom left, rgba(168, 85, 247, 0.06), transparent 40%),
+                var(--dark-bg);
+    font-family: 'Cairo', sans-serif;
 }
 
-.dark-theme { color: #f8fafc; }
-.fw-800 { font-weight: 800; }
-.fw-900 { font-weight: 900; }
-.shadow-premium { box-shadow: 0 20px 50px -12px rgba(0,0,0,0.5) !important; }
+.page-title {
+    font-size: 2.2rem;
+    letter-spacing: -0.5px;
+}
 
-/* Tabs */
-.nav-link { color: #64748b; border: none !important; transition: all 0.3s; }
-.active-tab { color: #3b82f6 !important; background: rgba(59, 130, 246, 0.1); border-radius: 12px; }
+.nav-tabs {
+    background: rgba(255, 255, 255, 0.03);
+    padding: 6px;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    gap: 4px;
+}
+
+.nav-link {
+    padding: 10px 24px !important;
+    font-size: 0.9rem !important;
+    color: var(--dark-muted) !important;
+    font-weight: 800;
+    border: none !important;
+    border-radius: 12px !important;
+    transition: all 0.3s ease;
+    background: transparent !important;
+}
+
+.nav-link:hover:not(.active-tab) {
+    background: rgba(255, 255, 255, 0.05) !important;
+    color: #fff !important;
+}
+
+.nav-link.active-tab {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6) !important;
+    color: #fff !important;
+    box-shadow: 0 8px 20px rgba(99, 102, 241, 0.3);
+}
 
 /* Exam Cards */
 .exam-card {
-    background: rgba(30, 41, 59, 0.7);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.03) !important;
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+    border-radius: 24px !important;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .exam-card:hover {
-    transform: translateY(-10px);
-    background: rgba(30, 41, 59, 0.9);
-    border-color: rgba(59, 130, 246, 0.3);
+    transform: translateY(-8px);
+    background: rgba(255, 255, 255, 0.05) !important;
+    border-color: rgba(99, 102, 241, 0.3) !important;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+}
+
+.exam-card h4 {
+    font-size: 1.15rem;
+    font-weight: 800;
+    margin-bottom: 0.5rem;
 }
 
 .subject-badge {
-    background: rgba(59, 130, 246, 0.1);
-    color: #3b82f6;
-    padding: 5px 15px;
-    border-radius: 50px;
+    background: rgba(99, 102, 241, 0.12);
+    color: #a5b4fc;
+    padding: 4px 12px;
+    border-radius: 8px;
     font-size: 0.75rem;
-    font-weight: 800;
+    font-weight: 700;
 }
 
-.pro-btn { border-radius: 15px; padding: 12px; font-weight: 800; transition: all 0.3s; }
-.pro-btn-primary { background: #3b82f6; border: none; }
-.pro-btn-primary:hover { background: #2563eb; transform: scale(1.02); }
+.stats-box {
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 14px;
+    padding: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.04);
+}
 
-/* Result Modal (Premium) */
+.pro-btn {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6) !important;
+    border: none !important;
+    padding: 12px !important;
+    font-weight: 800;
+    border-radius: 14px;
+    transition: all 0.3s;
+}
+
+.pro-btn:hover {
+    transform: scale(1.02);
+    box-shadow: 0 10px 20px rgba(99, 102, 241, 0.3);
+}
+
+/* Result Modal Premium */
 .result-modal-overlay {
     position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0, 0, 0, 0.8);
-    backdrop-filter: blur(15px);
-    z-index: 9999;
-    animation: fadeIn 0.4s ease;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
 }
 
-.result-modal-content {
-    background: #1e293b;
+.premium-result-card {
+    background: linear-gradient(180deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.98));
+    width: min(440px, 92%);
+    border-radius: 32px;
     border: 1px solid rgba(255, 255, 255, 0.1);
-    width: 420px;
-    max-width: 90%;
-    border-radius: 35px;
-    box-shadow: 0 40px 100px -20px rgba(0,0,0,0.8);
-    animation: scaleUp 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    padding: 2.5rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
 }
 
-.modal-top .success-icon i { font-size: 3rem !important; }
-.modal-top h2 { font-size: 1.5rem !important; }
-.big-score-text span:first-child { font-size: 3.5rem !important; }
-.big-score-text span:last-child { font-size: 1rem !important; }
+.success-icon-wrap {
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    border-radius: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+    font-size: 2.2rem;
+    color: #fff;
+    box-shadow: 0 15px 30px rgba(245, 158, 11, 0.3);
+}
 
-.shadow-glow { box-shadow: 0 0 20px rgba(34, 197, 94, 0.4); }
-.hover-lift:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,0.3); }
+.score-display {
+    margin: 2rem 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
 
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-@keyframes scaleUp { from { opacity: 0; transform: scale(0.9) translateY(30px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+.current-score {
+    font-size: 4rem;
+    font-weight: 900;
+    color: #fff;
+    line-height: 1;
+}
 
-.x-small { font-size: 0.7rem; }
-.tiny { font-size: 0.65rem; }
+.score-divider {
+    font-size: 2rem;
+    color: rgba(255, 255, 255, 0.2);
+    font-weight: 300;
+}
 
-/* Dashboard Animations */
-.animate-fade-in { animation: fadeIn 0.8s ease-out; }
-.animate-scale-in { animation: scaleIn 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
-.animate-bounce-soft { animation: bounceSoft 2s infinite ease-in-out; }
+.max-score {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.4);
+    align-self: flex-end;
+    margin-bottom: 4px;
+}
 
-@keyframes scaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-@keyframes bounceSoft { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+.subject-name-pill {
+    display: inline-block;
+    background: rgba(99, 102, 241, 0.1);
+    color: #818cf8;
+    padding: 6px 16px;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    border: 1px solid rgba(99, 102, 241, 0.1);
+}
+
+.animate-slide-up {
+    animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideUp {
+    from { transform: translateY(40px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+/* Mobile Adjustments */
+@media (max-width: 768px) {
+    .student-exams-container { padding: 1.5rem 1rem 100px; }
+    .page-title { font-size: 1.7rem; }
+    .nav-tabs { flex-direction: row; overflow-x: auto; white-space: nowrap; }
+    .nav-link { flex: 1; padding: 10px 12px !important; font-size: 0.8rem !important; }
+}

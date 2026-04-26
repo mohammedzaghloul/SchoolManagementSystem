@@ -151,6 +151,25 @@ public class SessionsController : BaseApiController
         });
     }
 
+    [HttpDelete("{id:int}")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> DeleteSession(int id)
+    {
+        var session = await _context.Sessions
+            .Include(currentSession => currentSession.Attendances)
+            .FirstOrDefaultAsync(currentSession => currentSession.Id == id);
+
+        if (session == null)
+        {
+            return NotFound(new { message = "الحصة المطلوبة غير موجودة." });
+        }
+
+        _context.Sessions.Remove(session);
+        await _context.SaveChangesAsync();
+
+        return Ok(new { message = "تم حذف الحصة من جدول المدرس." });
+    }
+
     [HttpGet("admin/schedule-overview")]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> GetScheduleOverview([FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate, [FromQuery] string? term)
@@ -182,6 +201,7 @@ public class SessionsController : BaseApiController
                 s.TeacherId,
                 s.ClassRoomId,
                 SessionDate = s.SessionDate,
+                SubjectId = s.SubjectId,
                 Term = s.Subject != null ? s.Subject.Term : null,
                 SubjectName = s.Subject != null ? s.Subject.Name : "حصة دراسية",
                 TeacherName = s.Teacher != null ? s.Teacher.FullName : "غير محدد",
@@ -205,6 +225,42 @@ public class SessionsController : BaseApiController
             TotalClasses = items.Select(item => item.ClassRoomId).Distinct().Count(),
             ScheduledToday = items.Count(item => item.SessionDate.Date == SchoolClock.Today),
             Items = items
+        });
+    }
+
+    [HttpGet("admin/create-metadata")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> GetCreateMetadata()
+    {
+        var teachers = await _context.Teachers
+            .AsNoTracking()
+            .Where(teacher => teacher.IsActive)
+            .OrderBy(teacher => teacher.FullName)
+            .Select(teacher => new
+            {
+                teacher.Id,
+                teacher.FullName
+            })
+            .ToListAsync();
+
+        var classRooms = await _context.ClassRooms
+            .AsNoTracking()
+            .OrderBy(classRoom => classRoom.GradeLevel != null ? classRoom.GradeLevel.Name : string.Empty)
+            .ThenBy(classRoom => classRoom.Name)
+            .Select(classRoom => new
+            {
+                classRoom.Id,
+                classRoom.Name,
+                GradeLevelId = classRoom.GradeLevelId.GetValueOrDefault(),
+                GradeLevelName = classRoom.GradeLevel != null ? classRoom.GradeLevel.Name : null,
+                classRoom.Capacity
+            })
+            .ToListAsync();
+
+        return Ok(new
+        {
+            Teachers = teachers,
+            ClassRooms = classRooms
         });
     }
 
@@ -297,6 +353,7 @@ public class SessionsController : BaseApiController
                 GradeName = s.ClassRoom != null && s.ClassRoom.GradeLevel != null ? s.ClassRoom.GradeLevel.Name : "—",
                 ClassRoomName = s.ClassRoom != null ? s.ClassRoom.Name : "—",
                 ClassRoomId = s.ClassRoomId,
+                SubjectId = s.SubjectId,
                 StartTime = s.SessionDate.Add(s.StartTime),
                 EndTime = s.SessionDate.Add(s.EndTime),
                 AttendanceType = s.AttendanceType ?? "QR",
@@ -306,17 +363,29 @@ public class SessionsController : BaseApiController
             })
             .ToListAsync();
 
-        var sessions = sessionRows.Select(session =>
+        var displayRows = sessionRows
+            .GroupBy(session => new { session.SessionDate, session.StartTime, session.EndTime })
+            .Select(group => group
+                .OrderByDescending(session => session.IsRecorded)
+                .ThenBy(session => session.ClassRoomName)
+                .First())
+            .OrderBy(session => session.StartTime)
+            .ToList();
+
+        var sessions = displayRows.Select(session =>
         {
             var window = DescribeAttendanceWindow(session.StartTime, session.EndTime, now);
+            var visibleAttendanceCount = window.Status == "upcoming" ? 0 : session.AttendanceCount;
+            var visibleIsRecorded = window.Status != "upcoming" && session.IsRecorded;
             var needsAttention = session.StudentCount > 0
-                ? session.AttendanceCount < session.StudentCount
-                : !session.IsRecorded;
+                ? visibleAttendanceCount < session.StudentCount
+                : !visibleIsRecorded;
 
             return new
             {
                 session.Id,
                 session.SessionDate,
+                session.SubjectId,
                 session.SubjectName,
                 session.GradeName,
                 session.ClassRoomName,
@@ -325,8 +394,8 @@ public class SessionsController : BaseApiController
                 session.EndTime,
                 session.AttendanceType,
                 session.StudentCount,
-                session.IsRecorded,
-                session.AttendanceCount,
+                IsRecorded = visibleIsRecorded,
+                AttendanceCount = visibleAttendanceCount,
                 AttendanceWindowStatus = window.Status,
                 AttendanceWindowLabel = window.Label,
                 CanRecordAttendance = window.CanRecord,
@@ -414,9 +483,9 @@ public class SessionsController : BaseApiController
             .Select(session =>
             {
                 var window = DescribeAttendanceWindow(session.StartTime, session.EndTime, now);
-                var canMarkWithQr = window.CanRecord
-                    && !session.AttendanceRecorded
-                    && string.Equals(session.AttendanceType ?? "QR", "QR", StringComparison.OrdinalIgnoreCase);
+                var isQrOrFlex = string.Equals(session.AttendanceType, "QR", StringComparison.OrdinalIgnoreCase) ||
+                                 string.Equals(session.AttendanceType, "Flex", StringComparison.OrdinalIgnoreCase);
+                var canMarkWithQr = window.CanRecord && !session.AttendanceRecorded && isQrOrFlex;
 
                 return new
                 {

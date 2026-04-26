@@ -4,6 +4,7 @@ using School.Application.Interfaces;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace School.Infrastructure.Services;
 
@@ -19,6 +20,16 @@ public class FaceRecognitionService : IFaceRecognitionService
 
         var baseUrl = (config["FaceRecognition:BaseUrl"] ?? "http://localhost:8000").Trim().TrimEnd('/');
         _httpClient.BaseAddress = new Uri($"{baseUrl}/");
+        
+        var apiKey = config["FaceRecognition:ApiKey"];
+        if (!string.IsNullOrWhiteSpace(apiKey))
+        {
+            _httpClient.DefaultRequestHeaders.Add("X-API-Key", apiKey);
+        }
+        else
+        {
+            _logger.LogWarning("FaceRecognition:ApiKey is not configured. Protected face recognition requests may fail.");
+        }
     }
 
     public async Task<FaceTrainingResult> TrainFaceAsync(int studentId, byte[] imageBytes, string fileName)
@@ -276,5 +287,12 @@ public class FaceServiceMessageResponse
 public class RecognizedFace
 {
     public int StudentId { get; set; }
+
+    [JsonPropertyName("student_id")]
+    public int LegacyStudentId
+    {
+        set => StudentId = value;
+    }
+
     public double Confidence { get; set; }
 }

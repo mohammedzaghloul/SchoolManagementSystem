@@ -1,27 +1,44 @@
 <div class="page-container" dir="rtl">
-    <div class="page-header d-flex justify-content-between align-items-center mb-4">
-        <div>
+    <div class="page-header d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-5 gap-3">
+        <div class="title-group">
             <h2 class="page-title text-gradient fw-bold">إدارة المصروفات والفواتير</h2>
-            <p class="text-muted mb-0">من هنا يرفع الأدمن المصروفات على الطلاب ويتابع التحصيل.</p>
+            <p class="text-muted-dark mb-0">من هنا يرفع الأدمن المصروفات على الطلاب ويتابع التحصيل.</p>
         </div>
-        <button class="btn btn-premium d-flex align-items-center gap-2" (click)="openAddModal()">
-            <i class="fas fa-plus"></i>
+        <button class="btn btn-add-premium btn-add-invoice d-flex align-items-center justify-content-center gap-2" (click)="openAddModal()">
+            <div class="plus-icon-circle">
+                <i class="fas fa-plus"></i>
+            </div>
             <span>إضافة فاتورة جديدة</span>
         </button>
     </div>
 
     <div class="stats-grid mb-4">
-        <div class="stat-card">
-            <span class="stat-label">إيرادات الشهر</span>
-            <strong>{{ formatCurrency(monthlyRevenue) }}</strong>
+        <div class="stat-card revenue">
+            <div class="stat-icon-wrap green">
+                <i class="fas fa-coins"></i>
+            </div>
+            <div class="stat-content">
+                <span class="stat-label">إيرادات الشهر</span>
+                <div class="stat-value">{{ formatCurrency(monthlyRevenue) }}</div>
+            </div>
         </div>
-        <div class="stat-card danger">
-            <span class="stat-label">مستحقات متأخرة</span>
-            <strong>{{ formatCurrency(overdueAmount) }}</strong>
+        <div class="stat-card overdue danger">
+            <div class="stat-icon-wrap red">
+                <i class="fas fa-triangle-exclamation"></i>
+            </div>
+            <div class="stat-content">
+                <span class="stat-label">مستحقات متأخرة</span>
+                <div class="stat-value">{{ formatCurrency(overdueAmount) }}</div>
+            </div>
         </div>
-        <div class="stat-card info">
-            <span class="stat-label">فواتير معلقة</span>
-            <strong>{{ pendingCount }}</strong>
+        <div class="stat-card pending info">
+            <div class="stat-icon-wrap blue">
+                <i class="fas fa-clock"></i>
+            </div>
+            <div class="stat-content">
+                <span class="stat-label">فواتير معلقة</span>
+                <div class="stat-value">{{ pendingCount }}</div>
+            </div>
         </div>
     </div>
 
@@ -69,7 +86,8 @@
                 <p class="mt-2">جاري تحميل الفواتير...</p>
             </div>
 
-            <div class="table-responsive" *ngIf="!loading">
+            <!-- Desktop Table -->
+            <div class="table-responsive d-none d-md-block" *ngIf="!loading">
                 <table class="table custom-table align-middle">
                     <thead>
                         <tr>
@@ -84,9 +102,9 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr *ngFor="let invoice of filteredInvoices">
+                        <tr *ngFor="let invoice of pagedInvoices">
                             <td>
-                                <div class="fw-bold">{{ invoice.title }}</div>
+                                <div class="fw-bold invoice-title">{{ invoice.title }}</div>
                                 <small class="text-muted">{{ invoice.term }} - {{ invoice.academicYear }}</small>
                             </td>
                             <td>
@@ -94,8 +112,8 @@
                                 <small class="text-muted">{{ invoice.classRoomName || 'بدون فصل' }}</small>
                             </td>
                             <td>{{ invoice.parentName || 'غير مربوط' }}</td>
-                            <td>{{ formatCurrency(invoice.amount) }}</td>
-                            <td>{{ formatCurrency(invoice.remainingAmount) }}</td>
+                            <td class="fw-bold text-dark">{{ formatCurrency(invoice.amount) }}</td>
+                            <td class="text-danger fw-bold">{{ formatCurrency(invoice.remainingAmount) }}</td>
                             <td>{{ invoice.dueDate | date:'d/M/yyyy' }}</td>
                             <td>
                                 <span class="badge px-3 py-2 rounded-pill fw-bold" [ngClass]="getStatusClass(invoice.status)">
@@ -113,11 +131,88 @@
                                 </div>
                             </td>
                         </tr>
-                        <tr *ngIf="filteredInvoices.length === 0">
-                            <td colspan="8" class="text-center py-4 text-muted">لا توجد فواتير مطابقة للفلاتر الحالية.</td>
-                        </tr>
                     </tbody>
                 </table>
+            </div>
+
+            <!-- Mobile Invoice Cards -->
+            <div class="mobile-invoice-grid d-block d-md-none" *ngIf="!loading">
+                <div class="invoice-mobile-card mb-3" *ngFor="let invoice of pagedInvoices">
+                    <div class="card-top d-flex justify-content-between align-items-start mb-3">
+                        <div class="invoice-header-info">
+                            <h6 class="mb-0 fw-bold invoice-title">{{ invoice.title }}</h6>
+                            <small class="text-muted d-block">{{ invoice.term }} - {{ invoice.academicYear }}</small>
+                        </div>
+                        <span class="badge rounded-pill" [ngClass]="getStatusClass(invoice.status)">
+                            {{ getStatusLabel(invoice.status) }}
+                        </span>
+                    </div>
+                    
+                    <div class="card-middle mb-3 p-2 bg-light rounded-3">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <i class="fas fa-user-graduate text-primary small"></i>
+                            <span class="fw-bold small">{{ invoice.studentName }}</span>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="fas fa-user-friends text-muted small"></i>
+                            <span class="small text-muted">{{ invoice.parentName || 'بدون ولي أمر' }}</span>
+                        </div>
+                    </div>
+
+                    <div class="card-financials d-flex justify-content-between align-items-center mb-3">
+                        <div class="fin-item text-center">
+                            <small class="text-muted d-block mb-1">الإجمالي</small>
+                            <span class="fw-bold">{{ formatCurrency(invoice.amount) }}</span>
+                        </div>
+                        <div class="fin-item text-center">
+                            <small class="text-muted d-block mb-1">المتبقي</small>
+                            <span class="fw-bold text-danger">{{ formatCurrency(invoice.remainingAmount) }}</span>
+                        </div>
+                        <div class="fin-item text-center">
+                            <small class="text-muted d-block mb-1">الاستحقاق</small>
+                            <span class="small fw-semibold">{{ invoice.dueDate | date:'d/M/yyyy' }}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="card-actions d-flex gap-2 border-top pt-3">
+                        <button class="btn btn-premium-light btn-sm flex-grow-1" (click)="openEditModal(invoice)">
+                            <i class="far fa-edit me-1"></i> تعديل
+                        </button>
+                        <button class="btn btn-outline-danger btn-sm px-3" (click)="deleteInvoice(invoice)">
+                            <i class="far fa-trash-alt"></i>
+                        </button>
+                    </div>
+                </div>
+                <div *ngIf="filteredInvoices.length === 0" class="text-center py-4">
+                     <p class="text-muted">لا توجد فواتير مطابقة</p>
+                </div>
+            </div>
+
+            <!-- Pagination -->
+            <div class="pagination-bar" *ngIf="!loading && totalPages > 1">
+                <button class="page-nav" [disabled]="currentPage === 1" (click)="goToPage(currentPage - 1)">
+                    <i class="fas fa-chevron-right"></i>
+                    السابق
+                </button>
+
+                <div class="page-numbers">
+                    <ng-container *ngFor="let p of pageNumbers">
+                        <span *ngIf="p === '...'" class="page-ellipsis">...</span>
+                        <button *ngIf="p !== '...'"
+                                class="page-num"
+                                [class.active]="p === currentPage"
+                                (click)="goToPage(+p)">{{ p }}</button>
+                    </ng-container>
+                </div>
+
+                <button class="page-nav" [disabled]="currentPage === totalPages" (click)="goToPage(currentPage + 1)">
+                    التالي
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+
+                <span class="page-info">
+                    عرض {{ pagedInvoices.length }} من {{ filteredInvoices.length }} فاتورة
+                </span>
             </div>
         </div>
     </div>

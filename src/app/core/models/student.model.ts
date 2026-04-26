@@ -8,7 +8,10 @@ export interface Student {
     gender?: string;
     classRoomId?: number;
     classRoomName?: string;
+    gradeId?: number;
+    gradeLevelId?: number;
     gradeName?: string;
+    gradeLevelName?: string;
     parentName?: string;
     parentId?: number;
     isActive: boolean;

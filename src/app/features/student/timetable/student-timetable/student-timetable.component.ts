@@ -14,10 +14,25 @@ import { Session } from '../../../../core/models/session.model';
 export class StudentTimetableComponent implements OnInit {
   sessions: Session[] = [];
   isFullScreen = false;
+  zoomLevel = 1;
   @ViewChild('timetableContent') timetableContent!: ElementRef;
 
   toggleFullScreen() {
     this.isFullScreen = !this.isFullScreen;
+  }
+
+  zoomIn() {
+    this.zoomLevel += 0.1;
+  }
+
+  zoomOut() {
+    if (this.zoomLevel > 0.5) {
+      this.zoomLevel -= 0.1;
+    }
+  }
+
+  resetZoom() {
+    this.zoomLevel = 1;
   }
 
   async downloadTimetable() {

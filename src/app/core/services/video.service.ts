@@ -25,4 +25,8 @@ export class VideoService {
     async addVideo(video: VideoInfo): Promise<any> {
         return this.api.post('/api/Videos', video);
     }
+
+    async incrementViews(id: number): Promise<{ views: number }> {
+        return this.api.post<{ views: number }>(`/api/Videos/${id}/view`, {});
+    }
 }

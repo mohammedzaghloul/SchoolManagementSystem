@@ -1,14 +1,16 @@
-import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ApiService } from '../../../core/services/api.service';
-import { Video } from '../../../core/models/video.model';
-import { VideoService } from '../../../core/services/video.service';
-import { SubjectService } from '../../../core/services/subject.service';
-import { SearchService } from '../../../core/services/search.service';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
-import { AuthService } from '../../../core/services/auth.service';
 import { Subscription } from 'rxjs';
+
+import { Video } from '../../../core/models/video.model';
+import { ApiService } from '../../../core/services/api.service';
+import { AuthService } from '../../../core/services/auth.service';
+import { NotificationService } from '../../../core/services/notification.service';
+import { SearchService } from '../../../core/services/search.service';
+import { SubjectService } from '../../../core/services/subject.service';
+import { VideoService } from '../../../core/services/video.service';
 
 @Component({
   selector: 'app-videos',
@@ -17,33 +19,32 @@ import { Subscription } from 'rxjs';
   templateUrl: './videos.component.html',
   styleUrls: ['./videos.component.css']
 })
-export class VideosComponent implements OnInit {
+export class VideosComponent implements OnInit, OnDestroy {
   showModal = false;
   loading = false;
   isEditing = false;
   currentUserRole = '';
   videos: Video[] = [];
-  filteredVideos: any[] = [];
+  filteredVideos: Video[] = [];
   subjects: any[] = [];
   grades: any[] = [];
-  searchSub!: Subscription;
+  searchSub?: Subscription;
 
-  // For Playing Video
   showPlayer = false;
   selectedVideoUrl: SafeResourceUrl | null = null;
   activeVideo: Video | null = null;
 
-  newVideo: any = {
-    id: null,
-    url: '',
-    title: '',
-    description: '',
-    subjectId: null,
-    gradeLevelId: null,
-    thumbnailUrl: 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&q=80&w=400&h=250',
-    duration: '10:00',
-    isHidden: false
-  };
+  showSuccessOverlay = false;
+  successOverlayTitle = 'تم الحفظ بنجاح!';
+  successOverlayMessage = 'تم تحديث المحتوى المرئي في قاعدة البيانات بنجاح.';
+
+  showDeleteOverlay = false;
+  pendingDeleteVideo: Video | null = null;
+  deletingVideo = false;
+
+  newVideo: any = this.getEmptyVideo();
+
+  private successOverlayTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
     private videoService: VideoService,
@@ -51,13 +52,14 @@ export class VideosComponent implements OnInit {
     private searchService: SearchService,
     private sanitizer: DomSanitizer,
     private api: ApiService,
-    private auth: AuthService
-  ) { }
+    private auth: AuthService,
+    private notificationService: NotificationService
+  ) {}
 
-  ngOnInit() {
+  ngOnInit(): void {
     const user = this.auth.getCurrentUser();
     this.currentUserRole = user?.role || '';
-    
+
     this.loadVideos();
     this.loadDependencies();
 
@@ -66,114 +68,116 @@ export class VideosComponent implements OnInit {
     });
   }
 
-  ngOnDestroy() {
-    if (this.searchSub) this.searchSub.unsubscribe();
+  ngOnDestroy(): void {
+    this.searchSub?.unsubscribe();
+
+    if (this.successOverlayTimer) {
+      clearTimeout(this.successOverlayTimer);
+      this.successOverlayTimer = null;
+    }
   }
 
-  filterVideos(term: string) {
-    if (!term) {
+  filterVideos(term: string): void {
+    const normalizedTerm = (term || '').trim().toLowerCase();
+    if (!normalizedTerm) {
       this.filteredVideos = [...this.videos];
       return;
     }
-    const t = term.toLowerCase();
-    this.filteredVideos = this.videos.filter(v =>
-      v.title.toLowerCase().includes(t) ||
-      (v.subject && v.subject.toLowerCase().includes(t)) ||
-      (v.description && v.description.toLowerCase().includes(t)) ||
-      (v.gradeName && v.gradeName.toLowerCase().includes(t))
+
+    this.filteredVideos = this.videos.filter(video =>
+      video.title?.toLowerCase().includes(normalizedTerm) ||
+      video.subject?.toLowerCase().includes(normalizedTerm) ||
+      video.description?.toLowerCase().includes(normalizedTerm) ||
+      video.gradeName?.toLowerCase().includes(normalizedTerm)
     );
   }
 
-  async loadDependencies() {
+  async loadDependencies(): Promise<void> {
     try {
-      const [subs, grades] = await Promise.all([
+      const [subjects, grades] = await Promise.all([
         this.subjectService.getAll(),
         this.api.get<any[]>('/api/Videos/grades')
       ]);
-      this.subjects = subs;
+
+      this.subjects = subjects;
       this.grades = grades;
-    } catch (err) {
-      console.error('Failed to load dependencies', err);
+    } catch (error) {
+      console.error('Failed to load video dependencies', error);
     }
   }
 
-  async loadVideos() {
+  async loadVideos(): Promise<void> {
     this.loading = true;
+
     try {
       this.videos = await this.videoService.getVideos();
       this.filteredVideos = [...this.videos];
-    } catch (err) {
-      console.error('Failed to load videos', err);
+    } catch (error) {
+      console.error('Failed to load videos', error);
       this.videos = [];
       this.filteredVideos = [];
+      this.notificationService.error('تعذر تحميل قائمة الفيديوهات الآن.');
     } finally {
       this.loading = false;
     }
   }
 
-  openModal() {
+  openModal(): void {
     this.isEditing = false;
-    this.resetForm();
+    this.newVideo = this.getEmptyVideo();
     this.showModal = true;
   }
 
-  closeModal() {
+  closeModal(): void {
     this.showModal = false;
-    this.resetForm();
+    this.newVideo = this.getEmptyVideo();
   }
 
-  private resetForm() {
-    this.newVideo = {
-      id: null,
-      url: '',
-      title: '',
-      description: '',
-      subjectId: null,
-      thumbnailUrl: 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&q=80&w=400&h=250',
-      duration: '10:00',
-      isHidden: false
-    };
-  }
-
-  async publishVideo() {
+  async publishVideo(): Promise<void> {
     if (!this.newVideo.url || !this.newVideo.title || !this.newVideo.subjectId) {
-      alert('يرجى ملء جميع الحقول المطلوبة');
+      this.notificationService.warning('يرجى ملء رابط الفيديو والعنوان والمادة قبل الحفظ.');
       return;
     }
 
-    // Extraction logic
-    const youtubeRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
-    const match = this.newVideo.url.match(youtubeRegex);
-    if (match && match[1]) {
-      this.newVideo.thumbnailUrl = `https://img.youtube.com/vi/${match[1]}/hqdefault.jpg`;
+    const youtubeId = this.extractYouTubeId(this.newVideo.url);
+    if (youtubeId) {
+      this.newVideo.thumbnailUrl = `https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg`;
     }
 
-    try {
-      const payload: any = {
-        title: this.newVideo.title,
-        description: this.newVideo.description,
-        url: this.newVideo.url,
-        thumbnailUrl: this.newVideo.thumbnailUrl,
-        duration: this.newVideo.duration,
-        subjectId: this.newVideo.subjectId,
-        gradeLevelId: this.newVideo.gradeLevelId,
-        isHidden: this.newVideo.isHidden
-      };
+    const payload: any = {
+      title: this.newVideo.title,
+      description: this.newVideo.description,
+      url: this.newVideo.url,
+      thumbnailUrl: this.newVideo.thumbnailUrl,
+      duration: this.newVideo.duration,
+      subjectId: this.newVideo.subjectId,
+      gradeLevelId: this.newVideo.gradeLevelId,
+      isHidden: this.newVideo.isHidden
+    };
 
+    try {
       if (this.isEditing) {
         payload.id = this.newVideo.id;
         await this.api.put(`/api/Videos/${this.newVideo.id}`, payload);
       } else {
         await this.api.post('/api/Videos', payload);
       }
+
       await this.loadVideos();
       this.closeModal();
-    } catch (err) {
-      console.error('Failed to save video', err);
+      this.flashSuccessOverlay(
+        'تم الحفظ بنجاح!',
+        this.isEditing
+          ? 'تم تحديث بيانات الفيديو في قاعدة البيانات.'
+          : 'تم إضافة الفيديو إلى المكتبة التعليمية بنجاح.'
+      );
+    } catch (error) {
+      console.error('Failed to save video', error);
+      this.notificationService.error('تعذر حفظ الفيديو الآن. حاول مرة أخرى.');
     }
   }
 
-  editVideo(video: any) {
+  editVideo(video: any): void {
     this.isEditing = true;
     this.newVideo = {
       id: video.id,
@@ -183,61 +187,140 @@ export class VideosComponent implements OnInit {
       subjectId: video.subjectId || null,
       gradeLevelId: video.gradeLevelId || null,
       thumbnailUrl: video.thumbnailUrl || video.thumbnail,
-      duration: video.duration,
-      isHidden: video.isHidden || false
+      duration: video.duration || '10:00',
+      isHidden: !!video.isHidden
     };
     this.showModal = true;
   }
 
-  playVideo(video: Video) {
+  async playVideo(video: Video): Promise<void> {
+    this.incrementVideoViews(video);
+
     const youtubeId = this.extractYouTubeId(video.url);
+
     if (youtubeId) {
-      this.selectedVideoUrl = this.sanitizer.bypassSecurityTrustResourceUrl(`https://www.youtube.com/embed/${youtubeId}?autoplay=1`);
+      this.selectedVideoUrl = this.sanitizer.bypassSecurityTrustResourceUrl(
+        `https://www.youtube.com/embed/${youtubeId}?autoplay=1`
+      );
       this.activeVideo = video;
       this.showPlayer = true;
-    } else {
-      // For non-YouTube or invalid IDs, open in a new tab to avoid frame errors
-      window.open(video.url, '_blank');
+      return;
     }
+
+    window.open(video.url, '_blank');
+  }
+
+  private async incrementVideoViews(video: Video): Promise<void> {
+    try {
+      const result = await this.videoService.incrementViews(video.id);
+      video.views = result.views;
+    } catch {
+      video.views = (video.views || 0) + 1;
+    }
+  }
+
+  async toggleLock(video: any): Promise<void> {
+    const previousState = !!video.isHidden;
+    video.isHidden = !previousState;
+
+    const payload = {
+      id: video.id,
+      title: video.title,
+      description: video.description,
+      url: video.url,
+      thumbnailUrl: video.thumbnailUrl || video.thumbnail,
+      subjectId: video.subjectId,
+      gradeLevelId: video.gradeLevelId,
+      isHidden: video.isHidden
+    };
+
+    try {
+      await this.api.put(`/api/Videos/${video.id}`, payload);
+      this.flashSuccessOverlay(
+        'تم التحديث بنجاح!',
+        video.isHidden ? 'تم إخفاء الفيديو عن الطلاب.' : 'تم إظهار الفيديو للطلاب.'
+      );
+    } catch (error) {
+      video.isHidden = previousState;
+      console.error('Failed to toggle video visibility', error);
+      this.notificationService.error('تعذر تحديث حالة الفيديو الآن.');
+    }
+  }
+
+  deleteVideo(video: Video): void {
+    this.pendingDeleteVideo = video;
+    this.showDeleteOverlay = true;
+  }
+
+  cancelDeleteVideo(): void {
+    if (this.deletingVideo) {
+      return;
+    }
+
+    this.pendingDeleteVideo = null;
+    this.showDeleteOverlay = false;
+  }
+
+  async confirmDeleteVideo(): Promise<void> {
+    if (!this.pendingDeleteVideo || this.deletingVideo) {
+      return;
+    }
+
+    const video = this.pendingDeleteVideo;
+    this.deletingVideo = true;
+
+    try {
+      await this.api.delete(`/api/Videos/${video.id}`);
+      this.videos = this.videos.filter(item => item.id !== video.id);
+      this.filteredVideos = this.filteredVideos.filter(item => item.id !== video.id);
+      this.pendingDeleteVideo = null;
+      this.showDeleteOverlay = false;
+      this.flashSuccessOverlay('تم الحذف بنجاح!', 'تم حذف الفيديو من المكتبة التعليمية بنجاح.');
+    } catch (error) {
+      console.error('Failed to delete video', error);
+      this.notificationService.error('تعذر حذف الفيديو الآن. حاول مرة أخرى.');
+    } finally {
+      this.deletingVideo = false;
+    }
+  }
+
+  private getEmptyVideo(): any {
+    return {
+      id: null,
+      url: '',
+      title: '',
+      description: '',
+      subjectId: null,
+      gradeLevelId: null,
+      thumbnailUrl:
+        'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&q=80&w=400&h=250',
+      duration: '10:00',
+      isHidden: false
+    };
   }
 
   private extractYouTubeId(url: string): string | null {
-    if (!url) return null;
-    const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?v=)|(\?v=)|(shorts\/)|(live\/))([^#\&\?]*).*/;
+    if (!url) {
+      return null;
+    }
+
+    const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?v=)|(\?v=)|(shorts\/)|(live\/))([^#&?]*).*/;
     const match = url.match(regExp);
-    return (match && (match[10].length === 11)) ? match[10] : null;
+    return match && match[10]?.length === 11 ? match[10] : null;
   }
 
-  async toggleLock(video: any) {
-    try {
-      const originalState = video.isHidden;
-      video.isHidden = !video.isHidden;
-      
-      const payload = {
-        id: video.id,
-        title: video.title,
-        description: video.description,
-        url: video.url,
-        thumbnailUrl: video.thumbnailUrl || video.thumbnail,
-        subjectId: video.subjectId,
-        gradeLevelId: video.gradeLevelId,
-        isHidden: video.isHidden
-      };
-
-      await this.api.put(`/api/Videos/${video.id}`, payload);
-    } catch (err) {
-      video.isHidden = !video.isHidden; // Revert on fail
-      console.error('Failed to toggle lock', err);
+  private flashSuccessOverlay(title: string, message: string): void {
+    if (this.successOverlayTimer) {
+      clearTimeout(this.successOverlayTimer);
     }
-  }
 
-  async deleteVideo(video: Video) {
-    if (!confirm('هل أنت متأكد من حذف هذا الفيديو؟')) return;
-    try {
-      await this.api.delete(`/api/Videos/${video.id}`);
-      this.videos = this.videos.filter(v => v.id !== video.id);
-    } catch (err) {
-      console.error('Failed to delete video', err);
-    }
+    this.successOverlayTitle = title;
+    this.successOverlayMessage = message;
+    this.showSuccessOverlay = true;
+
+    this.successOverlayTimer = setTimeout(() => {
+      this.showSuccessOverlay = false;
+      this.successOverlayTimer = null;
+    }, 2600);
   }
 }

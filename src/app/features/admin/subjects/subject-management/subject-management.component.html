@@ -2,12 +2,55 @@
     <div class="page-header d-flex justify-content-between align-items-center mb-4">
         <div>
             <h2 class="page-title text-gradient fw-bold">إدارة المواد الدراسية</h2>
-            <p class="text-muted mb-0">إضافة وتعديل المناهج والمواد التعليمية للمراحل المختلفة</p>
+            <p class="text-muted mb-0">اختر الفصل ثم أضف أو عدّل أو احذف المواد المرتبطة به بسهولة.</p>
         </div>
-        <button class="btn btn-premium d-flex align-items-center gap-2" (click)="openAddModal()">
-            <i class="fas fa-plus"></i>
+        <button class="btn btn-add-premium d-flex align-items-center gap-2" (click)="openAddModal()">
+            <div class="plus-icon-circle">
+                <i class="fas fa-plus"></i>
+            </div>
             <span>إضافة مادة جديدة</span>
         </button>
+    </div>
+
+    <!-- Grade Level Tabs -->
+    <div class="grade-tabs-wrap">
+        <button class="grade-tab" [class.active]="selectedGradeLevelId === 'all'" (click)="selectGradeLevel('all')">
+            <i class="fas fa-layer-group"></i>
+            <span>كل السنوات</span>
+            <span class="grade-count">{{ getGradeLevelSubjectCount('all') }}</span>
+        </button>
+        <button *ngFor="let gl of gradeLevels" class="grade-tab"
+            [class.active]="selectedGradeLevelId === gl.id" (click)="selectGradeLevel(gl.id)">
+            <i class="fas fa-graduation-cap"></i>
+            <span>{{ gl.name }}</span>
+            <span class="grade-count">{{ getGradeLevelSubjectCount(gl.id) }}</span>
+        </button>
+        <button class="grade-tab" [class.active]="selectedClassRoomId === 'general'" (click)="selectedClassRoomId = 'general'; selectedGradeLevelId = 'all'; applyFilter()">
+            <i class="fas fa-globe"></i>
+            <span>مواد عامة</span>
+        </button>
+    </div>
+
+    <div class="class-focus-panel">
+        <div>
+            <span class="panel-label">السنة / الفصل الحالي</span>
+            <h3>{{ selectedClassLabel }}</h3>
+            <p>المعروض الآن {{ filteredSubjects.length }} مادة من إجمالي {{ subjects.length }} مادة.</p>
+        </div>
+        <div class="panel-actions" *ngIf="selectedGradeLevelId !== 'all'">
+            <select class="form-select" [(ngModel)]="selectedClassRoomId" (change)="applyFilter()">
+                <option value="all">كل فصول السنة</option>
+                <option *ngFor="let cls of classRoomsForGrade" [ngValue]="cls.id">{{ cls.name }}</option>
+            </select>
+        </div>
+
+        <div class="panel-actions">
+            <select class="form-select" [(ngModel)]="selectedStatus" (change)="applyFilter()">
+                <option value="all">كل الحالات</option>
+                <option value="active">نشط</option>
+                <option value="inactive">غير نشط</option>
+            </select>
+        </div>
     </div>
 
     <div class="premium-toolbar">
@@ -18,15 +61,14 @@
         </div>
         <div class="filter-wrapper">
             <select class="form-select" [(ngModel)]="selectedTerm" (change)="applyFilter()">
-                <option value="all">كل التيرمات</option>
+                <option value="all">كل الترمات</option>
                 <option *ngFor="let term of terms" [value]="term">{{ term }}</option>
             </select>
         </div>
     </div>
 
     <div class="row g-4 list-container">
-        <!-- Subject Card -->
-        <div class="col-md-6 col-xl-4" *ngFor="let sub of filteredSubjects">
+        <div class="col-md-6 col-xl-4" *ngFor="let sub of pagedSubjects">
             <div class="card border-0 rounded-4 shadow-sm h-100 subject-card">
                 <div class="card-body p-4">
                     <div class="d-flex justify-content-between align-items-start mb-4">
@@ -37,7 +79,7 @@
                             <button class="btn btn-light rounded-circle shadow-sm btn-icon edit-btn" (click)="openEditModal(sub)" title="تعديل">
                                 <i class="fas fa-pen text-primary"></i>
                             </button>
-                            <button class="btn btn-light rounded-circle shadow-sm btn-icon delete-btn" (click)="deleteSubject(sub.id)" title="حذف">
+                            <button class="btn btn-light rounded-circle shadow-sm btn-icon delete-btn" (click)="deleteSubject(sub)" title="حذف">
                                 <i class="fas fa-trash-alt text-danger"></i>
                             </button>
                         </div>
@@ -47,7 +89,7 @@
                     
                     <div class="d-flex flex-wrap gap-2 mb-3">
                         <span class="badge bg-light text-secondary border px-2 py-1 rounded-pill">
-                            <i class="fas fa-hashtag me-1"></i> الكود: {{ sub.code || 'غير مجدول' }}
+                            <i class="fas fa-hashtag me-1"></i> الكود: {{ sub.code || 'غير محدد' }}
                         </span>
                         <span class="badge bg-light text-secondary border px-2 py-1 rounded-pill text-truncate" style="max-width: 200px;" [title]="sub.description || 'لا يوجد وصف'">
                             <i class="fas fa-info-circle me-1"></i> {{ sub.description || 'لا يوجد وصف' }}
@@ -57,7 +99,7 @@
                     <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top">
                         <div class="d-flex align-items-center gap-2">
                             <i class="fas fa-layer-group text-muted"></i>
-                            <span class="text-muted small fw-medium">المرحلة: <span class="text-dark">{{ getClassRoomName(sub.classRoomId) }}</span></span>
+                            <span class="text-muted small fw-medium">الفصل: <span class="text-dark">{{ getClassRoomName(sub.classRoomId) }}</span></span>
                         </div>
                         <div class="d-flex flex-column align-items-end gap-2">
                             <span class="badge bg-light text-secondary border px-3 py-2 rounded-pill fw-bold">{{ sub.term || 'الترم الأول' }}</span>
@@ -74,20 +116,25 @@
             <div class="spinner-border text-primary"></div>
         </div>
 
-        <div class="col-12" *ngIf="!loading && subjects.length === 0">
+        <div class="col-12" *ngIf="!loading && filteredSubjects.length === 0">
             <div class="text-center py-5 bg-white rounded-4 shadow-sm border border-dashed">
                 <div class="empty-state-icon mb-3">
                     <i class="fas fa-books fs-1 text-muted"></i>
                 </div>
-                <h5 class="fw-bold text-dark">لا توجد مواد مدرجة</h5>
-                <p class="text-muted">قم بإضافة المناهج الدراسية لتبدأ في ترتيب الجدول.</p>
-                <button class="btn btn-outline-primary rounded-pill px-4" (click)="openAddModal()">اضافة اول مادة</button>
+                <h5 class="fw-bold text-dark">لا توجد مواد لهذا الاختيار</h5>
+                <p class="text-muted">غيّر الفصل أو الترم، أو أضف أول مادة لهذا الفصل.</p>
+                <button class="btn btn-outline-primary rounded-pill px-4" (click)="openAddModal()">إضافة مادة</button>
             </div>
         </div>
     </div>
+
+    <div class="pagination-bar" *ngIf="filteredSubjects.length > pageSize">
+        <button type="button" (click)="goToPage(page - 1)" [disabled]="page === 1">السابق</button>
+        <span>صفحة {{ page }} من {{ totalPages }}</span>
+        <button type="button" (click)="goToPage(page + 1)" [disabled]="page === totalPages">التالي</button>
+    </div>
 </div>
 
-<!-- Modal -->
 <div class="modal-backdrop fade show" *ngIf="showModal"></div>
 <div class="modal fade show d-block" *ngIf="showModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
@@ -99,14 +146,14 @@
                     </div>
                     <h5 class="modal-title fw-bold mb-0 text-dark">{{ isEditMode ? 'تعديل مادة دراسية' : 'مادة دراسية جديدة' }}</h5>
                 </div>
-                <button type="button" class="btn-close shadow-none m-0 me-auto ms-0" (click)="showModal = false"></button>
+                <button type="button" class="btn-close shadow-none m-0 me-auto ms-0" (click)="closeModal()"></button>
             </div>
             
             <form (ngSubmit)="saveSubject()">
                 <div class="modal-body p-4 pt-4">
                     <div class="mb-4">
                         <label class="form-label fw-semibold text-secondary">اسم المادة</label>
-                        <input type="text" class="form-control form-control-lg rounded-3" placeholder="مثال: الرياضيات المتقدمة" name="name" [(ngModel)]="currentSubject.name" required>
+                        <input type="text" class="form-control form-control-lg rounded-3" placeholder="مثال: الرياضيات" name="name" [(ngModel)]="currentSubject.name" required>
                     </div>
                     
                     <div class="row g-4">
@@ -120,31 +167,39 @@
                                 <option *ngFor="let term of terms" [value]="term">{{ term }}</option>
                             </select>
                         </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold text-secondary">السنة الدراسية</label>
+                            <select class="form-select form-control-lg rounded-3" name="gradeForModal"
+                                [(ngModel)]="modalGradeId" (change)="currentSubject.classRoomId = null">
+                                <option [ngValue]="null">مادة عامة (كل السنوات)</option>
+                                <option *ngFor="let gl of gradeLevels" [ngValue]="gl.id">{{ gl.name }}</option>
+                            </select>
+                        </div>
                         <div class="col-md-12">
-                            <label class="form-label fw-semibold text-secondary">الفصل / القاعة (اختياري)</label>
+                            <label class="form-label fw-semibold text-secondary">الفصل <span class="text-muted small">(اختياري)</span></label>
                             <select class="form-select form-control-lg rounded-3" name="classRoomId" [(ngModel)]="currentSubject.classRoomId">
-                                <option [ngValue]="null">مادة عامة / أساسي</option>
-                                <option *ngFor="let cls of classRooms" [value]="cls.id">{{ cls.name }}</option>
+                                <option [ngValue]="null">كل فصول السنة</option>
+                                <option *ngFor="let cls of getClassRoomsForModalGrade()" [ngValue]="cls.id">{{ cls.name }}</option>
                             </select>
                         </div>
                     </div>
 
                     <div class="mt-4">
                         <label class="form-label fw-semibold text-secondary">وصف المادة</label>
-                        <textarea class="form-control form-control-lg rounded-3" rows="2" placeholder="أدخل وصفاً قصيراً لهذه المادة..." name="description" [(ngModel)]="currentSubject.description"></textarea>
+                        <textarea class="form-control form-control-lg rounded-3" rows="2" placeholder="أدخل وصفًا مختصرًا لهذه المادة..." name="description" [(ngModel)]="currentSubject.description"></textarea>
                     </div>
 
                     <div class="form-check form-switch mt-4 bg-light p-3 rounded-3 d-flex justify-content-between align-items-center m-0">
-                        <label class="form-check-label fw-semibold text-dark m-0" for="flexSwitchCheckChecked">إظهار المادة في هذا الترم</label>
-                        <input class="form-check-input m-0 fs-5" type="checkbox" role="switch" id="flexSwitchCheckChecked" name="isActive" [(ngModel)]="currentSubject.isActive">
+                        <label class="form-check-label fw-semibold text-dark m-0" for="subjectActiveSwitch">إظهار المادة للمدرسين والطلاب</label>
+                        <input class="form-check-input m-0 fs-5" type="checkbox" role="switch" id="subjectActiveSwitch" name="isActive" [(ngModel)]="currentSubject.isActive">
                     </div>
                 </div>
                 
                 <div class="modal-footer border-0 p-4 pt-0 d-flex justify-content-start gap-2">
                     <button type="submit" class="btn btn-primary btn-lg rounded-3 px-4 shadow-sm" [disabled]="submitting">
-                        {{ isEditMode ? 'حفظ التعديلات' : 'إعتماد المادة' }}
+                        {{ isEditMode ? 'حفظ التعديلات' : 'اعتماد المادة' }}
                     </button>
-                    <button type="button" class="btn btn-light btn-lg rounded-3 px-4" (click)="showModal = false">إلغاء الأمر</button>
+                    <button type="button" class="btn btn-light btn-lg rounded-3 px-4" (click)="closeModal()">إلغاء الأمر</button>
                 </div>
             </form>
         </div>

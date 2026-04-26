@@ -1,117 +1,373 @@
 <div class="parent-dashboard-container" dir="rtl">
-  <header class="dashboard-header highlight-card shadow-sm" *ngIf="!loading">
-    <div class="welcome-text">
-      <h1>أهلاً بك، {{ parentName }}</h1>
-      <p>هذا هو الملخص اليومي لأبنائك في المدرسة</p>
-    </div>
-
-    <div class="quick-stats" *ngIf="summary.pendingPaymentsAmount > 0">
-      <div class="stat-mini">
-        <span>المصاريف المطلوبة</span>
-        <strong>{{ formatCurrency(summary.pendingPaymentsAmount) }}</strong>
+  <ng-container *ngIf="!loading; else loadingState">
+    <header class="parent-topbar">
+      <div class="topbar-welcome">
+        <span class="topbar-icon"><i class="fas fa-user-friends"></i></span>
+        <div>
+          <p>أهلاً بك</p>
+          <h1>{{ parentName }}</h1>
+        </div>
       </div>
-      <button routerLink="/parent/payments" class="btn-pay-now">سدد الآن</button>
-    </div>
-  </header>
 
-  <section class="children-section" *ngIf="!loading">
-    <div class="section-title">
-      <h3>أبنائي</h3>
-      <span class="count">{{ children.length }} طلاب</span>
-    </div>
+      <div class="topbar-meta">
+        <span class="date-pill"><i class="far fa-calendar"></i>{{ getTodayLabel() }}</span>
+      </div>
+    </header>
 
-    <div class="children-list">
-      <article class="child-box shadow-sm" *ngFor="let child of children" (click)="selectChild(child)">
-        <div class="child-main">
-          <div class="child-avatar">
-            {{ child.fullName.charAt(0) }}
-          </div>
-          <div class="child-info">
-            <h4>{{ child.fullName }}</h4>
-            <p>{{ child.classRoomName }}</p>
-          </div>
+    <section class="daily-focus" aria-label="أهم حاجة اليوم">
+      <div class="section-title">
+        <div>
+          <span class="eyebrow">المتابعة اليومية</span>
+          <h2>أهم حاجة اليوم</h2>
         </div>
-        <div class="child-status">
-          <div class="attendance-ring" [style.color]="getAttendanceColor(child.attendanceRate)">
-            {{ child.attendanceRate }}%
+        <span>كل ما يحتاج متابعة في مكان واحد</span>
+      </div>
+
+      <div class="quick-action-grid">
+        <article class="quick-card money" [class.is-clear]="summary.pendingPaymentsAmount === 0">
+          <div class="quick-icon"><i class="fas fa-wallet"></i></div>
+          <div class="quick-body">
+            <span>المصروفات</span>
+            <strong>{{ formatCurrency(summary.pendingPaymentsAmount) }}</strong>
+            <small>{{ summary.pendingInvoicesCount }} فواتير محتاجة متابعة</small>
+          </div>
+          <a routerLink="/parent/payments" class="quick-action primary">ادفع الآن</a>
+        </article>
+
+        <article class="quick-card assignments" [class.is-clear]="getOpenAssignmentsTotal() === 0">
+          <div class="quick-icon"><i class="fas fa-book-open"></i></div>
+          <div class="quick-body">
+            <span>الواجبات</span>
+            <strong>{{ getOpenAssignmentsHeadline() }}</strong>
+            <small>{{ getOpenAssignmentsStatusText() }}</small>
+          </div>
+          <a href="#children-files" class="quick-action">راجع الواجبات</a>
+        </article>
+
+        <article class="quick-card attendance" [class.needs-attention]="getAttendanceConcernCount() > 0">
+          <div class="quick-icon"><i class="fas fa-user-check"></i></div>
+          <div class="quick-body">
             <span>الحضور</span>
+            <strong>{{ summary.averageAttendanceRate }}%</strong>
+            <small>{{ getAttendanceConcernCount() === 0 ? 'الحالة مطمئنة' : getDailyAttendanceText() }}</small>
           </div>
-          <span class="badge" [ngClass]="getChildStatusClass(child.latestAttendanceStatus)">
-            {{ getChildStatusLabel(child.latestAttendanceStatus) }}
-          </span>
-        </div>
+          <a href="#child-overview" class="quick-action">افتح الحضور</a>
+        </article>
+
+        <article class="quick-card messages">
+          <div class="quick-icon"><i class="fas fa-comments"></i></div>
+          <div class="quick-body">
+            <span>التواصل</span>
+            <strong>راسل المدرسة</strong>
+            <small>للأسئلة أو متابعة ملاحظة مهمة</small>
+          </div>
+          <a routerLink="/chat" class="quick-action">إرسال رسالة</a>
+        </article>
+      </div>
+    </section>
+
+    <section class="stats-overview" aria-label="الإحصائيات السريعة">
+      <article>
+        <span>عدد الأبناء</span>
+        <strong>{{ summary.totalChildren }}</strong>
       </article>
-    </div>
-  </section>
+      <article>
+        <span>الحضور</span>
+        <strong>{{ summary.averageAttendanceRate }}%</strong>
+      </article>
+      <article>
+        <span>الدرجات</span>
+        <strong>{{ summary.averageScore }}%</strong>
+      </article>
+      <article class="warn">
+        <span>فواتير للدفع</span>
+        <strong>{{ summary.pendingInvoicesCount }}</strong>
+      </article>
+    </section>
 
-  <div class="fab-container">
-    <button class="fab-chat" routerLink="/chat">
-      <i class="fas fa-comments"></i>
-      <span>كلم المدرسين</span>
-    </button>
-  </div>
+    <section class="children-section" id="children-files" aria-label="ملفات الأبناء">
+      <div class="section-title">
+        <div>
+          <span class="eyebrow">ملفات الأبناء</span>
+          <h2>اختار ابنك لمتابعة التفاصيل</h2>
+        </div>
+        <span>كل طالب له ملف مستقل</span>
+      </div>
 
-  <div class="details-overlay" *ngIf="selectedChild" (click)="closeDetails()">
-    <div class="details-drawer shadow-lg" (click)="$event.stopPropagation()">
-      <header>
-        <button class="btn-close" (click)="closeDetails()">×</button>
-        <div class="drawer-user">
-          <div class="drawer-avatar">{{ selectedChild.fullName.charAt(0) }}</div>
-          <div class="drawer-info">
-            <h3>{{ selectedChild.fullName }}</h3>
-            <p>{{ selectedChild.classRoomName }} - {{ selectedChild.gradeLevel }}</p>
+      <div class="children-cards-grid">
+        <article class="child-card" *ngFor="let child of children" [class.active]="isSelectedChild(child)">
+          <div class="child-card-main">
+            <span class="child-avatar">{{ child.fullName.charAt(0) }}</span>
+            <div class="child-title">
+              <h3>{{ child.fullName }}</h3>
+              <p>{{ getChildClassLabel(child) }}</p>
+            </div>
+          </div>
+
+          <div class="child-mini-stats">
+            <span>
+              <b>{{ child.average }}%</b>
+              درجات
+            </span>
+            <span>
+              <b>{{ child.attendanceRate }}%</b>
+              حضور
+            </span>
+            <span>
+              <b>{{ getPendingPaymentsCount(child) }}</b>
+              فواتير
+            </span>
+          </div>
+
+          <button
+            type="button"
+            class="child-detail-btn"
+            [attr.aria-pressed]="isSelectedChild(child)"
+            (click)="selectChild(child)">
+            عرض التفاصيل
+          </button>
+        </article>
+      </div>
+    </section>
+
+    <main class="child-overview" id="child-overview" *ngIf="selectedChild as child; else noSelectedChild">
+      <section class="child-profile-header">
+        <div class="student-head">
+          <span class="student-avatar-lg">{{ child.fullName.charAt(0) }}</span>
+          <div>
+            <span class="eyebrow">ابني عامل إيه؟</span>
+            <h2 class="student-name-text">{{ child.fullName }}</h2>
+            <p class="student-meta-text">{{ getChildClassLabel(child) }} · آخر حضور: {{ getShortDate(child.latestAttendanceAt) }}</p>
           </div>
         </div>
-      </header>
 
-      <div class="drawer-content">
-        <div class="stats-grid-details">
-          <div class="stat-box-d">
-            <i class="fas fa-calendar-check color-green"></i>
-            <span>نسبة الحضور</span>
-            <strong>{{ selectedChild.attendanceRate }}%</strong>
-          </div>
-          <div class="stat-box-d">
-            <i class="fas fa-user-times color-red"></i>
-            <span>أيام الغياب</span>
-            <strong>{{ selectedChild.absences }} أيام</strong>
-          </div>
-          <div class="stat-box-d">
-            <i class="fas fa-chart-line color-blue"></i>
-            <span>المتوسط العام</span>
-            <strong>{{ selectedChild.average }}%</strong>
+        <div class="last-status" [ngClass]="getChildStatusClass(child.latestAttendanceStatus)">
+          <span>آخر حالة</span>
+          <strong>{{ getChildStatusLabel(child.latestAttendanceStatus) }}</strong>
+        </div>
+      </section>
+
+      <section class="child-summary-grid" aria-label="ملخص الابن">
+        <article>
+          <span>الدرجات</span>
+          <strong>{{ getSelectedAssessmentAverage() || getAssessmentAverage(child) }}%</strong>
+        </article>
+        <article>
+          <span>النشاط</span>
+          <strong>{{ getSelectedParticipationAverage() || getParticipationAverage(child) }}%</strong>
+        </article>
+        <article>
+          <span>الحضور</span>
+          <strong [style.color]="getAttendanceColor(child.attendanceRate)">{{ child.attendanceRate }}%</strong>
+        </article>
+        <article>
+          <span>الغياب</span>
+          <strong>{{ child.absences }}</strong>
+        </article>
+      </section>
+
+      <section class="performance-card">
+        <div class="section-title compact">
+          <div>
+            <span class="eyebrow">توزيع الأداء</span>
+            <h2>قراءة سريعة لحالة الطالب</h2>
           </div>
         </div>
 
-        <div class="detail-section">
-          <div class="d-flex justify-content-between align-items-center mb-3">
-            <h4 class="mb-0">آخر الدرجات</h4>
-            <a [routerLink]="['/parent/child-results', selectedChild.id]" class="view-more-link" *ngIf="selectedChild.recentGrades.length > 4">
-              عرض الكل <i class="fas fa-chevron-left small ms-1"></i>
-            </a>
+        <div class="progress-list">
+          <div class="progress-row">
+            <div>
+              <span>درجات</span>
+              <b>{{ getSelectedAssessmentAverage() || getAssessmentAverage(child) }}%</b>
+            </div>
+            <div class="progress-track"><span [style.width.%]="getProgressValue(getSelectedAssessmentAverage() || getAssessmentAverage(child))"></span></div>
           </div>
-          <div class="grade-list-simple">
-            <div class="grade-item" *ngFor="let grade of selectedChild.recentGrades">
-              <span class="small">{{ grade.subject }}</span>
-              <div class="grade-val">
-                <div class="grade-bar" [style.width.%]="grade.score"></div>
-                <strong class="small">{{ grade.score }}%</strong>
+
+          <div class="progress-row">
+            <div>
+              <span>نشاط</span>
+              <b>{{ getSelectedParticipationAverage() || getParticipationAverage(child) }}%</b>
+            </div>
+            <div class="progress-track activity"><span [style.width.%]="getProgressValue(getSelectedParticipationAverage() || getParticipationAverage(child))"></span></div>
+          </div>
+
+          <div class="progress-row">
+            <div>
+              <span>حضور</span>
+              <b>{{ child.attendanceRate }}%</b>
+            </div>
+            <div class="progress-track attendance-bar"><span [style.width.%]="getProgressValue(child.attendanceRate)"></span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="details-layout">
+        <article class="panel panel-wide">
+          <div class="panel-heading">
+            <div>
+              <span class="eyebrow">المواد</span>
+              <h3>مستوى الطالب حسب المادة</h3>
+            </div>
+            <span>{{ selectedGradeBreakdown.length }} مواد</span>
+          </div>
+
+          <div class="subjects-grid" *ngIf="selectedGradeBreakdown.length; else noGradesBySubject">
+            <div class="subject-card" *ngFor="let item of selectedGradeBreakdown">
+              <div>
+                <strong>{{ item.subject }}</strong>
+                <small>{{ getGradeTypeLabel(item.latestType) }} · {{ item.latestDate | date:'d/M/yyyy' }}</small>
+              </div>
+              <b>{{ item.average }}%</b>
+              <div class="progress-track mini"><span [style.width.%]="getProgressValue(item.average)"></span></div>
+            </div>
+          </div>
+          <ng-template #noGradesBySubject>
+            <div class="empty-state">لا توجد درجات لهذا الطالب حالياً.</div>
+          </ng-template>
+        </article>
+
+        <article class="panel">
+          <div class="panel-heading">
+            <div>
+              <span class="eyebrow">الواجبات</span>
+              <h3>آخر الواجبات</h3>
+            </div>
+            <span>{{ selectedAssignments.length }}</span>
+          </div>
+
+          <div class="compact-list" *ngIf="selectedAssignments.length; else noAssignments">
+            <div class="compact-row" *ngFor="let assignment of selectedAssignments">
+              <div>
+                <strong>{{ assignment.title }}</strong>
+                <small>{{ assignment.subjectName }} · {{ assignment.dueDate | date:'d/M/yyyy' }}</small>
+              </div>
+              <em class="mini-status" [ngClass]="getAssignmentStatusClass(assignment.status)">
+                {{ getAssignmentStatusLabel(assignment.status) }}
+              </em>
+            </div>
+          </div>
+          <ng-template #noAssignments>
+            <div class="empty-state">لا يوجد واجبات حالياً.</div>
+          </ng-template>
+        </article>
+
+        <article class="panel">
+          <div class="panel-heading">
+            <div>
+              <span class="eyebrow">الحضور</span>
+              <h3>آخر حضور وغياب</h3>
+            </div>
+            <span>{{ child.attendanceSummary?.total || 0 }} رصد</span>
+          </div>
+
+          <div class="timeline-list" *ngIf="selectedAttendance.length; else noAttendance">
+            <div class="timeline-item" *ngFor="let attendance of selectedAttendance">
+              <span class="timeline-dot" [ngClass]="getChildStatusClass(attendance.status)"></span>
+              <div>
+                <strong>{{ attendance.sessionDate | date:'d/M' }} - {{ getChildStatusLabel(attendance.status) }}</strong>
+                <small>{{ attendance.subjectName }} · {{ attendance.method || 'Manual' }}</small>
               </div>
             </div>
-            <div *ngIf="selectedChild.recentGrades.length === 0" class="empty-mini">لا توجد درجات مسجلة حالياً</div>
           </div>
-        </div>
+          <ng-template #noAttendance>
+            <div class="empty-state">لا يوجد حضور مسجل بعد.</div>
+          </ng-template>
+        </article>
 
-        <div class="drawer-actions">
-          <button class="btn-outline-p" (click)="closeDetails()">إغلاق</button>
-          <button class="btn-primary-p" routerLink="/chat">مراسلة المعلم الآن</button>
-        </div>
-      </div>
+        <article class="panel">
+          <div class="panel-heading">
+            <div>
+              <span class="eyebrow">المصروفات</span>
+              <h3>الفواتير الخاصة بالطالب</h3>
+            </div>
+            <span>{{ formatCurrency(getChildPaymentDueTotal(child)) }}</span>
+          </div>
+
+          <div class="compact-list" *ngIf="selectedPayments.length; else noPayments">
+            <div class="compact-row money-row" *ngFor="let payment of selectedPayments">
+              <div>
+                <strong>{{ payment.title }}</strong>
+                <small>{{ payment.term }} · {{ payment.dueDate | date:'d/M/yyyy' }}</small>
+              </div>
+              <div class="money-side">
+                <b>{{ formatCurrency(payment.remainingAmount) }}</b>
+                <em class="mini-status" [ngClass]="getPaymentStatusClass(payment.status)">
+                  {{ getPaymentStatusLabel(payment.status) }}
+                </em>
+              </div>
+            </div>
+          </div>
+          <ng-template #noPayments>
+            <div class="empty-state">لا توجد فواتير لهذا الطالب.</div>
+          </ng-template>
+        </article>
+
+        <article class="panel panel-wide">
+          <div class="panel-heading">
+            <div>
+              <span class="eyebrow">تفاصيل النتيجة</span>
+              <h3>كل الدرجات المسجلة</h3>
+            </div>
+            <span *ngIf="selectedChildGrades.length">{{ selectedChildGrades.length }} درجة</span>
+          </div>
+
+          <div class="history-loader" *ngIf="gradesLoading">
+            <span class="simple-spinner small-spinner"></span>
+            <span>تحميل سجل الدرجات...</span>
+          </div>
+
+          <div class="grades-table-wrap" *ngIf="!gradesLoading && selectedChildGrades.length > 0; else recentGradesFallback">
+            <table class="grades-table">
+              <thead>
+                <tr>
+                  <th>المادة</th>
+                  <th>النوع</th>
+                  <th>التاريخ</th>
+                  <th>الدرجة</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let grade of selectedChildGrades">
+                  <td>{{ grade.subjectName }}</td>
+                  <td>
+                    <em class="mini-status" [ngClass]="getGradeCategoryClass(grade.gradeType)">
+                      {{ getGradeTypeLabel(grade.gradeType) }}
+                    </em>
+                  </td>
+                  <td>{{ grade.date | date:'d/M/yyyy' }}</td>
+                  <td><b>{{ getGradeDisplayValue(grade) }}%</b></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <ng-template #recentGradesFallback>
+            <div class="compact-list" *ngIf="!gradesLoading && child.recentGrades.length; else noRecentGrades">
+              <div class="compact-row" *ngFor="let grade of child.recentGrades">
+                <div>
+                  <strong>{{ grade.subject }}</strong>
+                  <small>{{ getGradeTypeLabel(grade.type || '') }} · {{ grade.date | date:'d/M/yyyy' }}</small>
+                </div>
+                <b>{{ grade.score }}%</b>
+              </div>
+            </div>
+          </ng-template>
+          <ng-template #noRecentGrades>
+            <div class="empty-state">لا توجد درجات مسجلة حالياً.</div>
+          </ng-template>
+        </article>
+      </section>
+    </main>
+  </ng-container>
+
+  <ng-template #noSelectedChild>
+    <div class="empty-state page-empty">اختر طالباً لعرض ملفه الدراسي.</div>
+  </ng-template>
+
+  <ng-template #loadingState>
+    <div class="loading-overlay">
+      <div class="simple-spinner"></div>
+      <p>جاري تحميل بياناتك...</p>
     </div>
-  </div>
-
-  <div class="loading-overlay" *ngIf="loading">
-    <div class="simple-spinner"></div>
-    <p>جاري تحميل بياناتك...</p>
-  </div>
+  </ng-template>
 </div>

@@ -1,9 +1,10 @@
 <section class="payments-shell" dir="rtl">
   <div class="payments-header" *ngIf="!loading; else loadingState">
     <div class="header-main">
-      <div>
+      <div class="header-copy">
+        <span class="eyebrow">بوابة ولي الأمر</span>
         <h1>سداد المصروفات</h1>
-        <p>بوابة دفع مبسطة وجاهزة للعرض مع دعم Vodafone Cash وفوري والبطاقات البنكية.</p>
+        <p>بوابة دفع مبسطة وجاهزة للعرض مع دعم Vodafone Cash وفوري والبطاقات البنكية وInstaPay.</p>
       </div>
 
       <div class="term-selector-simple">
@@ -13,6 +14,24 @@
           (click)="setTerm(term)">
           {{ term === 'الكل' ? 'الكل' : term }}
         </button>
+      </div>
+    </div>
+
+    <div class="payment-portal-card">
+      <div class="portal-copy">
+        <span>وسائل الدفع المتاحة</span>
+        <strong>اختار الفاتورة، ثم وسيلة الدفع المناسبة</strong>
+        <p>كل عملية تعرض مرجع واضح، وإيصال قابل للطباعة بعد التأكيد.</p>
+      </div>
+
+      <div class="portal-methods">
+        <article *ngFor="let method of paymentMethods">
+          <i [class]="method.icon"></i>
+          <div>
+            <strong>{{ method.label }}</strong>
+            <small>{{ method.providerCode }}</small>
+          </div>
+        </article>
       </div>
     </div>
 
@@ -52,7 +71,11 @@
             <h4>{{ invoice.title }}</h4>
             <span class="status-pill" [ngClass]="getStatusClass(invoice.status)">{{ getStatusLabel(invoice.status) }}</span>
           </div>
-          <p>للطالب: {{ invoice.studentName }}</p>
+          <p class="student-name-line">
+            <i class="fas fa-user-graduate"></i>
+            <span>للطالب:</span>
+            <strong>{{ invoice.studentName }}</strong>
+          </p>
           <small>تاريخ الاستحقاق: {{ invoice.dueDate | date:'d MMMM yyyy' }}</small>
         </div>
 
@@ -78,6 +101,11 @@
       <article class="history-simple-item" *ngFor="let invoice of paymentHistory">
         <div class="history-info">
           <strong>{{ invoice.title }}</strong>
+          <p class="student-name-line history-student">
+            <i class="fas fa-user-graduate"></i>
+            <span>الطالب:</span>
+            <strong>{{ invoice.studentName }}</strong>
+          </p>
           <p>
             {{ (invoice.paidAt | date:'d/M/yyyy') || 'تم السداد' }}
             <span *ngIf="invoice.paymentMethod"> • {{ invoice.paymentMethod }}</span>
@@ -86,7 +114,7 @@
 
         <div class="history-action">
           <span>{{ formatCurrency(invoice.amountPaid) }}</span>
-          <button (click)="printReceipt(invoice)" class="btn-receipt-icon">
+          <button (click)="showReceipt(invoice)" class="btn-receipt-icon">
             <i class="fas fa-file-invoice"></i> إيصال
           </button>
         </div>
@@ -111,6 +139,8 @@
           <div class="input-minimal">
             <label>قيمة الدفعة</label>
             <input
+              id="paymentAmount"
+              name="paymentAmount"
               type="number"
               [(ngModel)]="paymentAmount"
               min="1"
@@ -126,8 +156,8 @@
                 type="button"
                 class="method-card"
                 *ngFor="let method of paymentMethods"
-                [class.active]="selectedMethod === method.value"
-                (click)="selectMethod(method.value)">
+                [class.active]="selectedMethod === method.code"
+                (click)="selectMethod(method.code)">
                 <i [class]="method.icon"></i>
                 <div>
                   <strong>{{ method.label }}</strong>
@@ -139,26 +169,26 @@
             <div class="card-inputs" *ngIf="selectedMethod === 'card'">
               <div class="input-minimal">
                 <label>اسم صاحب البطاقة</label>
-                <input type="text" [(ngModel)]="cardDetails.name" placeholder="الاسم كما هو على البطاقة">
+                <input id="cardHolderName" name="cardHolderName" type="text" [(ngModel)]="cardDetails.name" placeholder="الاسم كما هو على البطاقة">
               </div>
 
               <div class="input-minimal">
                 <label>رقم البطاقة</label>
-                <input type="text" placeholder="xxxx xxxx xxxx xxxx" [value]="cardDetails.number" (input)="formatCardNumber($event)">
+                <input id="cardNumber" name="cardNumber" type="text" placeholder="xxxx xxxx xxxx xxxx" [value]="cardDetails.number" (input)="formatCardNumber($event)">
               </div>
 
               <div class="row g-2">
                 <div class="col-6">
                   <div class="input-minimal">
                     <label>تاريخ الانتهاء</label>
-                    <input type="text" placeholder="MM/YY" [value]="cardDetails.expiry" (input)="formatExpiry($event)">
+                    <input id="cardExpiry" name="cardExpiry" type="text" placeholder="MM/YY" [value]="cardDetails.expiry" (input)="formatExpiry($event)">
                   </div>
                 </div>
 
                 <div class="col-6">
                   <div class="input-minimal">
                     <label>CVC</label>
-                    <input type="password" [(ngModel)]="cardDetails.cvc" placeholder="***" maxlength="4">
+                    <input id="cardCvc" name="cardCvc" type="password" [(ngModel)]="cardDetails.cvc" placeholder="***" maxlength="4">
                   </div>
                 </div>
               </div>
@@ -167,12 +197,7 @@
             <div class="wallet-panel" *ngIf="selectedMethod === 'vodafone_cash'">
               <div class="input-minimal">
                 <label>رقم Vodafone Cash لاستقبال التعليمات</label>
-                <input type="tel" [(ngModel)]="walletNumber" placeholder="0100">
-              </div>
-
-              <div class="helper-box">
-                <i class="fas fa-paper-plane"></i>
-                <span>سيتم إرسال رقم المرجع وتعليمات السداد على {{ walletNumber || 'رقمك المسجل' }}.</span>
+                <input id="walletNumber" name="walletNumber" type="tel" [(ngModel)]="walletNumber" placeholder="0100">
               </div>
             </div>
 
@@ -180,10 +205,10 @@
               <p>سيتم إصدار كود فوري جاهز للطباعة أو العرض، وبعدها يمكنك تأكيد السداد من داخل البوابة.</p>
             </div>
 
-            <div class="support-note">
-              <i class="fas fa-headset"></i>
-              <span>لدعم العرض التجريبي: رقم المتابعة الحالي {{ supportNumber }}</span>
+            <div class="fawry-info instapay-info" *ngIf="selectedMethod === 'instapay'">
+              <p>سيظهر لك مرجع تحويل InstaPay وحساب المدرسة، وبعد التحويل يمكنك تأكيد العملية من نفس الشاشة.</p>
             </div>
+
           </div>
 
           <button class="btn-confirm-final" (click)="processGatewayPayment()" [disabled]="!canSubmitGateway">
@@ -214,7 +239,7 @@
 
           <div class="input-minimal text-center">
             <label>أدخل رمز التحقق</label>
-            <input type="text" [(ngModel)]="otpCode" placeholder="0 0 0 0" class="otp-input-field" maxlength="4">
+            <input id="otpCode" name="otpCode" type="text" [(ngModel)]="otpCode" placeholder="0 0 0 0" class="otp-input-field" maxlength="4">
           </div>
 
           <div class="target-caption" *ngIf="verificationTarget">
@@ -258,15 +283,39 @@
     </div>
   </div>
 
-  <div class="printable-receipt" *ngIf="receiptToShow" id="print-section">
-    <div class="receipt-header">
-      <h2>إيصال سداد - مدرسة المتحدة</h2>
-      <p>الرقم: {{ receiptToShow.referenceNumber }}</p>
-    </div>
-    <div class="receipt-body">
-      <p>اسم الطالب: {{ receiptToShow.studentName }}</p>
-      <p>المبلغ: {{ formatCurrency(receiptToShow.amountPaid) }}</p>
-      <p>التاريخ: {{ receiptToShow.paidAt | date:'medium' }}</p>
+  <div class="receipt-overlay" *ngIf="receiptToShow" role="dialog" aria-modal="true" aria-label="إيصال السداد">
+    <div class="receipt-modal">
+      <div class="receipt-modal__top">
+        <div>
+          <span>إيصال السداد</span>
+          <h3>{{ receiptToShow.title }}</h3>
+        </div>
+        <button type="button" class="btn-close-receipt" (click)="closeReceipt()" aria-label="إغلاق الإيصال">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="printable-receipt" id="print-section">
+        <div class="receipt-header">
+          <h2>إيصال سداد - مدرسة المتحدة</h2>
+          <p>الرقم: {{ receiptToShow.referenceNumber || receiptToShow.id }}</p>
+        </div>
+        <div class="receipt-body">
+          <p><span>اسم الطالب</span><strong>{{ receiptToShow.studentName }}</strong></p>
+          <p><span>البند</span><strong>{{ receiptToShow.title }}</strong></p>
+          <p><span>المبلغ</span><strong>{{ formatCurrency(receiptToShow.amountPaid) }}</strong></p>
+          <p><span>طريقة الدفع</span><strong>{{ receiptToShow.paymentMethod || 'غير محدد' }}</strong></p>
+          <p><span>التاريخ</span><strong>{{ receiptToShow.paidAt | date:'medium' }}</strong></p>
+        </div>
+      </div>
+
+      <div class="receipt-modal__actions">
+        <button type="button" class="btn-print-receipt" (click)="printReceipt()">
+          <i class="fas fa-print"></i>
+          طباعة الإيصال
+        </button>
+        <button type="button" class="btn-cancel-receipt" (click)="closeReceipt()">إغلاق</button>
+      </div>
     </div>
   </div>
 

@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+﻿import { CommonModule } from '@angular/common';
 import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterModule } from '@angular/router';
@@ -48,7 +48,7 @@ export class FaceAttendanceComponent implements OnInit, OnDestroy {
   isCameraOn = false;
   isScanning = false;
   statusTone: StatusTone = 'neutral';
-  statusMessage = 'النظام جاهز لتشغيل بصمة الوجه.';
+  statusMessage = 'Ø§Ù„Ù†Ø¸Ø§Ù… Ø¬Ø§Ù‡Ø² Ù„ØªØ´ØºÙŠÙ„ Ø¨ØµÙ…Ø© Ø§Ù„ÙˆØ¬Ù‡.';
   stream: MediaStream | null = null;
 
   sessions: TeacherSessionOption[] = [];
@@ -56,8 +56,12 @@ export class FaceAttendanceComponent implements OnInit, OnDestroy {
   selectedDate = this.getDateInputValue(new Date());
   recognizedStudent: RecognizedStudentCard | null = null;
   attendanceLog: FaceLogEntry[] = [];
+  showSuccessOverlay = false;
+  successOverlayTitle = 'ØªÙ… Ø§Ù„Ø­ÙØ¸ Ø¨Ù†Ø¬Ø§Ø­!';
+  successOverlayMessage = 'ØªÙ… ØªØ­Ø¯ÙŠØ« Ø³Ø¬Ù„ Ø­Ø¶ÙˆØ± Ø§Ù„Ø·Ø§Ù„Ø¨ ÙÙŠ Ù‚Ø§Ø¹Ø¯Ø© Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª Ø¨Ù†Ø¬Ø§Ø­.';
 
   private liveScanTimer: ReturnType<typeof setInterval> | null = null;
+  private successOverlayTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
     private attendanceService: AttendanceService,
@@ -81,6 +85,11 @@ export class FaceAttendanceComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    if (this.successOverlayTimer) {
+      clearTimeout(this.successOverlayTimer);
+      this.successOverlayTimer = null;
+    }
+
     this.stopCamera();
   }
 
@@ -90,7 +99,7 @@ export class FaceAttendanceComponent implements OnInit, OnDestroy {
 
   get selectedSessionLabel(): string {
     if (!this.selectedSession) {
-      return 'لم يتم اختيار الحصة بعد';
+      return 'Ù„Ù… ÙŠØªÙ… Ø§Ø®ØªÙŠØ§Ø± Ø§Ù„Ø­ØµØ© Ø¨Ø¹Ø¯';
     }
 
     return `${this.selectedSession.subjectName} - ${this.selectedSession.classRoomName}`;
@@ -98,7 +107,7 @@ export class FaceAttendanceComponent implements OnInit, OnDestroy {
 
   get selectedSessionTimeLabel(): string {
     if (!this.selectedSession?.startTime) {
-      return 'حدد الحصة لتفعيل الرصد';
+      return 'Ø­Ø¯Ø¯ Ø§Ù„Ø­ØµØ© Ù„ØªÙØ¹ÙŠÙ„ Ø§Ù„Ø±ØµØ¯';
     }
 
     const start = this.formatTime(this.selectedSession.startTime);
@@ -107,7 +116,7 @@ export class FaceAttendanceComponent implements OnInit, OnDestroy {
   }
 
   get cameraButtonLabel(): string {
-    return this.isCameraOn ? 'إغلاق الكاميرا' : 'تشغيل الكاميرا';
+    return this.isCameraOn ? 'Ø¥ØºÙ„Ø§Ù‚ Ø§Ù„ÙƒØ§Ù…ÙŠØ±Ø§' : 'ØªØ´ØºÙŠÙ„ Ø§Ù„ÙƒØ§Ù…ÙŠØ±Ø§';
   }
 
   get canScan(): boolean {
@@ -135,7 +144,7 @@ export class FaceAttendanceComponent implements OnInit, OnDestroy {
     } catch (error) {
       console.error('[FaceID] Failed to load sessions:', error);
       this.sessions = [];
-      this.setStatus('danger', 'تعذر تحميل حصص اليوم. حاول تحديث الصفحة أو استخدم الرصد اليدوي مؤقتًا.');
+      this.setStatus('danger', 'ØªØ¹Ø°Ø± ØªØ­Ù…ÙŠÙ„ Ø­ØµØµ Ø§Ù„ÙŠÙˆÙ…. Ø­Ø§ÙˆÙ„ ØªØ­Ø¯ÙŠØ« Ø§Ù„ØµÙØ­Ø© Ø£Ùˆ Ø§Ø³ØªØ®Ø¯Ù… Ø§Ù„Ø±ØµØ¯ Ø§Ù„ÙŠØ¯ÙˆÙŠ Ù…Ø¤Ù‚ØªÙ‹Ø§.');
     }
   }
 
@@ -150,7 +159,7 @@ export class FaceAttendanceComponent implements OnInit, OnDestroy {
 
   async startCamera(): Promise<void> {
     if (!navigator?.mediaDevices?.getUserMedia) {
-      this.setStatus('danger', 'هذا المتصفح لا يدعم تشغيل الكاميرا.');
+      this.setStatus('danger', 'Ù‡Ø°Ø§ Ø§Ù„Ù…ØªØµÙØ­ Ù„Ø§ ÙŠØ¯Ø¹Ù… ØªØ´ØºÙŠÙ„ Ø§Ù„ÙƒØ§Ù…ÙŠØ±Ø§.');
       return;
     }
 
@@ -172,11 +181,11 @@ export class FaceAttendanceComponent implements OnInit, OnDestroy {
 
       this.isCameraOn = true;
       this.recognizedStudent = null;
-      this.setStatus('neutral', 'الكاميرا تعمل الآن. وجّه وجه الطالب داخل الإطار ثم ابدأ الرصد.');
+      this.setStatus('neutral', 'Ø§Ù„ÙƒØ§Ù…ÙŠØ±Ø§ ØªØ¹Ù…Ù„ Ø§Ù„Ø¢Ù†. ÙˆØ¬Ù‘Ù‡ ÙˆØ¬Ù‡ Ø§Ù„Ø·Ø§Ù„Ø¨ Ø¯Ø§Ø®Ù„ Ø§Ù„Ø¥Ø·Ø§Ø± Ø«Ù… Ø§Ø¨Ø¯Ø£ Ø§Ù„Ø±ØµØ¯.');
       this.startLiveScanning();
     } catch (error) {
       console.error('[FaceID] Failed to start camera:', error);
-      this.setStatus('danger', 'تعذر تشغيل الكاميرا. تأكد من السماح بالوصول للكاميرا من المتصفح.');
+      this.setStatus('danger', 'ØªØ¹Ø°Ø± ØªØ´ØºÙŠÙ„ Ø§Ù„ÙƒØ§Ù…ÙŠØ±Ø§. ØªØ£ÙƒØ¯ Ù…Ù† Ø§Ù„Ø³Ù…Ø§Ø­ Ø¨Ø§Ù„ÙˆØµÙˆÙ„ Ù„Ù„ÙƒØ§Ù…ÙŠØ±Ø§ Ù…Ù† Ø§Ù„Ù…ØªØµÙØ­.');
     }
   }
 
@@ -193,12 +202,12 @@ export class FaceAttendanceComponent implements OnInit, OnDestroy {
 
     this.isCameraOn = false;
     this.isScanning = false;
-    this.setStatus('neutral', 'الكاميرا متوقفة. يمكنك تشغيلها مرة أخرى عند الحاجة.');
+    this.setStatus('neutral', 'Ø§Ù„ÙƒØ§Ù…ÙŠØ±Ø§ Ù…ØªÙˆÙ‚ÙØ©. ÙŠÙ…ÙƒÙ†Ùƒ ØªØ´ØºÙŠÙ„Ù‡Ø§ Ù…Ø±Ø© Ø£Ø®Ø±Ù‰ Ø¹Ù†Ø¯ Ø§Ù„Ø­Ø§Ø¬Ø©.');
   }
 
   async captureAndScan(trigger: 'manual' | 'live' = 'manual'): Promise<void> {
     if (!this.selectedSessionId) {
-      this.setStatus('warning', 'اختر الحصة أولًا قبل بدء رصد الحضور.');
+      this.setStatus('warning', 'Ø§Ø®ØªØ± Ø§Ù„Ø­ØµØ© Ø£ÙˆÙ„Ù‹Ø§ Ù‚Ø¨Ù„ Ø¨Ø¯Ø¡ Ø±ØµØ¯ Ø§Ù„Ø­Ø¶ÙˆØ±.');
       return;
     }
 
@@ -209,14 +218,14 @@ export class FaceAttendanceComponent implements OnInit, OnDestroy {
     const video = this.videoElement.nativeElement;
     if (!video.videoWidth || !video.videoHeight) {
       if (trigger === 'manual') {
-        this.setStatus('warning', 'الكاميرا ما زالت تجهز الصورة. جرّب بعد ثانية واحدة.');
+        this.setStatus('warning', 'Ø§Ù„ÙƒØ§Ù…ÙŠØ±Ø§ Ù…Ø§ Ø²Ø§Ù„Øª ØªØ¬Ù‡Ø² Ø§Ù„ØµÙˆØ±Ø©. Ø¬Ø±Ù‘Ø¨ Ø¨Ø¹Ø¯ Ø«Ø§Ù†ÙŠØ© ÙˆØ§Ø­Ø¯Ø©.');
       }
       return;
     }
 
     this.isScanning = true;
     this.recognizedStudent = null;
-    this.setStatus('warning', 'جارٍ تحليل الصورة والتأكد من هوية الطالب...');
+    this.setStatus('warning', 'Ø¬Ø§Ø±Ù ØªØ­Ù„ÙŠÙ„ Ø§Ù„ØµÙˆØ±Ø© ÙˆØ§Ù„ØªØ£ÙƒØ¯ Ù…Ù† Ù‡ÙˆÙŠØ© Ø§Ù„Ø·Ø§Ù„Ø¨...');
 
     const canvas = this.canvasElement.nativeElement;
     canvas.width = video.videoWidth;
@@ -225,7 +234,7 @@ export class FaceAttendanceComponent implements OnInit, OnDestroy {
     const context = canvas.getContext('2d');
     if (!context) {
       this.isScanning = false;
-      this.setStatus('danger', 'تعذر تجهيز إطار الصورة للرصد.');
+      this.setStatus('danger', 'ØªØ¹Ø°Ø± ØªØ¬Ù‡ÙŠØ² Ø¥Ø·Ø§Ø± Ø§Ù„ØµÙˆØ±Ø© Ù„Ù„Ø±ØµØ¯.');
       return;
     }
 
@@ -241,7 +250,7 @@ export class FaceAttendanceComponent implements OnInit, OnDestroy {
 
       if (result && (result.success || result.recognized || result.studentName)) {
         const alreadyPresent = !!result.alreadyPresent;
-        const studentName = result.studentName || result.name || 'طالب';
+        const studentName = result.studentName || result.name || 'Ø·Ø§Ù„Ø¨';
 
         this.recognizedStudent = {
           name: studentName,
@@ -252,7 +261,7 @@ export class FaceAttendanceComponent implements OnInit, OnDestroy {
 
         this.prependLog({
           name: studentName,
-          note: alreadyPresent ? 'مسجل بالفعل' : 'تم الرصد ببصمة الوجه',
+          note: alreadyPresent ? 'Ù…Ø³Ø¬Ù„ Ø¨Ø§Ù„ÙØ¹Ù„' : 'ØªÙ… Ø§Ù„Ø±ØµØ¯ Ø¨Ø¨ØµÙ…Ø© Ø§Ù„ÙˆØ¬Ù‡',
           time: new Date(),
           tone: alreadyPresent ? 'warning' : 'success'
         });
@@ -263,16 +272,20 @@ export class FaceAttendanceComponent implements OnInit, OnDestroy {
           activeSession.isRecorded = true;
         }
 
+        if (!alreadyPresent) {
+          this.flashSuccessOverlay();
+        }
+
         this.setStatus(
           alreadyPresent ? 'warning' : 'success',
-          result.message || (alreadyPresent ? 'تم العثور على الطالب لكنه مسجل بالفعل في هذه الحصة.' : 'تم تسجيل الحضور بنجاح.')
+          result.message || (alreadyPresent ? 'ØªÙ… Ø§Ù„Ø¹Ø«ÙˆØ± Ø¹Ù„Ù‰ Ø§Ù„Ø·Ø§Ù„Ø¨ Ù„ÙƒÙ†Ù‡ Ù…Ø³Ø¬Ù„ Ø¨Ø§Ù„ÙØ¹Ù„ ÙÙŠ Ù‡Ø°Ù‡ Ø§Ù„Ø­ØµØ©.' : 'ØªÙ… ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø­Ø¶ÙˆØ± Ø¨Ù†Ø¬Ø§Ø­.')
         );
       } else {
-        this.setStatus('danger', result?.message || 'تعذر التعرف على الوجه. حاول بصورة أوضح أو انتقل إلى الرصد اليدوي.');
+        this.setStatus('danger', result?.message || 'ØªØ¹Ø°Ø± Ø§Ù„ØªØ¹Ø±Ù Ø¹Ù„Ù‰ Ø§Ù„ÙˆØ¬Ù‡. Ø­Ø§ÙˆÙ„ Ø¨ØµÙˆØ±Ø© Ø£ÙˆØ¶Ø­ Ø£Ùˆ Ø§Ù†ØªÙ‚Ù„ Ø¥Ù„Ù‰ Ø§Ù„Ø±ØµØ¯ Ø§Ù„ÙŠØ¯ÙˆÙŠ.');
       }
     } catch (error: any) {
       console.error('[FaceID] Scan failed:', error);
-      const message = error?.error?.message || error?.message || 'حدث خطأ أثناء الاتصال بخدمة بصمة الوجه.';
+      const message = error?.error?.message || error?.message || 'Ø­Ø¯Ø« Ø®Ø·Ø£ Ø£Ø«Ù†Ø§Ø¡ Ø§Ù„Ø§ØªØµØ§Ù„ Ø¨Ø®Ø¯Ù…Ø© Ø¨ØµÙ…Ø© Ø§Ù„ÙˆØ¬Ù‡.';
       this.setStatus('danger', message);
     } finally {
       this.isScanning = false;
@@ -281,7 +294,7 @@ export class FaceAttendanceComponent implements OnInit, OnDestroy {
 
   formatTime(value?: string): string {
     if (!value) {
-      return '—';
+      return 'â€”';
     }
 
     const date = new Date(value);
@@ -326,6 +339,18 @@ export class FaceAttendanceComponent implements OnInit, OnDestroy {
     this.statusMessage = message;
   }
 
+  private flashSuccessOverlay(): void {
+    if (this.successOverlayTimer) {
+      clearTimeout(this.successOverlayTimer);
+    }
+
+    this.showSuccessOverlay = true;
+    this.successOverlayTimer = setTimeout(() => {
+      this.showSuccessOverlay = false;
+      this.successOverlayTimer = null;
+    }, 2600);
+  }
+
   private getDateInputValue(value: Date): string {
     const year = value.getFullYear();
     const month = String(value.getMonth() + 1).padStart(2, '0');
@@ -333,3 +358,4 @@ export class FaceAttendanceComponent implements OnInit, OnDestroy {
     return `${year}-${month}-${day}`;
   }
 }
+

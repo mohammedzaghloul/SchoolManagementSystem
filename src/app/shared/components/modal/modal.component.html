@@ -1,0 +1,38 @@
+<div class="modal-overlay" *ngIf="isOpen" @backdropAnimation (click)="onCancel()">
+  <div class="modal-dialog" @modalAnimation (click)="$event.stopPropagation()" dir="rtl">
+    
+    <button class="modal-close" (click)="onCancel()" aria-label="Close modal">
+      <i class="fas fa-xmark"></i>
+    </button>
+
+    <div class="modal-content-wrap">
+      
+      <!-- Icon Header -->
+      <div class="modal-icon-container" [ngClass]="iconBgClass">
+        <i [class]="iconClass"></i>
+      </div>
+
+      <!-- Content -->
+      <div class="modal-body-text">
+        <h3 class="modal-title">{{ title }}</h3>
+        <p class="modal-message" *ngIf="message">{{ message }}</p>
+        
+        <!-- Custom Content Projection -->
+        <div class="modal-custom-content">
+          <ng-content></ng-content>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="modal-actions">
+        <button class="modal-btn confirm-btn" [ngClass]="confirmBtnClass" (click)="onConfirm()">
+          {{ confirmText }}
+        </button>
+        <button *ngIf="showCancel" class="modal-btn cancel-btn" (click)="onCancel()">
+          {{ cancelText }}
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>

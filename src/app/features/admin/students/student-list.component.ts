@@ -22,13 +22,19 @@ export class StudentListComponent implements OnInit {
   pageSize = 10;
   currentPage = 1;
   searchTerm = '';
+  classes: any[] = []; // Added for filter dropdown
+  
+  stats = {
+    total: 0,
+    active: 0,
+    activePercent: 0,
+    avgAttendance: 0,
+    unpaidCount: 0
+  };
   
   columns: TableColumn[] = [
-    { field: 'id', title: 'المعرف', sortable: true },
     { field: 'fullName', title: 'الاسم الكامل', sortable: true },
-    { field: 'email', title: 'البريد الإلكتروني', sortable: true },
     { field: 'classRoomName', title: 'الفصل', sortable: true },
-    { field: 'parentName', title: 'ولي الأمر', sortable: true },
     { 
       field: 'attendanceRate', 
       title: 'نسبة الحضور', 
@@ -55,8 +61,7 @@ export class StudentListComponent implements OnInit {
       const params = {
         pageIndex: this.currentPage,
         pageSize: this.pageSize,
-        search: this.searchTerm,
-        sort: this.getSortParam()
+        search: this.searchTerm
       };
       
       const response = await this.studentService.getStudents(params);
@@ -66,19 +71,26 @@ export class StudentListComponent implements OnInit {
           text: s.isActive ? 'نشط' : 'غير نشط',
           class: s.isActive ? 'bg-success' : 'bg-danger'
         },
-        attendanceRate: s.attendanceRate || 0 // Default to 0 if missing
+        attendanceRate: s.attendanceRate || 0
       }));
       this.totalItems = response.totalCount;
+      
+      // Calculate basic stats locally
+      this.stats.total = response.totalCount;
+      this.stats.active = this.students.filter(s => s.isActive).length;
+      this.stats.activePercent = this.stats.total > 0 ? Math.round((this.stats.active / this.stats.total) * 100) : 0;
+      
+      const totalAttendance = this.students.reduce((sum, s) => sum + (s.attendanceRate || 0), 0);
+      this.stats.avgAttendance = this.students.length > 0 ? Math.round(totalAttendance / this.students.length) : 0;
+      
+      // Unpaid is just a mockup for now as no field exists in model
+      this.stats.unpaidCount = this.students.filter(s => !(s as any).isFeesPaid).length;
+
     } catch (error) {
       this.notification.error('حدث خطأ في تحميل البيانات');
     } finally {
       this.loading = false;
     }
-  }
-
-  getSortParam(): string {
-    // Implement sort logic
-    return '';
   }
 
   onPageChange(page: number): void {
@@ -93,7 +105,6 @@ export class StudentListComponent implements OnInit {
   }
 
   onSort(event: SortEvent): void {
-    // Implement sort
     this.loadStudents();
   }
 
@@ -131,7 +142,6 @@ export class StudentListComponent implements OnInit {
       this.notification.success('تم حذف الطالب بنجاح');
       await this.loadStudents();
     } catch (error) {
-      console.error('Delete error:', error);
       this.notification.error('حدث خطأ في حذف الطالب');
     } finally {
       this.loading = false;
@@ -144,5 +154,10 @@ export class StudentListComponent implements OnInit {
 
   onTrainFace(student: Student): void {
     this.router.navigate(['/admin/students/train-face', student.id]);
+  }
+
+  applyFilters(): void {
+    this.currentPage = 1;
+    this.loadStudents();
   }
 }

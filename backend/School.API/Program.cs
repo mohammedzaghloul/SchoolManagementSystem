@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using School.API.Filters;
@@ -11,8 +12,11 @@ using School.Infrastructure.Identity;
 using School.Infrastructure.Services;
 using StackExchange.Redis;
 using System.Text;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
+var resetSeedRequested = args.Contains("--reset-seed", StringComparer.OrdinalIgnoreCase)
+    || Environment.GetEnvironmentVariable("SCHOOL_RESET_SEED") == "1";
 var railwayPort = Environment.GetEnvironmentVariable("PORT");
 
 if (!string.IsNullOrWhiteSpace(railwayPort))
@@ -44,8 +48,13 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(c =>
 });
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IAdministrationService, AdministrationService>();
 builder.Services.AddScoped<ICacheService, CacheService>();
+builder.Services.AddScoped<IEmailOtpService, EmailOtpService>();
+builder.Services.AddHttpClient<IEmailService, EmailService>();
 builder.Services.AddScoped<IQrCodeService, QrCodeService>();
+builder.Services.AddScoped<IScheduleService, ScheduleService>();
+builder.Services.AddScoped<ITeacherWorkflowService, TeacherWorkflowService>();
 builder.Services.AddScoped<ILiveSessionService, LiveSessionService>();
 builder.Services.AddHttpClient<IFaceRecognitionService, FaceRecognitionService>();
 builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
@@ -125,6 +134,25 @@ builder.Services.AddCors(options =>
     });
 });
 
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    
+    options.AddFixedWindowLimiter("strict", opt =>
+    {
+        opt.Window = TimeSpan.FromMinutes(1);
+        opt.PermitLimit = 5; // 5 requests per minute for sensitive endpoints
+        opt.QueueLimit = 0;
+    });
+
+    options.AddFixedWindowLimiter("api", opt =>
+    {
+        opt.Window = TimeSpan.FromSeconds(10);
+        opt.PermitLimit = 100; // 100 requests per 10 seconds for general API
+        opt.QueueLimit = 0;
+    });
+});
+
 builder.Services.AddSignalR();
 
 builder.Services.AddControllers(options =>
@@ -138,6 +166,7 @@ builder.Services.AddHealthChecks();
 var app = builder.Build();
 
 app.UseCors();
+app.UseRateLimiter();
 
 if (app.Environment.IsDevelopment())
 {
@@ -159,6 +188,10 @@ using (var scope = app.Services.CreateScope())
     {
         var context = services.GetRequiredService<SchoolDbContext>();
         await context.Database.MigrateAsync();
+        if (resetSeedRequested)
+        {
+            await CleanSchoolSeed.ResetDataAsync(context);
+        }
 
         var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
         var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
@@ -169,6 +202,11 @@ using (var scope = app.Services.CreateScope())
         var logger = services.GetRequiredService<ILogger<Program>>();
         logger.LogError(ex, "An error occurred during seeding the database. This might be because the database server is not reachable.");
     }
+}
+
+if (resetSeedRequested)
+{
+    return;
 }
 
 app.Run();

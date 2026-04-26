@@ -47,7 +47,9 @@ public class AuthService : IAuthService
         }
 
         var roles = await _userManager.GetRolesAsync(user);
-        var role = roles.FirstOrDefault() ?? "User";
+        var role = roles.Contains("Admin")
+            ? "Admin"
+            : roles.FirstOrDefault() ?? "User";
 
         if (role == "Student")
         {

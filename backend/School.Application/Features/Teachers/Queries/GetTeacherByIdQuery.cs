@@ -20,16 +20,20 @@ public class GetTeacherByIdQueryHandler : IRequestHandler<GetTeacherByIdQuery, T
 
     public async Task<TeacherDto?> Handle(GetTeacherByIdQuery request, CancellationToken cancellationToken)
     {
-        var teacher = await _unitOfWork.Repository<Teacher>().GetByIdAsync(request.Id);
+        var spec = new TeachersWithSubjectsSpecification(request.Id);
+        var teacher = await _unitOfWork.Repository<Teacher>().GetEntityWithSpec(spec);
 
         if (teacher == null) return null;
 
+        var primarySubject = teacher.Subjects?.FirstOrDefault();
         return new TeacherDto
         {
             Id = teacher.Id,
             FullName = teacher.FullName,
             Email = teacher.Email,
             Phone = teacher.Phone,
+            SubjectId = primarySubject?.Id,
+            SubjectName = primarySubject?.Name,
             IsActive = teacher.IsActive
         };
     }

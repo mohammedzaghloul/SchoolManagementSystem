@@ -30,6 +30,16 @@ export class DashboardComponent implements OnInit {
   announcements: Announcement[] = [];
   loading = true;
 
+  readonly quickLinks = [
+    { label: 'رصد الحضور', icon: 'fas fa-clipboard-check', route: '/teacher/attendance', tone: 'blue' },
+    { label: 'جدول الأسبوع', icon: 'fas fa-calendar-week', route: '/teacher/timetable', tone: 'slate' },
+    { label: 'درجات الطلاب', icon: 'fas fa-pen-to-square', route: '/teacher/grades', tone: 'green' },
+    { label: 'الواجبات', icon: 'fas fa-list-check', route: '/teacher/assignments', tone: 'amber' },
+    { label: 'الفيديوهات', icon: 'fas fa-circle-play', route: '/teacher/videos', tone: 'red' },
+    { label: 'الامتحانات', icon: 'fas fa-file-lines', route: '/teacher/exams', tone: 'violet' },
+    { label: 'الشات', icon: 'fas fa-comments', route: '/chat', tone: 'cyan' }
+  ];
+
   constructor(
     private router: Router,
     private dashboardService: DashboardService,
@@ -94,23 +104,35 @@ export class DashboardComponent implements OnInit {
   }
 
   get qrTargetSession(): any | null {
-    const qrSessions = this.todaySessions.filter((session: any) =>
-      String(session?.attendanceType || '').toLowerCase() === 'qr'
-    );
-
-    return this.pickPreferredActionSession(qrSessions);
+    return this.pickPreferredActionSession(this.todaySessions);
   }
 
   get qrTargetHint(): string {
     if (!this.qrTargetSession) {
-      return 'لا توجد حصة QR متاحة للرصد الآن.';
+      return 'لا توجد حصة متاحة للرصد الآن.';
     }
 
     if (this.heroSession && this.qrTargetSession.id !== this.heroSession.id) {
-      return `سيتم فتح ${this.qrTargetSession.subjectName} - ${this.qrTargetSession.classRoomName}`;
+      return `${this.qrTargetSession.subjectName} - ${this.qrTargetSession.classRoomName} ستكون الحصة المفتوحة لبث QR.`;
     }
 
-    return 'سيتم فتح الحصة المناسبة لبث رمز QR.';
+    return 'سيتم فتح نفس الحصة المتاحة لبث رمز QR.';
+  }
+
+  get pendingAttendanceSessions(): number {
+    return this.todaySessions.filter((session: any) => !!session?.needsAttention).length;
+  }
+
+  get recordedSessionsCount(): number {
+    return this.todaySessions.filter((session: any) => !!session?.isRecorded).length;
+  }
+
+  get todayProgressLabel(): string {
+    if (!this.todaySessions.length) {
+      return 'لا توجد حصص';
+    }
+
+    return `${this.recordedSessionsCount}/${this.todaySessions.length}`;
   }
 
   formatTime(time: any): string {

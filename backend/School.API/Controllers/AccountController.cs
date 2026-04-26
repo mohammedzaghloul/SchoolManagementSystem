@@ -1,14 +1,20 @@
-using MediatR;
+﻿using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using School.Application.DTOs.Auth;
 using School.Application.Features.Account.Commands;
 using School.Application.Interfaces;
 using School.Domain.Entities;
 using School.Infrastructure.Data;
 using School.Infrastructure.Identity;
+using System.Collections.Concurrent;
+using System.Net;
+using System.Net.Mail;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace School.API.Controllers;
 
@@ -21,41 +27,68 @@ public class AccountController : ControllerBase
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly SchoolDbContext _context;
     private readonly IFileStorageService _fileStorage;
+    private readonly IConfiguration _configuration;
+    private readonly IEmailService _emailService;
+    private readonly IEmailOtpService _emailOtpService;
+    private const string TrustedDeviceLoginProvider = "TrustedLoginDevice";
+    private static readonly TimeSpan OtpLifetime = TimeSpan.FromMinutes(5);
+    private static readonly ConcurrentDictionary<string, ForgotPasswordOtpState> ForgotPasswordOtps = new();
+    private static readonly ConcurrentDictionary<string, LoginOtpChallengeState> LoginOtpChallenges = new();
 
     public AccountController(
         IMediator mediator,
         RoleManager<IdentityRole> roleManager,
         UserManager<ApplicationUser> userManager,
         SchoolDbContext context,
-        IFileStorageService fileStorage)
+        IFileStorageService fileStorage,
+        IConfiguration configuration,
+        IEmailService emailService,
+        IEmailOtpService emailOtpService)
     {
         _mediator = mediator;
         _roleManager = roleManager;
         _userManager = userManager;
         _context = context;
         _fileStorage = fileStorage;
+        _configuration = configuration;
+        _emailService = emailService;
+        _emailOtpService = emailOtpService;
     }
-
+    [AllowAnonymous]
     [HttpPost("login")]
-    public async Task<IActionResult> Login(LoginCommand command)
+    public async Task<IActionResult> Login([FromBody] LoginCommand command)
     {
         Console.WriteLine($"[CONTROLLER] Login start for: {command.Email}");
+
         try
         {
             var token = await _mediator.Send(command);
-            if (token == null) 
+            if (string.IsNullOrWhiteSpace(token))
             {
                 Console.WriteLine($"[CONTROLLER] Login failed - token is null for: {command.Email}");
                 return Unauthorized(new { message = "بيانات الدخول غير صحيحة." });
             }
-            Console.WriteLine($"[CONTROLLER] Login success - returning token for: {command.Email}");
+
             return Ok(new { token });
         }
-        catch (InvalidOperationException ex)
+        catch (UnauthorizedAccessException ex)
         {
-            Console.WriteLine($"[CONTROLLER] Login blocked for inactive account: {command.Email}");
-            return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
+            Console.WriteLine($"[CONTROLLER] Login unauthorized for: {command.Email} - {ex.Message}");
+            return Unauthorized(new { message = ex.Message });
         }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[CONTROLLER] Login error for {command.Email}: {ex}");
+            return StatusCode(StatusCodes.Status500InternalServerError, new { message = "حدث خطأ أثناء تسجيل الدخول." });
+        }
+    }
+
+    [AllowAnonymous]
+    [HttpPost("login/verify-otp")]
+    [Obsolete("Login OTP is no longer required on this route.")]
+    public IActionResult VerifyLoginOtp()
+    {
+        return StatusCode(StatusCodes.Status410Gone, new { message = "لم يعد هذا المسار مستخدمًا." });
     }
 
     [HttpPost("create-roles")]
@@ -92,12 +125,12 @@ public class AccountController : ControllerBase
 
         if (string.IsNullOrWhiteSpace(fullName) || string.IsNullOrWhiteSpace(email))
         {
-            return BadRequest(new { message = "يرجى إدخال الاسم الكامل والبريد الإلكتروني." });
+            return BadRequest(new { message = "ÙŠØ±Ø¬Ù‰ Ø¥Ø¯Ø®Ø§Ù„ Ø§Ù„Ø§Ø³Ù… Ø§Ù„ÙƒØ§Ù…Ù„ ÙˆØ§Ù„Ø¨Ø±ÙŠØ¯ Ø§Ù„Ø¥Ù„ÙƒØªØ±ÙˆÙ†ÙŠ." });
         }
 
         if (await _userManager.FindByEmailAsync(email) != null || await _context.Parents.AnyAsync(parent => parent.Email == email))
         {
-            return BadRequest(new { message = "يوجد حساب آخر مسجل بهذا البريد الإلكتروني." });
+            return BadRequest(new { message = "ÙŠÙˆØ¬Ø¯ Ø­Ø³Ø§Ø¨ Ø¢Ø®Ø± Ù…Ø³Ø¬Ù„ Ø¨Ù‡Ø°Ø§ Ø§Ù„Ø¨Ø±ÙŠØ¯ Ø§Ù„Ø¥Ù„ÙƒØªØ±ÙˆÙ†ÙŠ." });
         }
 
         if (!await _roleManager.RoleExistsAsync("Parent"))
@@ -122,7 +155,7 @@ public class AccountController : ControllerBase
             {
                 return BadRequest(new
                 {
-                    message = "تعذر إنشاء حساب ولي الأمر.",
+                    message = "ØªØ¹Ø°Ø± Ø¥Ù†Ø´Ø§Ø¡ Ø­Ø³Ø§Ø¨ ÙˆÙ„ÙŠ Ø§Ù„Ø£Ù…Ø±.",
                     errors = createUserResult.Errors.Select(error => error.Description)
                 });
             }
@@ -133,7 +166,7 @@ public class AccountController : ControllerBase
                 await _userManager.DeleteAsync(createdUser);
                 return BadRequest(new
                 {
-                    message = "تم إنشاء المستخدم لكن تعذر منحه صلاحية ولي الأمر.",
+                    message = "ØªÙ… Ø¥Ù†Ø´Ø§Ø¡ Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… Ù„ÙƒÙ† ØªØ¹Ø°Ø± Ù…Ù†Ø­Ù‡ ØµÙ„Ø§Ø­ÙŠØ© ÙˆÙ„ÙŠ Ø§Ù„Ø£Ù…Ø±.",
                     errors = addRoleResult.Errors.Select(error => error.Description)
                 });
             }
@@ -160,7 +193,7 @@ public class AccountController : ControllerBase
 
                 return BadRequest(new
                 {
-                    message = "تم إنشاء ولي الأمر لكن تعذر ربط الحساب به.",
+                    message = "ØªÙ… Ø¥Ù†Ø´Ø§Ø¡ ÙˆÙ„ÙŠ Ø§Ù„Ø£Ù…Ø± Ù„ÙƒÙ† ØªØ¹Ø°Ø± Ø±Ø¨Ø· Ø§Ù„Ø­Ø³Ø§Ø¨ Ø¨Ù‡.",
                     errors = updateUserResult.Errors.Select(error => error.Description)
                 });
             }
@@ -217,7 +250,7 @@ public class AccountController : ControllerBase
         var fullName = NormalizeOptionalValue(request.FullName);
         if (string.IsNullOrWhiteSpace(fullName))
         {
-            return BadRequest(new { message = "الاسم الكامل مطلوب." });
+            return BadRequest(new { message = "Ø§Ù„Ø§Ø³Ù… Ø§Ù„ÙƒØ§Ù…Ù„ Ù…Ø·Ù„ÙˆØ¨." });
         }
 
         var role = await GetPrimaryRoleAsync(user);
@@ -262,7 +295,7 @@ public class AccountController : ControllerBase
         {
             return BadRequest(new
             {
-                message = "تعذر تحديث الملف الشخصي.",
+                message = "ØªØ¹Ø°Ø± ØªØ­Ø¯ÙŠØ« Ø§Ù„Ù…Ù„Ù Ø§Ù„Ø´Ø®ØµÙŠ.",
                 errors = result.Errors.Select(error => error.Description)
             });
         }
@@ -278,17 +311,17 @@ public class AccountController : ControllerBase
     {
         if (file == null || file.Length == 0)
         {
-            return BadRequest(new { message = "يرجى اختيار صورة صالحة." });
+            return BadRequest(new { message = "ÙŠØ±Ø¬Ù‰ Ø§Ø®ØªÙŠØ§Ø± ØµÙˆØ±Ø© ØµØ§Ù„Ø­Ø©." });
         }
 
         if (!file.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
         {
-            return BadRequest(new { message = "الملف المرفوع يجب أن يكون صورة." });
+            return BadRequest(new { message = "Ø§Ù„Ù…Ù„Ù Ø§Ù„Ù…Ø±ÙÙˆØ¹ ÙŠØ¬Ø¨ Ø£Ù† ÙŠÙƒÙˆÙ† ØµÙˆØ±Ø©." });
         }
 
         if (file.Length > 5 * 1024 * 1024)
         {
-            return BadRequest(new { message = "حجم الصورة يجب ألا يتجاوز 5 ميجابايت." });
+            return BadRequest(new { message = "Ø­Ø¬Ù… Ø§Ù„ØµÙˆØ±Ø© ÙŠØ¬Ø¨ Ø£Ù„Ø§ ÙŠØªØ¬Ø§ÙˆØ² 5 Ù…ÙŠØ¬Ø§Ø¨Ø§ÙŠØª." });
         }
 
         var user = await _userManager.GetUserAsync(User);
@@ -303,7 +336,7 @@ public class AccountController : ControllerBase
 
         if (string.IsNullOrWhiteSpace(uploadedPath))
         {
-            return StatusCode(StatusCodes.Status500InternalServerError, new { message = "تعذر حفظ الصورة الآن." });
+            return StatusCode(StatusCodes.Status500InternalServerError, new { message = "ØªØ¹Ø°Ø± Ø­ÙØ¸ Ø§Ù„ØµÙˆØ±Ø© Ø§Ù„Ø¢Ù†." });
         }
 
         user.ProfilePictureUrl = uploadedPath;
@@ -330,7 +363,7 @@ public class AccountController : ControllerBase
         {
             return BadRequest(new
             {
-                message = "تعذر تحديث صورة الملف الشخصي.",
+                message = "ØªØ¹Ø°Ø± ØªØ­Ø¯ÙŠØ« ØµÙˆØ±Ø© Ø§Ù„Ù…Ù„Ù Ø§Ù„Ø´Ø®ØµÙŠ.",
                 errors = result.Errors.Select(error => error.Description)
             });
         }
@@ -350,6 +383,68 @@ public class AccountController : ControllerBase
         });
     }
 
+    [AllowAnonymous]
+    [HttpPost("forgot-password/send-otp")]
+    public async Task<IActionResult> SendForgotPasswordOtp([FromBody] ForgotPasswordOtpRequest request)
+    {
+        // Force use the new secure service
+        var normalizedEmail = NormalizeOptionalValue(request.Email);
+        if (string.IsNullOrWhiteSpace(normalizedEmail))
+        {
+            return BadRequest(new { message = "ÙŠØ±Ø¬Ù‰ Ø¥Ø¯Ø®Ø§Ù„ Ø¨Ø±ÙŠØ¯ Ø¥Ù„ÙƒØªØ±ÙˆÙ†ÙŠ ØµØ­ÙŠØ­." });
+        }
+
+        var response = await _emailOtpService.RequestPasswordResetOtpAsync(
+            new ForgotPasswordRequest { Email = normalizedEmail });
+
+        return Ok(new
+        {
+            success = response.Success,
+            emailSent = response.EmailSent,
+            devOtp = (string?)null,
+            expiresAtUtc = response.ExpiresAtUtc,
+            message = response.Message
+        });
+    }
+
+    [AllowAnonymous]
+    [HttpPost("forgot-password/verify-otp")]
+    public async Task<IActionResult> VerifyForgotPasswordOtp([FromBody] VerifyForgotPasswordOtpRequest request)
+    {
+        var normalizedEmail = NormalizeOptionalValue(request.Email);
+        var normalizedOtp = NormalizeOtpDigits(NormalizeOptionalValue(request.Otp));
+
+        if (string.IsNullOrWhiteSpace(normalizedEmail) || string.IsNullOrWhiteSpace(normalizedOtp))
+        {
+            return BadRequest(new { message = "Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ù…Ø·Ù„ÙˆØ¨Ø© Ù†Ø§Ù‚ØµØ©." });
+        }
+
+        try
+        {
+            // If it's a full reset request (with password)
+            if (!string.IsNullOrWhiteSpace(request.NewPassword))
+            {
+                var response = await _emailOtpService.ResetPasswordAsync(new ResetPasswordRequest
+                {
+                    Email = normalizedEmail,
+                    Otp = normalizedOtp,
+                    NewPassword = request.NewPassword,
+                    ConfirmPassword = request.NewPassword
+                });
+                return Ok(new { success = response.Success, message = response.Message });
+            }
+
+            // Otherwise just verify the OTP
+            var isValid = await _emailOtpService.VerifyPasswordResetOtpOnlyAsync(normalizedEmail, normalizedOtp);
+            if (!isValid) return BadRequest(new { message = "ÙƒÙˆØ¯ Ø§Ù„ØªØ­Ù‚Ù‚ ØºÙŠØ± ØµØ­ÙŠØ­." });
+            return Ok(new { success = true });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
     [Authorize]
     [HttpPost("change-password")]
     public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request)
@@ -366,7 +461,7 @@ public class AccountController : ControllerBase
             var result = await _userManager.ChangePasswordAsync(user, request.CurrentPassword, request.NewPassword);
             if (result.Succeeded)
             {
-                return Ok(new { message = "تم تغيير كلمة المرور بنجاح." });
+                return Ok(new { message = "ØªÙ… ØªØºÙŠÙŠØ± ÙƒÙ„Ù…Ø© Ø§Ù„Ù…Ø±ÙˆØ± Ø¨Ù†Ø¬Ø§Ø­." });
             }
             
             // If it failed, we can still fall back to reset if it's a demo account or for convenience
@@ -380,12 +475,12 @@ public class AccountController : ControllerBase
         {
             return BadRequest(new
             {
-                message = "تعذر تغيير كلمة المرور.",
+                message = "ØªØ¹Ø°Ø± ØªØºÙŠÙŠØ± ÙƒÙ„Ù…Ø© Ø§Ù„Ù…Ø±ÙˆØ±.",
                 errors = resetResult.Errors.Select(error => error.Description)
             });
         }
 
-        return Ok(new { message = "تم تحديث كلمة المرور بنجاح." });
+        return Ok(new { message = "ØªÙ… ØªØ­Ø¯ÙŠØ« ÙƒÙ„Ù…Ø© Ø§Ù„Ù…Ø±ÙˆØ± Ø¨Ù†Ø¬Ø§Ø­." });
     }
 
     private async Task<UserProfileResponse> BuildProfileResponseAsync(ApplicationUser user, string? role = null)
@@ -444,6 +539,11 @@ public class AccountController : ControllerBase
     private async Task<string?> GetPrimaryRoleAsync(ApplicationUser user)
     {
         var roles = await _userManager.GetRolesAsync(user);
+        if (roles.Contains("Admin"))
+        {
+            return "Admin";
+        }
+
         return roles.FirstOrDefault();
     }
 
@@ -522,9 +622,148 @@ public class AccountController : ControllerBase
         return $"{Request.Scheme}://{Request.Host}{fileUrl}";
     }
 
+    private static string GenerateOtp()
+    {
+        return RandomNumberGenerator.GetInt32(100000, 999999).ToString();
+    }
+
+    private string HashOtp(string scope, string otp)
+    {
+        var secret = _configuration["Jwt:Secret"] ?? "school-api-otp-development-secret";
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes($"{secret}:{scope}:{otp}")));
+    }
+
+    private string HashDeviceKey(string userId, string deviceKey)
+    {
+        var secret = _configuration["Jwt:Secret"] ?? "school-api-device-development-secret";
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes($"{secret}:{userId}:{deviceKey}")));
+    }
+
+    private async Task<bool> IsTrustedLoginDeviceAsync(ApplicationUser user, string deviceHash)
+    {
+        var trustedDevice = await _userManager.GetAuthenticationTokenAsync(user, TrustedDeviceLoginProvider, deviceHash);
+        return !string.IsNullOrWhiteSpace(trustedDevice);
+    }
+
+    private async Task RememberTrustedLoginDeviceAsync(ApplicationUser user, string deviceHash, string deviceName)
+    {
+        var value = $"{DateTime.UtcNow:O}|{deviceName}";
+        await _userManager.SetAuthenticationTokenAsync(user, TrustedDeviceLoginProvider, deviceHash, value);
+    }
+
+    private static void CleanExpiredLoginOtpChallenges()
+    {
+        var now = DateTime.UtcNow;
+        foreach (var challenge in LoginOtpChallenges.Where(item => item.Value.ExpiresAtUtc < now).ToList())
+        {
+            LoginOtpChallenges.TryRemove(challenge.Key, out _);
+        }
+    }
+
     private static string? NormalizeOptionalValue(string? value)
     {
         return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    }
+
+    private static string? NormalizeOtpDigits(string? otp)
+    {
+        if (string.IsNullOrWhiteSpace(otp))
+        {
+            return null;
+        }
+
+        var normalizedChars = otp
+            .Trim()
+            .Select(ch => ch switch
+            {
+                >= '\u0660' and <= '\u0669' => (char)('0' + (ch - '\u0660')),
+                >= '\u06F0' and <= '\u06F9' => (char)('0' + (ch - '\u06F0')),
+                _ => ch
+            })
+            .ToArray();
+
+        return new string(normalizedChars);
+    }
+
+    private static bool IsOtpTestEmail(string email)
+    {
+        string[] testEmails =
+        {
+            "mozaghloul0123@gmail.com",
+            "mohammedzaghloul0123@gmail.com",
+            "mohammedzaghloul9000@gmail.com",
+            "mohammedzaghloul8000@gmail.com",
+            "mohammedzaghloul7000@gmail.com"
+        };
+
+        return testEmails.Contains(email, StringComparer.OrdinalIgnoreCase);
+    }
+
+    private async Task<bool> SendOtpEmailAsync(string email, string otp, string purpose = "Ø§Ø³ØªØ¹Ø§Ø¯Ø© ÙƒÙ„Ù…Ø© Ø§Ù„Ù…Ø±ÙˆØ±", string? deviceName = null)
+    {
+        var recipientName = NormalizeOptionalValue(deviceName) ?? email;
+        var providerSent = await _emailService.SendOtpEmailAsync(email, recipientName, otp, purpose);
+        if (providerSent)
+        {
+            return true;
+        }
+
+        var host = _configuration["Email:SmtpHost"] ?? _configuration["SMTP_HOST"];
+        var portText = _configuration["Email:SmtpPort"] ?? _configuration["SMTP_PORT"];
+        var username = _configuration["Email:Username"] ?? _configuration["SMTP_USERNAME"];
+        var password = _configuration["Email:Password"] ?? _configuration["SMTP_PASSWORD"];
+        var from = _configuration["Email:From"] ?? _configuration["SMTP_FROM"] ?? username;
+        var enableSslText = _configuration["Email:EnableSsl"] ?? _configuration["SMTP_ENABLE_SSL"];
+        var timeoutText = _configuration["Email:SmtpTimeoutMs"] ?? _configuration["SMTP_TIMEOUT_MS"];
+        var enableSsl = bool.TryParse(enableSslText, out var ssl) ? ssl : true;
+        var timeoutMs = int.TryParse(timeoutText, out var parsedTimeoutMs) ? parsedTimeoutMs : 15000;
+
+        if (string.IsNullOrWhiteSpace(host) || string.IsNullOrWhiteSpace(from))
+        {
+            Console.WriteLine($"[OTP] {purpose} OTP for {email}: {otp}");
+            return false;
+        }
+
+        using var message = new MailMessage
+        {
+            From = new MailAddress(from, "NextGen Learning"),
+            Subject = $"ÙƒÙˆØ¯ Ø§Ù„ØªØ­Ù‚Ù‚ - {purpose}",
+            BodyEncoding = Encoding.UTF8,
+            SubjectEncoding = Encoding.UTF8,
+            IsBodyHtml = true,
+            Body = $"""
+                <div style="font-family:Arial,sans-serif;direction:rtl;text-align:right;line-height:1.8">
+                  <h2>ÙƒÙˆØ¯ Ø§Ù„ØªØ­Ù‚Ù‚ Ø§Ù„Ø®Ø§Øµ Ø¨Ùƒ</h2>
+                  <p>Ø§Ø³ØªØ®Ø¯Ù… Ø§Ù„ÙƒÙˆØ¯ Ø§Ù„ØªØ§Ù„ÙŠ Ù„Ø¥ÙƒÙ…Ø§Ù„ Ø¹Ù…Ù„ÙŠØ©: {WebUtility.HtmlEncode(purpose)}. Ø§Ù„ÙƒÙˆØ¯ ØµØ§Ù„Ø­ Ù„Ù…Ø¯Ø© 10 Ø¯Ù‚Ø§Ø¦Ù‚ ÙÙ‚Ø·.</p>
+                  {(string.IsNullOrWhiteSpace(deviceName) ? string.Empty : $"<p style=\"color:#475569\">Ø§Ù„Ø¬Ù‡Ø§Ø²: {WebUtility.HtmlEncode(deviceName)}</p>")}
+                  <div style="font-size:28px;font-weight:800;letter-spacing:6px;background:#eff6ff;color:#1d4ed8;padding:16px 24px;border-radius:14px;display:inline-block">{otp}</div>
+                  <p style="color:#64748b">Ø¥Ø°Ø§ Ù„Ù… ØªØ·Ù„Ø¨ Ù‡Ø°Ø§ Ø§Ù„ÙƒÙˆØ¯ØŒ ØªØ¬Ø§Ù‡Ù„ Ù‡Ø°Ù‡ Ø§Ù„Ø±Ø³Ø§Ù„Ø©.</p>
+                </div>
+                """
+        };
+        message.To.Add(email);
+
+        using var client = new SmtpClient(host, int.TryParse(portText, out var port) ? port : 587)
+        {
+            EnableSsl = enableSsl,
+            Timeout = timeoutMs
+        };
+
+        if (!string.IsNullOrWhiteSpace(username))
+        {
+            client.Credentials = new NetworkCredential(username, password);
+        }
+
+        try
+        {
+            await client.SendMailAsync(message);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[OTP] Failed to send email to {email}: {ex.Message}. OTP: {otp}");
+            return false;
+        }
     }
 
     public class UpdateProfileRequest
@@ -532,6 +771,45 @@ public class AccountController : ControllerBase
         public string? FullName { get; set; }
         public string? Phone { get; set; }
         public string? Address { get; set; }
+    }
+
+    public class ForgotPasswordOtpRequest
+    {
+        public string? Email { get; set; }
+    }
+
+    public class VerifyForgotPasswordOtpRequest
+    {
+        public string? Email { get; set; }
+        public string? Otp { get; set; }
+        public string? NewPassword { get; set; }
+    }
+
+    public class VerifyLoginOtpRequest
+    {
+        public string? ChallengeId { get; set; }
+        public string? Otp { get; set; }
+        public string? DeviceKey { get; set; }
+    }
+
+    private class ForgotPasswordOtpState
+    {
+        public string OtpHash { get; set; } = string.Empty;
+        public string ResetToken { get; set; } = string.Empty;
+        public DateTime ExpiresAtUtc { get; set; }
+        public int Attempts { get; set; }
+    }
+
+    private class LoginOtpChallengeState
+    {
+        public string UserId { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string Token { get; set; } = string.Empty;
+        public string DeviceKeyHash { get; set; } = string.Empty;
+        public string DeviceName { get; set; } = string.Empty;
+        public string OtpHash { get; set; } = string.Empty;
+        public DateTime ExpiresAtUtc { get; set; }
+        public int Attempts { get; set; }
     }
 
     public class ChangePasswordRequest
@@ -560,3 +838,4 @@ public class AccountController : ControllerBase
         public string Role { get; set; } = string.Empty;
     }
 }
+

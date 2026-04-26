@@ -4,6 +4,7 @@ import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import {
   ParentPaymentInvoice,
+  ParentPaymentMethod,
   ParentPaymentResult,
   ParentService
 } from '../../../core/services/parent.service';
@@ -11,15 +12,7 @@ import { NotificationService } from '../../../core/services/notification.service
 import { NotificationCenterService } from '../../../core/services/notification-center.service';
 import { environment } from '../../../../environments/environment';
 
-type PaymentMethod = 'card' | 'vodafone_cash' | 'fawry';
 type PaymentStep = 'input' | 'processing' | 'otp' | 'reference' | 'finalizing' | 'success';
-
-interface PaymentMethodOption {
-  value: PaymentMethod;
-  label: string;
-  hint: string;
-  icon: string;
-}
 
 @Component({
   selector: 'app-parent-payments',
@@ -31,7 +24,7 @@ interface PaymentMethodOption {
 export class PaymentsComponent implements OnInit {
   loading = true;
   payingInvoiceId: number | null = null;
-  selectedMethod: PaymentMethod = environment.paymentGateway.vodafoneCashNumber ? 'vodafone_cash' : 'card';
+  selectedMethod = environment.paymentGateway.vodafoneCashNumber ? 'vodafone_cash' : 'card';
   invoices: ParentPaymentInvoice[] = [];
 
   showGateway = false;
@@ -52,24 +45,45 @@ export class PaymentsComponent implements OnInit {
   receiptToShow: ParentPaymentInvoice | null = null;
   selectedTerm = 'الكل';
 
-  readonly paymentMethods: PaymentMethodOption[] = [
+  paymentMethods: ParentPaymentMethod[] = [
     {
-      value: 'vodafone_cash',
+      code: 'vodafone_cash',
       label: 'Vodafone Cash',
       hint: 'إرسال التعليمات ورقم المرجع على رقمك مباشرة',
-      icon: 'fas fa-mobile-screen-button'
+      icon: 'fas fa-mobile-screen-button',
+      providerCode: 'VODAFONE_CASH',
+      receiver: environment.paymentGateway.vodafoneCashNumber,
+      requiresOtp: true,
+      requiresReferenceConfirmation: false
     },
     {
-      value: 'card',
+      code: 'instapay',
+      label: 'InstaPay',
+      hint: 'تحويل لحظي ثم تأكيد رقم المرجع',
+      icon: 'fas fa-building-columns',
+      providerCode: 'INSTAPAY',
+      receiver: 'school@instapay',
+      requiresOtp: false,
+      requiresReferenceConfirmation: true
+    },
+    {
+      code: 'card',
       label: 'بطاقة بنكية',
       hint: 'محاكاة دفع آمنة داخل البوابة بدون أي مفاتيح خارجية',
-      icon: 'far fa-credit-card'
+      icon: 'far fa-credit-card',
+      providerCode: 'CARD_DEMO',
+      requiresOtp: true,
+      requiresReferenceConfirmation: false
     },
     {
-      value: 'fawry',
+      code: 'fawry',
       label: 'فوري',
       hint: 'إنشاء كود سداد فوري للاستخدام في نقاط الدفع',
-      icon: 'fas fa-barcode'
+      icon: 'fas fa-barcode',
+      providerCode: 'FAWRY',
+      receiver: '788',
+      requiresOtp: false,
+      requiresReferenceConfirmation: true
     }
   ];
 
@@ -80,7 +94,7 @@ export class PaymentsComponent implements OnInit {
   ) {}
 
   async ngOnInit(): Promise<void> {
-    await this.loadInvoices();
+    await Promise.all([this.loadPaymentMethods(), this.loadInvoices()]);
   }
 
   get termOptions(): string[] {
@@ -137,6 +151,21 @@ export class PaymentsComponent implements OnInit {
     return true;
   }
 
+  async loadPaymentMethods(): Promise<void> {
+    try {
+      const methods = await this.parentService.getPaymentMethods();
+      if (Array.isArray(methods) && methods.length > 0) {
+        this.paymentMethods = methods;
+        this.selectedMethod = methods.some(method => method.code === this.selectedMethod)
+          ? this.selectedMethod
+          : methods[0].code;
+        this.walletNumber = methods.find(method => method.code === 'vodafone_cash')?.receiver || this.walletNumber;
+      }
+    } catch (error) {
+      console.warn('Failed to load payment methods, using local fallback:', error);
+    }
+  }
+
   async loadInvoices(): Promise<void> {
     this.loading = true;
 
@@ -159,7 +188,7 @@ export class PaymentsComponent implements OnInit {
     this.selectedTerm = term;
   }
 
-  selectMethod(method: PaymentMethod): void {
+  selectMethod(method: string): void {
     this.selectedMethod = method;
     this.gatewayMessage = '';
     this.otpCode = '';
@@ -208,24 +237,29 @@ export class PaymentsComponent implements OnInit {
     await this.delay(1200);
     this.gatewayLoading = false;
 
-    switch (this.selectedMethod) {
-      case 'card':
+    const method = this.activeMethod;
+
+    if (this.selectedMethod === 'card') {
         this.verificationTarget = 'البطاقة البنكية';
         this.gatewayMessage = `تم إرسال رمز تحقق بنكي لإتمام سداد ${this.formatCurrency(this.normalizedPaymentAmount)}.`;
         this.paymentStep = 'otp';
-        break;
-      case 'vodafone_cash':
+        return;
+    }
+
+    if (this.selectedMethod === 'vodafone_cash') {
         this.paymentCode = this.generateReference('VC');
         this.verificationTarget = this.maskPhone(this.walletNumber);
         this.gatewayMessage = `تم إرسال تعليمات السداد ورقم المرجع ${this.paymentCode} إلى رقم فودافون كاش ${this.maskPhone(this.walletNumber)}.`;
         this.paymentStep = 'otp';
-        break;
-      case 'fawry':
-        this.paymentCode = this.generateReference('FWY');
-        this.gatewayMessage = `استخدم الكود ${this.paymentCode} لسداد ${this.formatCurrency(this.normalizedPaymentAmount)} من أي نقطة فوري خلال 24 ساعة.`;
-        this.paymentStep = 'reference';
-        break;
+        return;
     }
+
+    const prefix = this.selectedMethod === 'instapay' ? 'IPY' : 'FWY';
+    this.paymentCode = this.generateReference(prefix);
+    this.gatewayMessage = this.selectedMethod === 'instapay'
+      ? `حوّل ${this.formatCurrency(this.normalizedPaymentAmount)} إلى ${method?.receiver || 'حساب المدرسة'} ثم أكد رقم المرجع ${this.paymentCode}.`
+      : `استخدم الكود ${this.paymentCode} لسداد ${this.formatCurrency(this.normalizedPaymentAmount)} من أي نقطة فوري خلال 24 ساعة.`;
+    this.paymentStep = 'reference';
   }
 
   async verifyOtp(): Promise<void> {
@@ -254,12 +288,22 @@ export class PaymentsComponent implements OnInit {
     this.cardDetails.expiry = formatted;
   }
 
-  printReceipt(invoice: ParentPaymentInvoice): void {
+  showReceipt(invoice: ParentPaymentInvoice): void {
     this.receiptToShow = invoice;
+  }
+
+  closeReceipt(): void {
+    this.receiptToShow = null;
+  }
+
+  printReceipt(): void {
+    if (!this.receiptToShow) {
+      return;
+    }
+
     setTimeout(() => {
       window.print();
-      this.receiptToShow = null;
-    }, 500);
+    }, 50);
   }
 
   async payInvoice(invoice: ParentPaymentInvoice): Promise<void> {
@@ -300,15 +344,8 @@ export class PaymentsComponent implements OnInit {
     }
   }
 
-  getMethodLabel(method: PaymentMethod): string {
-    switch (method) {
-      case 'card':
-        return 'بطاقة بنكية';
-      case 'vodafone_cash':
-        return 'Vodafone Cash';
-      default:
-        return 'فوري';
-    }
+  getMethodLabel(method: string): string {
+    return this.paymentMethods.find(item => item.code === method)?.label || method;
   }
 
   private async completePayment(note: string): Promise<void> {
@@ -332,6 +369,7 @@ export class PaymentsComponent implements OnInit {
         : await this.parentService.payInvoice(invoice.id, {
             amount,
             method: methodLabel,
+            methodCode: this.selectedMethod,
             note
           });
 
@@ -552,6 +590,10 @@ export class PaymentsComponent implements OnInit {
       return `سداد عبر فوري باستخدام الكود ${this.paymentCode}.`;
     }
 
+    if (this.selectedMethod === 'instapay') {
+      return `سداد عبر InstaPay إلى ${this.activeMethod?.receiver || 'حساب المدرسة'} بالمرجع ${this.paymentCode}.`;
+    }
+
     return 'سداد عبر بوابة الدفع الآمنة داخل المنصة.';
   }
 
@@ -562,6 +604,10 @@ export class PaymentsComponent implements OnInit {
 
     if (this.selectedMethod === 'fawry') {
       return `تم تأكيد السداد باستخدام كود فوري ${this.paymentCode}.`;
+    }
+
+    if (this.selectedMethod === 'instapay') {
+      return `تم تأكيد تحويل ${this.formatCurrency(amount)} عبر ${methodLabel} بالمرجع ${this.paymentCode}.`;
     }
 
     return `تمت عملية سداد ${this.formatCurrency(amount)} عبر ${methodLabel} بنجاح.`;
@@ -591,6 +637,10 @@ export class PaymentsComponent implements OnInit {
     }
 
     return Number(Math.min(parsed, this.activeInvoice.remainingAmount).toFixed(2));
+  }
+
+  private get activeMethod(): ParentPaymentMethod | undefined {
+    return this.paymentMethods.find(method => method.code === this.selectedMethod);
   }
 
   private normalizeMoney(value: unknown, fallback: number): number {

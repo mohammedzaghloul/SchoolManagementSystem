@@ -1,11 +1,13 @@
 <div class="page-container" dir="rtl">
-    <div class="page-header d-flex justify-content-between align-items-center mb-4">
-        <div>
+    <div class="page-header d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-5 gap-3">
+        <div class="title-group">
             <h2 class="page-title text-gradient fw-bold">إدارة المدرسين</h2>
             <p class="text-muted-dark mb-0">إجمالي المدرسين: {{ teachers.length }}</p>
         </div>
-        <button class="btn btn-premium d-flex align-items-center gap-2" (click)="openAddModal()">
-            <i class="fas fa-plus"></i>
+        <button class="btn btn-add-premium btn-add-teacher d-flex align-items-center justify-content-center gap-2" (click)="openAddModal()">
+            <div class="plus-icon-circle">
+                <i class="fas fa-plus"></i>
+            </div>
             <span>إضافة مدرس جديد</span>
         </button>
     </div>
@@ -23,7 +25,15 @@
                 <div class="filter-wrapper">
                     <select class="form-select" [(ngModel)]="selectedSubject" (change)="applyFilter()">
                         <option value="all">كل المواد</option>
-                        <option *ngFor="let s of subjects" [value]="s.id">{{ s.name }}</option>
+                        <option *ngFor="let sub of subjects" [value]="sub.id">{{ sub.name }}</option>
+                    </select>
+                </div>
+
+                <div class="filter-wrapper">
+                    <select class="form-select" [(ngModel)]="selectedStatus" (change)="applyFilter()">
+                        <option value="all">كل الحالات</option>
+                        <option value="active">نشط</option>
+                        <option value="inactive">غير نشط</option>
                     </select>
                 </div>
             </div>
@@ -37,7 +47,8 @@
             </div>
 
             <!-- Data Table -->
-            <div class="table-responsive" *ngIf="!loading">
+            <!-- Desktop Data Table -->
+            <div class="table-responsive d-none d-md-block" *ngIf="!loading">
                 <table class="table custom-table align-middle">
                     <thead>
                         <tr>
@@ -57,9 +68,9 @@
                                     <div class="avatar bg-light-blue text-blue">
                                         <i class="fas fa-chalkboard-teacher fs-3"></i>
                                     </div>
-                                    <div>
+                                    <div class="teacher-info-cell">
                                         <h6 class="mb-0 fw-bold">{{ teacher.fullName }}</h6>
-                                        <small class="text-muted">{{ teacher.email }}</small>
+                                        <small class="text-muted teacher-email">{{ teacher.email }}</small>
                                     </div>
                                 </div>
                             </td>
@@ -90,6 +101,49 @@
                     </tbody>
                 </table>
             </div>
+
+            <!-- Mobile Teacher Cards -->
+            <div class="mobile-teacher-grid d-block d-md-none" *ngIf="!loading">
+                <div class="teacher-mobile-card mb-3" *ngFor="let teacher of filteredTeachers">
+                    <div class="card-top d-flex justify-content-between align-items-start mb-3">
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="avatar-sm bg-primary text-white">
+                                <i class="fas fa-chalkboard-teacher"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-0 fw-bold">{{ teacher.fullName }}</h6>
+                                <span class="badge bg-secondary-subtle text-secondary small">{{ teacher.subjectName || 'عام' }}</span>
+                            </div>
+                        </div>
+                        <span class="status-dot" [class.active]="teacher.isActive" (click)="toggleTeacherStatus(teacher)">
+                            <i class="fas fa-circle"></i> {{ teacher.isActive ? 'نشط' : 'غير نشط' }}
+                        </span>
+                    </div>
+                    
+                    <div class="card-body p-0">
+                        <div class="info-row d-flex align-items-center mb-2">
+                            <i class="fas fa-envelope text-muted me-2"></i>
+                            <span class="small teacher-email">{{ teacher.email }}</span>
+                        </div>
+                        <div class="info-row d-flex align-items-center mb-3">
+                            <i class="fas fa-phone text-muted me-2"></i>
+                            <span class="small">{{ teacher.phone || '—' }}</span>
+                        </div>
+                        
+                        <div class="card-actions d-flex gap-2 border-top pt-3">
+                            <button class="btn btn-premium-light btn-sm flex-grow-1" (click)="openEditModal(teacher)">
+                                <i class="far fa-edit me-1"></i> تعديل
+                            </button>
+                            <button class="btn btn-outline-danger btn-sm px-3" (click)="deleteTeacher(teacher.id)">
+                                <i class="far fa-trash-alt"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div *ngIf="filteredTeachers.length === 0" class="text-center py-4">
+                     <p class="text-muted">لا يوجد نتائج</p>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -98,51 +152,88 @@
 <div class="modal-backdrop fade show" *ngIf="showModal"></div>
 <div class="modal fade show d-block" *ngIf="showModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
-            <div class="modal-header border-0 bg-light p-4">
-                <h5 class="modal-title fw-bold text-dark">{{ isEditMode ? 'تعديل بيانات مدرس' : 'إضافة مدرس جديد' }}</h5>
-                <button type="button" class="btn-close shadow-none m-0 me-auto ms-0" (click)="closeModal()"></button>
-            </div>
-            <form (ngSubmit)="saveTeacher()">
-                <div class="modal-body p-4">
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold text-secondary">الاسم الكامل</label>
-                        <input type="text" class="form-control rounded-3" name="fullName"
-                            [(ngModel)]="currentTeacher.fullName" required placeholder="ادخل الاسم الرباعي">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold text-secondary">البريد الإلكتروني</label>
-                        <input type="email" class="form-control rounded-3" name="email"
-                            [(ngModel)]="currentTeacher.email" required placeholder="example@school.com">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold text-secondary">رقم الهاتف</label>
-                        <input type="text" class="form-control rounded-3" name="phone"
-                            [(ngModel)]="currentTeacher.phone" placeholder="01xxxxxxxxx">
-                    </div>
-                    <div class="mb-3" *ngIf="!isEditMode">
-                        <label class="form-label fw-semibold text-secondary">كلمة المرور</label>
-                        <input type="password" class="form-control rounded-3" name="password"
-                            [(ngModel)]="currentTeacher.password">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold text-secondary">المادة الدراسية</label>
-                        <select class="form-select rounded-3" name="subjectId" [(ngModel)]="currentTeacher.subjectId">
-                            <option [ngValue]="null" disabled>اختر مادة المدرس...</option>
-                            <option *ngFor="let s of subjects" [ngValue]="s.id">{{ s.name }}</option>
-                        </select>
-                    </div>
-                    <div class="form-check form-switch mb-0 bg-light p-3 rounded-3 d-flex justify-content-between align-items-center m-0">
-                        <label class="form-check-label fw-semibold text-dark m-0">حساب المدرس نشط</label>
-                        <input class="form-check-input m-0 fs-5" type="checkbox" name="isActive" [(ngModel)]="currentTeacher.isActive">
+        <div class="modal-content border-0 shadow-2xl rounded-5 overflow-hidden">
+            <div class="modal-header border-0 p-4 pb-0 align-items-center bg-white justify-content-center flex-column position-relative">
+                <button type="button" class="btn-close shadow-none m-0 position-absolute end-0 top-0 mt-4 me-4" (click)="closeModal()"></button>
+                
+                <div class="modal-icon-premium mb-3">
+                    <div class="icon-circle shadow-premium">
+                         <i class="fas" [ngClass]="isEditMode ? 'fa-user-edit' : 'fa-user-plus'"></i>
                     </div>
                 </div>
-                <div class="modal-footer border-0 p-4 pt-0 d-flex justify-content-start gap-2">
-                    <button type="submit" class="btn btn-premium px-5" [disabled]="submitting">
-                        {{ submitting ? 'جاري الحفظ...' : 'حفظ بيانات المدرس' }}
+                <h4 class="modal-title fw-bold text-dark text-center">{{ isEditMode ? 'تعديل بيانات مدرس' : 'إضافة مدرس جديد' }}</h4>
+                <div class="title-underline mt-2"></div>
+            </div>
+            
+            <form (ngSubmit)="saveTeacher()">
+                <div class="modal-body p-5 pt-4">
+                    <div class="form-group-premium mb-4">
+                        <label class="premium-label">الاسم الكامل</label>
+                        <div class="input-wrapper">
+                            <input type="text" class="premium-input" name="fullName"
+                                [(ngModel)]="currentTeacher.fullName" required placeholder="ادخل الاسم الرباعي">
+                            <i class="fas fa-user input-icon"></i>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group-premium mb-4">
+                        <label class="premium-label">البريد الإلكتروني</label>
+                        <div class="input-wrapper">
+                            <input type="email" class="premium-input" name="email"
+                                [(ngModel)]="currentTeacher.email" required placeholder="example@school.com">
+                            <i class="fas fa-envelope input-icon"></i>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-4">
+                            <div class="form-group-premium">
+                                <label class="premium-label">رقم الهاتف</label>
+                                <div class="input-wrapper">
+                                    <input type="text" class="premium-input" name="phone"
+                                        [(ngModel)]="currentTeacher.phone" placeholder="01xxxxxxxxx">
+                                    <i class="fas fa-phone input-icon"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-4" *ngIf="!isEditMode">
+                            <div class="form-group-premium">
+                                <label class="premium-label">كلمة المرور</label>
+                                <div class="input-wrapper">
+                                    <input type="password" class="premium-input" name="password"
+                                        [(ngModel)]="currentTeacher.password" placeholder="••••••••">
+                                    <i class="fas fa-lock input-icon"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group-premium mb-4">
+                        <label class="premium-label">المادة الدراسية</label>
+                        <div class="input-wrapper">
+                            <select class="premium-input" name="subjectId" [(ngModel)]="currentTeacher.subjectId">
+                                <option [ngValue]="null">عام / غير محدد</option>
+                                <option *ngFor="let s of subjects" [ngValue]="s.id">{{ s.name }}</option>
+                            </select>
+                            <i class="fas fa-book input-icon"></i>
+                        </div>
+                    </div>
+                    
+                    <div class="premium-switch-card d-flex justify-content-between align-items-center">
+                        <label class="fw-bold text-dark m-0">حساب المدرس نشط</label>
+                        <div class="form-check form-switch m-0 p-0">
+                            <input class="form-check-input ms-0 fs-4" type="checkbox" name="isActive" [(ngModel)]="currentTeacher.isActive">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-footer border-0 p-5 pt-0 d-flex justify-content-center gap-3">
+                    <button type="submit" class="btn btn-premium-primary px-5 py-3 shadow-lg" [disabled]="submitting">
+                        <span>{{ submitting ? 'جاري الحفظ...' : 'حفظ بيانات المدرس' }}</span>
+                        <i class="fas fa-save ms-2"></i>
                     </button>
-                    <button type="button" class="btn btn-light px-4" (click)="closeModal()"
-                        [disabled]="submitting">إلغاء</button>
+                    <button type="button" class="btn btn-premium-light px-5 py-3" (click)="closeModal()"
+                        [disabled]="submitting">إلغاء الأمر</button>
                 </div>
             </form>
         </div>

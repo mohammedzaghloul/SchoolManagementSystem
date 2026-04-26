@@ -35,6 +35,10 @@ export class SidebarComponent implements OnInit, OnDestroy {
     return this.authService.hasRole(role);
   }
 
+  canCreateAdmins(): boolean {
+    return this.authService.canCreateAdmins();
+  }
+
   resetChatBadge() {
     this.notificationCenter.markAllAsRead('message');
   }

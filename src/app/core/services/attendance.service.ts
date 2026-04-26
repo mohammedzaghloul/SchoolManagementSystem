@@ -9,7 +9,7 @@ export class AttendanceService {
   constructor(private api: ApiService) { }
 
   async generateQr(sessionId: number): Promise<any> {
-    return this.api.get(`/api/Attendance/generate-qr/${sessionId}`);
+    return this.api.get(`/api/Attendance/generate-flex-qr/${sessionId}`);
   }
 
   async markManual(data: any): Promise<any> {

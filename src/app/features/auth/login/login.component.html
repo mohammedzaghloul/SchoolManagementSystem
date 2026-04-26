@@ -16,10 +16,30 @@
   <div class="login-left">
     <div class="login-form-container">
       <div class="login-header">
-        <div class="logo-circle">
-          <i class="fas fa-school"></i>
+        <div class="brand-lockup" aria-label="NEXTGEN LEARNING">
+          <div class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 60 60" role="img">
+              <path d="M30 15L55 27L30 39L5 27L30 15Z" fill="url(#loginLogoGrad)" />
+              <path d="M15 32V42C15 42 22 49 30 49C38 49 45 42 45 42V32" stroke="white" stroke-width="2" opacity="0.38" fill="none" />
+              <path d="M30 15L55 27L30 39L5 27L30 15Z" stroke="white" stroke-width="0.8" opacity="0.25" fill="none" />
+              <path d="M55 27V40" stroke="#60A5FA" stroke-width="2.5" stroke-linecap="round" />
+              <circle cx="55" cy="42" r="3.5" fill="#60A5FA" />
+              <defs>
+                <linearGradient id="loginLogoGrad" x1="10" y1="10" x2="50" y2="50" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stop-color="#A855F7" />
+                  <stop offset="100%" stop-color="#2563EB" />
+                </linearGradient>
+              </defs>
+            </svg>
+          </div>
+          <div class="brand-text">
+            <span class="brand-name">NEXTGEN</span>
+            <span class="brand-subtitle">LEARNING</span>
+          </div>
         </div>
-        <h2>نظام إدارة المدرسة</h2>
+        <span class="login-kicker">بوابة الدخول</span>
+        <h1>نظام إدارة المدرسة</h1>
+        <p>سجّل دخولك لمتابعة الحصص، الحضور، والتواصل داخل المنصة.</p>
       </div>
 
       <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
@@ -32,6 +52,8 @@
           <div class="input-wrapper">
             <input type="email" id="email" formControlName="email" class="form-control"
               [ngClass]="{ 'is-invalid': f['email'].errors && (f['email'].dirty || f['email'].touched) }"
+              [readonly]="requiresOtp"
+              autocomplete="email"
               placeholder="أدخل البريد الإلكتروني">
             <i class="fas fa-user input-icon"></i>
           </div>
@@ -47,9 +69,13 @@
             <input [type]="showPassword ? 'text' : 'password'" id="password" formControlName="password"
               class="form-control password-input"
               [ngClass]="{ 'is-invalid': f['password'].errors && (f['password'].dirty || f['password'].touched) }"
+              [readonly]="requiresOtp"
+              autocomplete="current-password"
               placeholder="••••••••">
             <i class="fas fa-lock input-icon"></i>
-            <button type="button" class="toggle-password-btn" (click)="togglePasswordVisibility()">
+            <button type="button" class="toggle-password-btn" (click)="togglePasswordVisibility()"
+              [attr.aria-label]="showPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'"
+              [title]="showPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'">
               <i class="fas" [class.fa-eye]="!showPassword" [class.fa-eye-slash]="showPassword"></i>
             </button>
           </div>
@@ -58,14 +84,44 @@
           </div>
         </div>
 
+        <div class="otp-panel" *ngIf="requiresOtp">
+          <div class="otp-panel__icon">
+            <i class="fas fa-shield-alt"></i>
+          </div>
+          <div>
+            <h3>تأكيد جهاز جديد</h3>
+            <p>أدخل كود OTP الذي وصل إلى البريد الإلكتروني حتى نثق هذا الجهاز.</p>
+          </div>
+        </div>
+
+        <div class="alert alert-info otp-info" *ngIf="infoMessage && requiresOtp">
+          <i class="fas fa-circle-info"></i> {{ infoMessage }}
+        </div>
+
+        <div class="form-group" *ngIf="requiresOtp">
+          <label for="otp">كود التحقق OTP</label>
+          <div class="input-wrapper">
+            <input type="text" id="otp" formControlName="otp" class="form-control otp-input"
+              [ngClass]="{ 'is-invalid': f['otp'].errors && (f['otp'].dirty || f['otp'].touched) }"
+              maxlength="6" inputmode="numeric" autocomplete="one-time-code" placeholder="000000">
+            <i class="fas fa-key input-icon"></i>
+          </div>
+          <div *ngIf="f['otp'].errors && (f['otp'].dirty || f['otp'].touched)" class="invalid-feedback">
+            <div *ngIf="f['otp'].errors['pattern']">كود التحقق يجب أن يكون 6 أرقام.</div>
+          </div>
+          <button type="button" class="change-device-btn" (click)="resetOtpStep()">
+            تغيير البريد أو كلمة المرور
+          </button>
+        </div>
+
         <div class="forgot-password">
           <a routerLink="/auth/forgot-password">هل نسيت كلمة المرور؟</a>
         </div>
 
         <div class="form-actions">
-          <button [disabled]="loading" class="btn btn-primary d-flex align-items-center justify-content-center w-100">
+          <button type="submit" [disabled]="loading" class="btn btn-primary d-flex align-items-center justify-content-center w-100">
             <span *ngIf="loading" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-            <span>تسجيل الدخول</span>
+            <span>{{ requiresOtp ? 'تأكيد الكود وتسجيل الدخول' : 'تسجيل الدخول' }}</span>
           </button>
         </div>
 

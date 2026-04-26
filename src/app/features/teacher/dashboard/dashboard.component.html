@@ -1,215 +1,224 @@
-<div class="page-container p-4 p-lg-5" dir="rtl">
-    <div class="page-header d-flex flex-column flex-sm-row justify-content-between align-items-center mb-5 gap-3">
-        <div class="animate-fade-in">
-            <div class="d-flex align-items-center gap-3 mb-1">
-                <div class="header-icon-badge bg-primary text-white rounded-circle p-2 shadow-sm">
-                    <i class="fas fa-bolt-lightning fs-5"></i>
-                </div>
-                <h2 class="page-title mb-0 fw-800">مرحباً، أستاذ {{ teacherName }} 👋</h2>
-            </div>
-            <p class="text-secondary small mb-0 ps-5">نظرة عامة حية لنشاطك التعليمي ومؤشرات الحضور لليوم</p>
-        </div>
-        <a routerLink="/teacher/timetable"
-            class="btn btn-white btn-action-outline px-4 py-2-5 rounded-15 fw-800 shadow-premium hover-glow transition d-flex align-items-center gap-2">
-            <i class="fas fa-calendar-alt text-primary"></i>
-            جدول المحاضرات الكامل
-        </a>
-    </div>
-
-    <div class="row g-4 mb-5">
-        <div class="col-md-4">
-            <div class="card stat-card border-0 rounded-25 p-4 d-flex flex-row align-items-center gap-4">
-                <div class="stat-icon-box bg-blue-soft rounded-20">
-                    <i class="fas fa-user-graduate"></i>
-                </div>
-                <div class="text-start flex-grow-1">
-                    <p class="text-secondary x-small fw-800 ls-1 mb-1 opacity-75">إجمالي الطلاب</p>
-                    <h2 class="fw-800 mb-0 text-dark">{{ stats.totalStudents || 0 }}</h2>
-                </div>
-            </div>
+<div class="teacher-dashboard-page" dir="rtl">
+    <section class="teacher-hero">
+        <div class="teacher-hero__content">
+            <span class="eyebrow">لوحة المدرس</span>
+            <h1>مرحباً، أستاذ {{ teacherName }}</h1>
+            <p>كل حاجة محتاجها اليوم: الحضور، الدرجات، الواجبات، والتواصل في شاشة واحدة.</p>
         </div>
 
-        <div class="col-md-4">
-            <div class="card stat-card border-0 rounded-25 p-4 d-flex flex-row align-items-center gap-4 border-bottom-primary">
-                <div class="stat-icon-box bg-green-soft rounded-20">
-                    <i class="fas fa-chart-line"></i>
-                </div>
-                <div class="text-start flex-grow-1">
-                    <p class="text-secondary x-small fw-800 ls-1 mb-1 opacity-75">معدل الحضور</p>
-                    <h2 class="fw-800 mb-0 text-dark">{{ stats.attendanceAvg }}</h2>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-4">
-            <a routerLink="/teacher/attendance" class="text-decoration-none">
-                <div class="card stat-card border-0 rounded-25 p-4 d-flex flex-row align-items-center gap-4 clickable-card overflow-hidden position-relative">
-                    <div class="stat-icon-box bg-purple-soft rounded-20">
-                        <i class="fas fa-clock-rotate-left"></i>
-                    </div>
-                    <div class="text-start flex-grow-1">
-                        <p class="text-secondary x-small fw-800 ls-1 mb-1 opacity-75">حصص اليوم</p>
-                        <h2 class="fw-800 mb-0 text-dark">{{ stats.todayClasses }}</h2>
-                    </div>
-                    <div class="position-absolute bottom-0 start-0 w-100 bg-purple h-2 opacity-10"></div>
-                </div>
+        <div class="teacher-hero__actions">
+            <a routerLink="/teacher/attendance" class="hero-action hero-action--primary">
+                <i class="fas fa-clipboard-check"></i>
+                <span>ابدأ الحضور</span>
+            </a>
+            <a routerLink="/teacher/grades" class="hero-action hero-action--light">
+                <i class="fas fa-pen-to-square"></i>
+                <span>رصد الدرجات</span>
+            </a>
+            <a routerLink="/teacher/timetable" class="hero-action hero-action--light">
+                <i class="fas fa-calendar-alt"></i>
+                <span>الجدول</span>
             </a>
         </div>
-    </div>
+    </section>
 
-    <div class="row g-5">
-        <div class="col-lg-7 order-lg-1">
-            <div class="card current-class-card border-0 rounded-25 h-100 animate-scale-in">
-                <div class="card-header bg-transparent border-0 pt-5 pb-3 px-5 d-flex align-items-center gap-3">
-                    <div class="pulse-indicator" *ngIf="currentSession"></div>
-                    <h5 class="fw-800 mb-0 text-dark-blue">
-                        {{ currentSession ? 'الحصة الجارية الآن' : (attendanceFocusSession ? 'آخر حصة ما زالت متاحة للرصد' : 'حالة الجدول المدرسي') }}
-                    </h5>
-                </div>
-
-                <div class="card-body px-5 pb-5">
-                    <div class="current-class-content text-start" *ngIf="heroSession">
-                        <div class="mb-5">
-                            <div class="d-flex align-items-center gap-3 mb-2 flex-wrap">
-                                <span class="badge badge-live rounded-pill py-2-5" *ngIf="currentSession">
-                                    <i class="fas fa-circle fs-xxxs me-2 blink"></i> جارية الآن
-                                </span>
-                                <span class="badge badge-attendance-window rounded-pill py-2-5" *ngIf="isAttendanceWindowState">
-                                    <i class="fas fa-clipboard-check me-2"></i> نافذة الرصد مفتوحة
-                                </span>
-                                <span class="badge bg-primary-soft text-primary rounded-pill px-3 py-2 fw-800 x-small">
-                                    <i class="far fa-clock me-1"></i> {{ formatTime(heroSession.startTime) }}
-                                </span>
-                            </div>
-
-                            <h1 class="fw-800 text-dark-blue mb-1 display-5">{{ heroSession.subjectName }}</h1>
-                            <h4 class="text-secondary fw-700 opacity-75 d-flex align-items-center gap-2">
-                                <i class="fas fa-location-dot x-small"></i> {{ heroSession.classRoomName }}
-                            </h4>
-
-                            <p class="status-note mt-3 mb-0" *ngIf="isAttendanceWindowState">
-                                يمكنك استكمال الرصد لهذه الحصة الآن
-                                <span class="fw-800" *ngIf="heroSession.attendanceWindowLabel">({{ heroSession.attendanceWindowLabel }})</span>
-                            </p>
-                        </div>
-
-                        <div class="row g-4 mb-5">
-                            <div class="col-sm-6">
-                                <div class="bg-light p-4 rounded-25 border-0 text-center shadow-tiny hover-glow transition">
-                                    <div class="text-muted x-small fw-800 ls-1 mb-2">الطلاب الحاضرين</div>
-                                    <div class="d-flex align-items-baseline justify-content-center gap-2">
-                                        <h1 class="fw-800 text-success mb-0 counter-animate">{{ heroSession.attendanceCount || 0 }}</h1>
-                                        <span class="text-muted fw-bold">/{{ heroSession.studentCount || 0 }}</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-sm-6">
-                                <div class="bg-light p-4 rounded-25 border-0 text-center shadow-tiny hover-glow transition">
-                                    <div class="text-muted x-small fw-800 ls-1 mb-2">في انتظار الرصد</div>
-                                    <h1 class="fw-800 text-warning mb-0 counter-animate">
-                                        {{ (heroSession.studentCount || 0) - (heroSession.attendanceCount || 0) }}
-                                    </h1>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="d-flex flex-column gap-3">
-                            <div class="row g-3">
-                                <div class="col-md-6">
-                                    <button type="button"
-                                        class="btn btn-dashboard-action btn-qr-glow w-100 animate-fade-in d-flex align-items-center justify-content-center gap-3"
-                                        (click)="openQrBroadcast()"
-                                        [disabled]="!qrTargetSession">
-                                        <i class="fas fa-qrcode fs-4"></i>
-                                        بث رمز QR
-                                    </button>
-                                    <div class="action-helper-text" *ngIf="qrTargetHint">
-                                        {{ qrTargetHint }}
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <a [routerLink]="['/teacher/attendance/face']" [queryParams]="{sessionId: heroSession.id}"
-                                        class="btn btn-dashboard-action btn-face-dark w-100 animate-fade-in d-flex align-items-center justify-content-center gap-3">
-                                        <i class="fas fa-id-card-clip fs-4"></i>
-                                        التعرف بالوجه
-                                    </a>
-                                </div>
-                            </div>
-                            <a [routerLink]="['/teacher/attendance/manual']" [queryParams]="{sessionId: heroSession.id}"
-                                class="btn btn-action-outline border-dashed w-100 py-3 rounded-20 fw-800 text-muted transition hover-primary">
-                                <i class="fas fa-list-check me-2"></i> الرصد اليدوي التقليدي
-                            </a>
-                        </div>
-                    </div>
-
-                    <div class="py-5 text-center animate-fade-in" *ngIf="!heroSession && !loading">
-                        <div class="mb-4 bg-light p-5 rounded-circle d-inline-flex mx-auto scale-up">
-                            <i class="fas fa-mug-hot fs-1 text-primary-light opacity-50"></i>
-                        </div>
-                        <h4 class="fw-800 text-dark-blue mb-2">لا توجد حصة جارية الآن</h4>
-                        <p class="text-secondary opacity-75 mb-2" *ngIf="lastCompletedSession">
-                            آخر حصة انتهت اليوم عند {{ formatTime(lastCompletedSession.endTime) }}.
-                        </p>
-                        <p class="text-secondary opacity-75 mb-2" *ngIf="!lastCompletedSession && nextUpcomingSession">
-                            الحصة التالية تبدأ عند {{ formatTime(nextUpcomingSession.startTime) }}.
-                        </p>
-                        <p class="text-secondary opacity-75" *ngIf="!nextUpcomingSession">
-                            انتهى جدول اليوم الحالي، ويمكنك مراجعة الحصص من شاشة الحضور والغياب.
-                        </p>
-                        <div class="mt-4 d-flex flex-wrap justify-content-center gap-2">
-                            <span class="subtle-chip" *ngIf="stats.todayClasses">إجمالي حصص اليوم: {{ stats.todayClasses }}</span>
-                            <span class="subtle-chip" *ngIf="lastCompletedSession">آخر مادة: {{ lastCompletedSession.subjectName }}</span>
-                        </div>
-                        <div class="mt-4">
-                            <a routerLink="/teacher/attendance" class="btn btn-primary px-5 py-2-5 rounded-pill fw-800 shadow-premium">إدارة جميع الحصص</a>
-                        </div>
-                    </div>
-
-                    <div class="py-10 text-center animate-fade-in" *ngIf="loading">
-                        <div class="spinner-grow text-primary" role="status" style="width: 4rem; height: 4rem;"></div>
-                        <h5 class="mt-4 text-secondary fw-800 opacity-75">جاري مزامنة القاعة الدراسية...</h5>
-                    </div>
-                </div>
+    <section class="stats-grid" aria-label="ملخص اليوم">
+        <article class="metric-card metric-card--blue">
+            <div class="metric-card__icon">
+                <i class="fas fa-user-graduate"></i>
             </div>
-        </div>
+            <div>
+                <span>طلابك</span>
+                <strong>{{ stats.totalStudents || 0 }}</strong>
+            </div>
+        </article>
 
-        <div class="col-lg-5 order-lg-2">
-            <div class="card glass-card border-0 rounded-25 h-100 animate-stagger">
-                <div class="card-header bg-transparent border-0 pt-5 pb-3 px-5 d-flex justify-content-between align-items-center">
-                    <h5 class="fw-800 mb-0 d-flex align-items-center gap-3">
-                        <i class="fas fa-calendar-day text-primary-light"></i>
-                        جدول حصص اليوم
-                    </h5>
-                    <span class="badge bg-primary-soft text-primary rounded-10 px-3 py-1-5 x-small fw-800">{{ todaySessions.length }} حصص</span>
+        <article class="metric-card metric-card--green">
+            <div class="metric-card__icon">
+                <i class="fas fa-chart-line"></i>
+            </div>
+            <div>
+                <span>معدل الحضور</span>
+                <strong>{{ stats.attendanceAvg }}</strong>
+            </div>
+        </article>
+
+        <a routerLink="/teacher/attendance" class="metric-card metric-card--purple metric-card--link">
+            <div class="metric-card__icon">
+                <i class="fas fa-clock-rotate-left"></i>
+            </div>
+            <div>
+                <span>حصص اليوم</span>
+                <strong>{{ stats.todayClasses }}</strong>
+            </div>
+        </a>
+
+        <a routerLink="/teacher/attendance" class="metric-card metric-card--amber metric-card--link">
+            <div class="metric-card__icon">
+                <i class="fas fa-triangle-exclamation"></i>
+            </div>
+            <div>
+                <span>تحتاج رصد</span>
+                <strong>{{ pendingAttendanceSessions }}</strong>
+            </div>
+        </a>
+    </section>
+
+    <section class="quick-hub" aria-label="اختصارات المدرس">
+        <a
+            *ngFor="let link of quickLinks"
+            [routerLink]="link.route"
+            class="quick-link"
+            [ngClass]="'quick-link--' + link.tone">
+            <i [class]="link.icon"></i>
+            <span>{{ link.label }}</span>
+        </a>
+    </section>
+
+    <div class="dashboard-grid">
+        <section class="session-focus-card">
+            <header class="section-header">
+                <div>
+                    <span class="section-kicker">{{ currentSession ? 'الآن' : 'متابعة الحضور' }}</span>
+                    <h2>
+                        {{ currentSession ? 'الحصة الجارية' : (attendanceFocusSession ? 'حصة محتاجة رصد' : 'حالة اليوم') }}
+                    </h2>
                 </div>
-                <div class="card-body p-0">
-                    <div class="list-group list-group-flush px-4" *ngIf="todaySessions.length > 0">
-                        <div class="list-group-item session-item border-0 px-4 py-4 mb-3 d-flex justify-content-between align-items-center"
-                             *ngFor="let s of todaySessions"
-                             [class.active-session]="s.id === currentSession?.id">
-                            <div class="d-flex align-items-center gap-4">
-                                <div class="session-time-indicator" [class.bg-success]="s.id === currentSession?.id"></div>
-                                <div>
-                                    <h6 class="fw-800 mb-1" [style.color]="s.id === currentSession?.id ? '#4f46e5' : '#1e293b'">{{ s.subjectName }}</h6>
-                                    <div class="d-flex align-items-center gap-2 text-secondary opacity-75 x-small">
-                                        <i class="fas fa-building-columns"></i> {{ s.classRoomName }}
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="text-end">
-                                <div class="fw-800 text-dark-blue small mb-2">{{ formatTime(s.startTime) }}</div>
-                                <span class="badge bg-success shadow-sm rounded-pill px-2 py-1 fs-xxs" *ngIf="s.id === currentSession?.id">جارية الآن</span>
-                                <span class="badge badge-outline-warning shadow-sm rounded-pill px-2 py-1 fs-xxs" *ngIf="s.id !== currentSession?.id && s.id === attendanceFocusSession?.id">الرصد متاح</span>
-                            </div>
+                <span class="live-dot" *ngIf="currentSession" aria-hidden="true"></span>
+            </header>
+
+            <div class="session-body" *ngIf="heroSession">
+                <div class="session-meta">
+                    <span class="status-pill status-pill--live" *ngIf="currentSession">
+                        <i class="fas fa-circle"></i>
+                        جارية الآن
+                    </span>
+                    <span class="status-pill status-pill--warning" *ngIf="isAttendanceWindowState">
+                        <i class="fas fa-clipboard-check"></i>
+                        نافذة الرصد مفتوحة
+                    </span>
+                    <span class="status-pill">
+                        <i class="far fa-clock"></i>
+                        {{ formatTime(heroSession.startTime) }}
+                    </span>
+                    <span class="status-pill">
+                        <i class="fas fa-users"></i>
+                        {{ heroSession.studentCount || 0 }} طالب
+                    </span>
+                </div>
+
+                <div class="session-title-block">
+                    <h3>{{ heroSession.subjectName }}</h3>
+                    <p>
+                        <i class="fas fa-location-dot"></i>
+                        {{ heroSession.classRoomName }}
+                    </p>
+                    <p class="session-note" *ngIf="isAttendanceWindowState">
+                        افتح الرصد المناسب وكملها بسرعة
+                        <strong *ngIf="heroSession.attendanceWindowLabel">({{ heroSession.attendanceWindowLabel }})</strong>
+                    </p>
+                </div>
+
+                <div class="attendance-summary">
+                    <div class="attendance-box attendance-box--present">
+                        <span>تم رصدهم</span>
+                        <strong>{{ heroSession.attendanceCount || 0 }}</strong>
+                        <small>من {{ heroSession.studentCount || 0 }}</small>
+                    </div>
+                    <div class="attendance-box attendance-box--waiting">
+                        <span>المتبقي</span>
+                        <strong>{{ (heroSession.studentCount || 0) - (heroSession.attendanceCount || 0) }}</strong>
+                        <small>طالب</small>
+                    </div>
+                </div>
+
+                <div class="quick-actions">
+                    <button type="button"
+                        class="action-button action-button--qr"
+                        (click)="openQrBroadcast()"
+                        [disabled]="!qrTargetSession">
+                        <i class="fas fa-qrcode"></i>
+                        <span>بث رمز QR</span>
+                    </button>
+
+                    <a [routerLink]="['/teacher/attendance/face']" [queryParams]="{sessionId: heroSession.id}"
+                        class="action-button action-button--face">
+                        <i class="fas fa-id-card-clip"></i>
+                        <span>التعرف بالوجه</span>
+                    </a>
+
+                    <a [routerLink]="['/teacher/attendance/manual']" [queryParams]="{sessionId: heroSession.id}"
+                        class="action-button action-button--manual">
+                        <i class="fas fa-list-check"></i>
+                        <span>الرصد اليدوي</span>
+                    </a>
+                </div>
+
+                <p class="action-helper" *ngIf="qrTargetHint">{{ qrTargetHint }}</p>
+            </div>
+
+            <div class="empty-state" *ngIf="!heroSession && !loading">
+                <div class="empty-state__icon">
+                    <i class="fas fa-calendar-check"></i>
+                </div>
+                <h3>لا توجد حصة جارية الآن</h3>
+                <p *ngIf="lastCompletedSession">آخر حصة انتهت اليوم عند {{ formatTime(lastCompletedSession.endTime) }}.</p>
+                <p *ngIf="!lastCompletedSession && nextUpcomingSession">الحصة التالية تبدأ عند {{ formatTime(nextUpcomingSession.startTime) }}.</p>
+                <p *ngIf="!nextUpcomingSession">انتهى جدول اليوم الحالي، ويمكنك مراجعة الحصص من شاشة الحضور والغياب.</p>
+                <div class="empty-state__chips">
+                    <span *ngIf="stats.todayClasses">إجمالي حصص اليوم: {{ stats.todayClasses }}</span>
+                    <span *ngIf="lastCompletedSession">آخر مادة: {{ lastCompletedSession.subjectName }}</span>
+                </div>
+                <a routerLink="/teacher/attendance" class="empty-state__button">إدارة جميع الحصص</a>
+            </div>
+
+            <div class="loading-state" *ngIf="loading" aria-busy="true">
+                <span class="loader"></span>
+                <h3>جارٍ تجهيز بيانات اليوم...</h3>
+                <p>نرتب الحصص ومؤشرات الحضور لحظياً.</p>
+            </div>
+        </section>
+
+        <aside class="today-card">
+            <header class="section-header section-header--compact">
+                <div>
+                    <span class="section-kicker">اليوم</span>
+                    <h2>جدول الحصص</h2>
+                </div>
+                <span class="count-badge">{{ todayProgressLabel }}</span>
+            </header>
+
+            <div class="sessions-list" *ngIf="todaySessions.length > 0">
+                <article class="session-item" *ngFor="let s of todaySessions" [class.session-item--active]="s.id === currentSession?.id">
+                    <div class="session-item__time">
+                        <span>{{ formatTime(s.startTime) }}</span>
+                    </div>
+
+                    <div class="session-item__content">
+                        <h3>{{ s.subjectName }}</h3>
+                        <p>
+                            <i class="fas fa-building-columns"></i>
+                            {{ s.classRoomName }}
+                        </p>
+                        <div class="session-item__badges">
+                            <span class="mini-badge mini-badge--live" *ngIf="s.id === currentSession?.id">جارية الآن</span>
+                            <span class="mini-badge mini-badge--warning" *ngIf="s.id !== currentSession?.id && s.id === attendanceFocusSession?.id">الرصد متاح</span>
                         </div>
                     </div>
-                    <div class="d-flex flex-column align-items-center justify-content-center text-center py-10"
-                        *ngIf="todaySessions.length === 0 && !loading">
-                        <i class="fas fa-calendar-day fs-1 text-light mb-4"></i>
-                        <p class="text-secondary fw-800 opacity-50">لا توجد حصص لليوم</p>
-                    </div>
-                </div>
+
+                    <a [routerLink]="['/teacher/attendance/manual']" [queryParams]="{sessionId: s.id}" class="session-item__action" aria-label="رصد الحضور">
+                        <i class="fas fa-chevron-left"></i>
+                    </a>
+                </article>
             </div>
-        </div>
+
+            <div class="empty-state empty-state--small" *ngIf="todaySessions.length === 0 && !loading">
+                <div class="empty-state__icon">
+                    <i class="fas fa-calendar-day"></i>
+                </div>
+                <h3>لا توجد حصص لليوم</h3>
+                <p>استمتع بيوم هادئ أو راجع جدول الأسبوع.</p>
+            </div>
+        </aside>
     </div>
 </div>

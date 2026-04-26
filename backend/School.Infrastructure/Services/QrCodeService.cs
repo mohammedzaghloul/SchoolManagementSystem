@@ -7,6 +7,8 @@ namespace School.Infrastructure.Services;
 
 public class QrCodeService : IQrCodeService
 {
+    private const int QrTokenLifetimeSeconds = 10;
+
     private readonly IConfiguration _config;
     private readonly string _secretKey;
 
@@ -52,9 +54,9 @@ public class QrCodeService : IQrCodeService
 
             if (tokenSessionId != sessionId) return false;
 
-            // Token is only valid for 30 seconds
+            // Keep QR tokens valid long enough for camera focus and classroom scanning flow.
             var currentTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-            if (currentTimestamp - timestamp > 30) return false;
+            if (currentTimestamp - timestamp > QrTokenLifetimeSeconds) return false;
 
             return true;
         }

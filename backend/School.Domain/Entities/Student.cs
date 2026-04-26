@@ -23,5 +23,6 @@ public class Student : BaseEntity
     public ICollection<Attendance> Attendances { get; set; } = new List<Attendance>();
     public ICollection<ExamResult> ExamResults { get; set; } = new List<ExamResult>();
     public ICollection<GradeRecord> GradeRecords { get; set; } = new List<GradeRecord>();
+    public ICollection<StudentSubject> StudentSubjects { get; set; } = new List<StudentSubject>();
     public ICollection<TuitionInvoice> TuitionInvoices { get; set; } = new List<TuitionInvoice>();
 }

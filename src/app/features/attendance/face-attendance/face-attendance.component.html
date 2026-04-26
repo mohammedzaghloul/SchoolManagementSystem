@@ -202,4 +202,14 @@
       </aside>
     </div>
   </div>
+
+  <div class="success-overlay" *ngIf="showSuccessOverlay">
+    <div class="success-content">
+      <div class="success-icon">
+        <i class="fas fa-check"></i>
+      </div>
+      <h2>{{ successOverlayTitle }}</h2>
+      <p>{{ successOverlayMessage }}</p>
+    </div>
+  </div>
 </div>

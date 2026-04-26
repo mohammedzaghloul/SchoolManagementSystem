@@ -17,15 +17,18 @@ public class ParentController : BaseApiController
     private readonly SchoolDbContext _context;
     private readonly IHubContext<ChatHub> _hubContext;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly IConfiguration _configuration;
 
     public ParentController(
         SchoolDbContext context,
         IHubContext<ChatHub> hubContext,
-        UserManager<ApplicationUser> userManager)
+        UserManager<ApplicationUser> userManager,
+        IConfiguration configuration)
     {
         _context = context;
         _hubContext = hubContext;
         _userManager = userManager;
+        _configuration = configuration;
     }
 
     [HttpGet]
@@ -280,6 +283,61 @@ public class ParentController : BaseApiController
         return Ok(Math.Round(pendingAmount, 2));
     }
 
+    [HttpGet("grades/history")]
+    [Authorize(Roles = "Parent")]
+    public async Task<ActionResult<IEnumerable<object>>> GetChildrenGradeHistory([FromQuery] int? childId, [FromQuery] int take = 80)
+    {
+        var parent = await GetCurrentParentAsync(includeChildren: true);
+        if (parent == null)
+        {
+            return NotFound("Parent not found");
+        }
+
+        var childIds = parent.Children.Select(c => c.Id).ToList();
+        if (childId.HasValue)
+        {
+            if (!childIds.Contains(childId.Value))
+            {
+                return Forbid();
+            }
+
+            childIds = [childId.Value];
+        }
+
+        var safeTake = Math.Clamp(take, 10, 200);
+        var grades = await _context.GradeRecords
+            .AsNoTracking()
+            .Include(grade => grade.Student)
+            .Include(grade => grade.Subject)
+            .Where(grade => childIds.Contains(grade.StudentId))
+            .OrderByDescending(grade => grade.Date)
+            .ThenByDescending(grade => grade.Id)
+            .Take(safeTake)
+            .Select(grade => new
+            {
+                grade.Id,
+                grade.StudentId,
+                studentName = grade.Student != null ? grade.Student.FullName : "الطالب",
+                grade.SubjectId,
+                subjectName = grade.Subject != null ? grade.Subject.Name : "المادة",
+                grade.GradeType,
+                grade.Score,
+                percentage = Math.Round(grade.Score, 1),
+                grade.Notes,
+                grade.Date
+            })
+            .ToListAsync();
+
+        return Ok(grades);
+    }
+
+    [HttpGet("payments/methods")]
+    [Authorize(Roles = "Parent")]
+    public ActionResult<IEnumerable<PaymentMethodDto>> GetPaymentMethods()
+    {
+        return Ok(BuildPaymentMethods());
+    }
+
     [HttpGet("payments")]
     [Authorize(Roles = "Parent")]
     public async Task<ActionResult<IEnumerable<object>>> GetPayments()
@@ -352,9 +410,12 @@ public class ParentController : BaseApiController
 
         invoice.AmountPaid += amountToPay;
         invoice.PaidAt = DateTime.UtcNow;
-        invoice.PaymentMethod = string.IsNullOrWhiteSpace(request?.Method) ? "بطاقة" : request!.Method;
+        var method = ResolvePaymentMethod(request);
+        invoice.PaymentMethod = method.Label;
         invoice.ReferenceNumber = $"PAY-{DateTime.UtcNow:yyyyMMddHHmmss}-{invoice.Id}";
-        invoice.Notes = string.IsNullOrWhiteSpace(request?.Note) ? invoice.Notes : request!.Note;
+        invoice.Notes = string.IsNullOrWhiteSpace(request?.Note)
+            ? method.ProviderCode
+            : $"{request!.Note.Trim()} | Provider: {method.ProviderCode}";
         invoice.Status = invoice.AmountPaid >= invoice.Amount ? "Paid" : "Partial";
 
         await _context.SaveChangesAsync();
@@ -375,6 +436,8 @@ public class ParentController : BaseApiController
             status = GetInvoiceStatus(invoice),
             invoice.ReferenceNumber,
             invoice.PaymentMethod,
+            paymentMethodCode = method.Code,
+            providerCode = method.ProviderCode,
             invoice.PaidAt
         });
     }
@@ -422,7 +485,20 @@ public class ParentController : BaseApiController
     {
         public decimal? Amount { get; set; }
         public string? Method { get; set; }
+        public string? MethodCode { get; set; }
         public string? Note { get; set; }
+    }
+
+    public class PaymentMethodDto
+    {
+        public string Code { get; set; } = string.Empty;
+        public string Label { get; set; } = string.Empty;
+        public string Hint { get; set; } = string.Empty;
+        public string Icon { get; set; } = string.Empty;
+        public string ProviderCode { get; set; } = string.Empty;
+        public string? Receiver { get; set; }
+        public bool RequiresOtp { get; set; }
+        public bool RequiresReferenceConfirmation { get; set; }
     }
 
     public class ParentEventDto
@@ -433,5 +509,76 @@ public class ParentController : BaseApiController
         public DateTime Date { get; set; }
         public string Type { get; set; } = null!;
         public string StudentName { get; set; } = null!;
+    }
+
+    private PaymentMethodDto ResolvePaymentMethod(ParentPaymentRequest? request)
+    {
+        var methods = BuildPaymentMethods();
+        var requestedCode = request?.MethodCode?.Trim();
+        var requestedLabel = request?.Method?.Trim();
+
+        return methods.FirstOrDefault(method =>
+                string.Equals(method.Code, requestedCode, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(method.Label, requestedLabel, StringComparison.OrdinalIgnoreCase))
+            ?? methods.First(method => method.Code == "card");
+    }
+
+    private List<PaymentMethodDto> BuildPaymentMethods()
+    {
+        var vodafoneNumber = GetPaymentSetting("VodafoneCashNumber", "0100");
+        var supportPhone = GetPaymentSetting("SupportPhone", vodafoneNumber);
+        var instaPayHandle = GetPaymentSetting("InstaPayHandle", "school@instapay");
+        var fawryBillerCode = GetPaymentSetting("FawryBillerCode", "788");
+
+        return
+        [
+            new PaymentMethodDto
+            {
+                Code = "vodafone_cash",
+                Label = "Vodafone Cash",
+                Hint = "إرسال تعليمات السداد ورقم المرجع على رقم ولي الأمر",
+                Icon = "fas fa-mobile-screen-button",
+                ProviderCode = "VODAFONE_CASH",
+                Receiver = vodafoneNumber,
+                RequiresOtp = true
+            },
+            new PaymentMethodDto
+            {
+                Code = "instapay",
+                Label = "InstaPay",
+                Hint = "تحويل لحظي على عنوان InstaPay ثم تأكيد المرجع",
+                Icon = "fas fa-building-columns",
+                ProviderCode = "INSTAPAY",
+                Receiver = instaPayHandle,
+                RequiresReferenceConfirmation = true
+            },
+            new PaymentMethodDto
+            {
+                Code = "fawry",
+                Label = "فوري",
+                Hint = $"إنشاء كود سداد على خدمة فوري رقم {fawryBillerCode}",
+                Icon = "fas fa-barcode",
+                ProviderCode = "FAWRY",
+                Receiver = fawryBillerCode,
+                RequiresReferenceConfirmation = true
+            },
+            new PaymentMethodDto
+            {
+                Code = "card",
+                Label = "بطاقة بنكية",
+                Hint = $"محاكاة دفع آمنة داخل المنصة مع دعم المتابعة {supportPhone}",
+                Icon = "far fa-credit-card",
+                ProviderCode = "CARD_DEMO",
+                RequiresOtp = true
+            }
+        ];
+    }
+
+    private string GetPaymentSetting(string key, string fallback)
+    {
+        return _configuration[$"PaymentGateway:{key}"]
+            ?? _configuration[key]
+            ?? Environment.GetEnvironmentVariable(key)
+            ?? fallback;
     }
 }

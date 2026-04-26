@@ -1,10 +1,15 @@
-// shared/components/paginator/paginator.component.ts
+import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { CommonModule } from '@angular/common';
+
 @Component({
   selector: 'app-paginator',
+  standalone: true,
+  imports: [CommonModule],
   templateUrl: './paginator.component.html',
   styleUrls: ['./paginator.component.css']
 })
 export class PaginatorComponent {
+  protected readonly Math = Math;
   @Input() totalItems = 0;
   @Input() pageSize = 10;
   @Input() currentPage = 1;

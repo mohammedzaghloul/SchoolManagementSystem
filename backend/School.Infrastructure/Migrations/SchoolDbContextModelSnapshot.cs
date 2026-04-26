@@ -343,6 +343,60 @@ namespace School.Infrastructure.Migrations
                     b.ToTable("ClassRooms");
                 });
 
+            modelBuilder.Entity("School.Domain.Entities.EmailOtp", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("CodeHash")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<DateTime>("ExpiresAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("FailedAttempts")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsUsed")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Purpose")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime>("RequestedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Salt")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<DateTime?>("UsedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Email", "Purpose", "IsUsed", "ExpiresAtUtc");
+
+                    b.ToTable("EmailOtps", (string)null);
+                });
+
             modelBuilder.Entity("School.Domain.Entities.Exam", b =>
                 {
                     b.Property<int>("Id")
@@ -614,6 +668,66 @@ namespace School.Infrastructure.Migrations
                     b.ToTable("QuestionChoices");
                 });
 
+            modelBuilder.Entity("School.Domain.Entities.Schedule", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AttendanceType")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<int>("ClassRoomId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("DayOfWeek")
+                        .HasColumnType("int");
+
+                    b.Property<TimeSpan>("EndTime")
+                        .HasColumnType("time");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("SessionsGeneratedUntil")
+                        .HasColumnType("datetime2");
+
+                    b.Property<TimeSpan>("StartTime")
+                        .HasColumnType("time");
+
+                    b.Property<int>("SubjectId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TeacherId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("TermEndDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("TermStartDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClassRoomId");
+
+                    b.HasIndex("SubjectId");
+
+                    b.HasIndex("TeacherId", "SubjectId", "ClassRoomId", "DayOfWeek", "StartTime", "EndTime", "TermStartDate")
+                        .IsUnique();
+
+                    b.ToTable("Schedules", (string)null);
+                });
+
             modelBuilder.Entity("School.Domain.Entities.Session", b =>
                 {
                     b.Property<int>("Id")
@@ -637,6 +751,9 @@ namespace School.Infrastructure.Migrations
                     b.Property<bool>("IsLive")
                         .HasColumnType("bit");
 
+                    b.Property<int?>("ScheduleId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("SessionDate")
                         .HasColumnType("datetime2");
 
@@ -655,6 +772,8 @@ namespace School.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("ClassRoomId");
+
+                    b.HasIndex("ScheduleId");
 
                     b.HasIndex("SubjectId");
 
@@ -708,6 +827,24 @@ namespace School.Infrastructure.Migrations
                     b.HasIndex("ParentId");
 
                     b.ToTable("Students");
+                });
+
+            modelBuilder.Entity("School.Domain.Entities.StudentSubject", b =>
+                {
+                    b.Property<int>("StudentId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SubjectId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("EnrolledOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("StudentId", "SubjectId");
+
+                    b.HasIndex("SubjectId");
+
+                    b.ToTable("StudentSubjects", (string)null);
                 });
 
             modelBuilder.Entity("School.Domain.Entities.Subject", b =>
@@ -1200,6 +1337,33 @@ namespace School.Infrastructure.Migrations
                     b.Navigation("Question");
                 });
 
+            modelBuilder.Entity("School.Domain.Entities.Schedule", b =>
+                {
+                    b.HasOne("School.Domain.Entities.ClassRoom", "ClassRoom")
+                        .WithMany("Schedules")
+                        .HasForeignKey("ClassRoomId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("School.Domain.Entities.Subject", "Subject")
+                        .WithMany("Schedules")
+                        .HasForeignKey("SubjectId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("School.Domain.Entities.Teacher", "Teacher")
+                        .WithMany("Schedules")
+                        .HasForeignKey("TeacherId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ClassRoom");
+
+                    b.Navigation("Subject");
+
+                    b.Navigation("Teacher");
+                });
+
             modelBuilder.Entity("School.Domain.Entities.Session", b =>
                 {
                     b.HasOne("School.Domain.Entities.ClassRoom", "ClassRoom")
@@ -1207,6 +1371,11 @@ namespace School.Infrastructure.Migrations
                         .HasForeignKey("ClassRoomId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("School.Domain.Entities.Schedule", "Schedule")
+                        .WithMany("Sessions")
+                        .HasForeignKey("ScheduleId")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("School.Domain.Entities.Subject", "Subject")
                         .WithMany("Sessions")
@@ -1221,6 +1390,8 @@ namespace School.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("ClassRoom");
+
+                    b.Navigation("Schedule");
 
                     b.Navigation("Subject");
 
@@ -1242,6 +1413,25 @@ namespace School.Infrastructure.Migrations
                     b.Navigation("ClassRoom");
 
                     b.Navigation("Parent");
+                });
+
+            modelBuilder.Entity("School.Domain.Entities.StudentSubject", b =>
+                {
+                    b.HasOne("School.Domain.Entities.Student", "Student")
+                        .WithMany("StudentSubjects")
+                        .HasForeignKey("StudentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("School.Domain.Entities.Subject", "Subject")
+                        .WithMany("StudentSubjects")
+                        .HasForeignKey("SubjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Student");
+
+                    b.Navigation("Subject");
                 });
 
             modelBuilder.Entity("School.Domain.Entities.Subject", b =>
@@ -1300,6 +1490,8 @@ namespace School.Infrastructure.Migrations
 
             modelBuilder.Entity("School.Domain.Entities.ClassRoom", b =>
                 {
+                    b.Navigation("Schedules");
+
                     b.Navigation("Sessions");
 
                     b.Navigation("Students");
@@ -1329,6 +1521,11 @@ namespace School.Infrastructure.Migrations
                     b.Navigation("Choices");
                 });
 
+            modelBuilder.Entity("School.Domain.Entities.Schedule", b =>
+                {
+                    b.Navigation("Sessions");
+                });
+
             modelBuilder.Entity("School.Domain.Entities.Session", b =>
                 {
                     b.Navigation("Attendances");
@@ -1342,6 +1539,8 @@ namespace School.Infrastructure.Migrations
 
                     b.Navigation("GradeRecords");
 
+                    b.Navigation("StudentSubjects");
+
                     b.Navigation("TuitionInvoices");
                 });
 
@@ -1349,7 +1548,11 @@ namespace School.Infrastructure.Migrations
                 {
                     b.Navigation("Exams");
 
+                    b.Navigation("Schedules");
+
                     b.Navigation("Sessions");
+
+                    b.Navigation("StudentSubjects");
                 });
 
             modelBuilder.Entity("School.Domain.Entities.Teacher", b =>
@@ -1357,6 +1560,8 @@ namespace School.Infrastructure.Migrations
                     b.Navigation("ClassRooms");
 
                     b.Navigation("Exams");
+
+                    b.Navigation("Schedules");
 
                     b.Navigation("Sessions");
 

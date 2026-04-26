@@ -8,16 +8,22 @@ public class GetChatHistoryQuery : IRequest<List<MessageDto>>
 {
     public string UserId1 { get; set; }
     public string UserId2 { get; set; }
+    public int Page { get; set; } = 1;
+    public int Size { get; set; } = 50;
 }
 
 public class MessagesByUsersSpecification : Specifications.BaseSpecification<Message>
 {
-    public MessagesByUsersSpecification(string userId1, string userId2)
+    public MessagesByUsersSpecification(string userId1, string userId2, int page, int size)
         : base(m => !m.IsDeleted &&
                     ((m.SenderId == userId1 && m.ReceiverId == userId2) ||
                      (m.SenderId == userId2 && m.ReceiverId == userId1)))
     {
-        AddOrderBy(m => m.SentAt);
+        var safePage = Math.Max(1, page);
+        var safeSize = Math.Clamp(size, 10, 100);
+
+        AddOrderByDescending(m => m.SentAt);
+        ApplyPaging((safePage - 1) * safeSize, safeSize);
     }
 }
 
@@ -47,11 +53,13 @@ public class GetChatHistoryQueryHandler : IRequestHandler<GetChatHistoryQuery, L
 
     public async Task<List<MessageDto>> Handle(GetChatHistoryQuery request, CancellationToken cancellationToken)
     {
-        var spec = new MessagesByUsersSpecification(request.UserId1, request.UserId2);
+        var spec = new MessagesByUsersSpecification(request.UserId1, request.UserId2, request.Page, request.Size);
 
         var messages = await _unitOfWork.Repository<Message>().ListAsync(spec);
 
-        return messages.Select(m => new MessageDto
+        return messages
+            .OrderBy(m => m.SentAt)
+            .Select(m => new MessageDto
         {
             Id = m.Id,
             SenderId = m.SenderId,

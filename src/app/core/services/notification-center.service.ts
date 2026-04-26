@@ -11,7 +11,7 @@ type NotificationInput = Omit<Notification, 'id' | 'isRead' | 'createdAt'> & {
 })
 export class NotificationCenterService {
   private readonly storageKey = 'school_notification_center';
-  private readonly maxItems = 40;
+  private readonly maxItems = 100;
 
   private notificationsSubject = new BehaviorSubject<Notification[]>(this.loadNotifications());
   readonly notifications$ = this.notificationsSubject.asObservable();
@@ -58,6 +58,27 @@ export class NotificationCenterService {
     });
 
     this.setNotifications(nextState);
+  }
+
+  markAsRead(notificationId: number): void {
+    const nextState = this.notificationsSubject.value.map(notification => {
+      if (notification.id !== notificationId || notification.isRead) {
+        return notification;
+      }
+
+      return {
+        ...notification,
+        isRead: true
+      };
+    });
+
+    this.setNotifications(nextState);
+  }
+
+  removeNotification(notificationId: number): void {
+    this.setNotifications(
+      this.notificationsSubject.value.filter(notification => notification.id !== notificationId)
+    );
   }
 
   clearAll(): void {

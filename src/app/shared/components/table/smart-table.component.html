@@ -22,8 +22,8 @@
     <p>جاري التحميل...</p>
   </div>
 
-  <!-- Table -->
-  <div class="table-responsive" *ngIf="!loading">
+  <!-- Desktop Table -->
+  <div class="table-responsive d-none d-md-block" *ngIf="!loading">
     <table class="smart-table">
       <thead>
         <tr>
@@ -91,6 +91,36 @@
         </tr>
       </tbody>
     </table>
+  </div>
+
+  <!-- Mobile Card View -->
+  <div class="mobile-card-grid d-block d-md-none" *ngIf="!loading">
+    <div class="smart-mobile-card mb-3" *ngFor="let item of data">
+      <div class="card-body p-3">
+        <div class="card-row d-flex justify-content-between mb-2" *ngFor="let col of columns; let first = first">
+          <span class="col-title small text-muted-dark fw-bold" *ngIf="!first">{{ col.title }}:</span>
+          <div [class.fw-bold]="first" [class.fs-5]="first">
+            <ng-container *ngIf="col.template; else mobileDefaultTemplate"
+                         [ngTemplateOutlet]="col.template"
+                         [ngTemplateOutletContext]="{ $implicit: item, column: col }">
+            </ng-container>
+            <ng-template #mobileDefaultTemplate>
+              {{ getNestedValue(item, col.field) }}
+            </ng-template>
+          </div>
+        </div>
+        
+        <div class="card-actions mt-3 pt-3 border-top d-flex justify-content-end gap-2" *ngIf="showActions">
+           <button class="btn-icon view" (click)="view.emit(item)"><i class="fas fa-eye"></i></button>
+           <button class="btn-icon edit" (click)="edit.emit(item)"><i class="fas fa-edit"></i></button>
+           <button class="btn-icon delete" (click)="delete.emit(item)"><i class="fas fa-trash"></i></button>
+        </div>
+      </div>
+    </div>
+    <div *ngIf="data.length === 0" class="text-center py-5 empty-state">
+      <i class="fas fa-inbox"></i>
+      <p>لا توجد بيانات</p>
+    </div>
   </div>
 
   <!-- Pagination -->

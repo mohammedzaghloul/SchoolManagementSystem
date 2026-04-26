@@ -79,13 +79,14 @@
           <input
             type="search"
             [(ngModel)]="searchTerm"
+            (ngModelChange)="onFilterChange()"
             placeholder="بحث عن طالب بالاسم أو البريد..."
           >
         </label>
 
         <label class="select-field">
           <span>الحالة</span>
-          <select [(ngModel)]="statusFilter">
+          <select [(ngModel)]="statusFilter" (ngModelChange)="onFilterChange()">
             <option value="all">كل الحالات</option>
             <option value="present">حاضر</option>
             <option value="absent">غائب</option>
@@ -135,7 +136,7 @@
         </div>
 
         <div class="roster-list">
-          <article class="student-card" *ngFor="let student of filteredStudents; trackBy: trackByStudent">
+          <article class="student-card" *ngFor="let student of paginatedStudents; trackBy: trackByStudent">
             <div class="student-main">
               <div class="student-avatar">{{ student.fullName.charAt(0) }}</div>
               <div>
@@ -144,39 +145,18 @@
               </div>
             </div>
 
-            <div class="student-status">
-              <button
-                type="button"
-                class="status-btn"
-                [class.active]="student.status === 'Present'"
+            <div class="student-status-control">
+              <select 
+                class="status-dropdown" 
+                [(ngModel)]="student.status" 
+                (ngModelChange)="setStudentStatus(student, $event)"
                 [disabled]="!canRecordAttendance || saving"
-                (click)="setStudentStatus(student, 'Present')">
-                حاضر
-              </button>
-              <button
-                type="button"
-                class="status-btn"
-                [class.active]="student.status === 'Absent'"
-                [disabled]="!canRecordAttendance || saving"
-                (click)="setStudentStatus(student, 'Absent')">
-                غائب
-              </button>
-              <button
-                type="button"
-                class="status-btn"
-                [class.active]="student.status === 'Late'"
-                [disabled]="!canRecordAttendance || saving"
-                (click)="setStudentStatus(student, 'Late')">
-                متأخر
-              </button>
-              <button
-                type="button"
-                class="status-btn"
-                [class.active]="student.status === 'Unrecorded'"
-                [disabled]="!canRecordAttendance || saving"
-                (click)="setStudentStatus(student, 'Unrecorded')">
-                لم يُرصد
-              </button>
+                [ngClass]="getStatusDropdownClass(student.status)">
+                <option value="Present">حاضر</option>
+                <option value="Absent">غائب</option>
+                <option value="Late">متأخر</option>
+                <option value="Unrecorded">لم يُرصد</option>
+              </select>
             </div>
 
             <label class="notes-field">
@@ -193,6 +173,15 @@
             </div>
           </article>
         </div>
+
+        <div class="pagination-wrapper" *ngIf="filteredStudents.length > 0">
+          <app-paginator
+            [totalItems]="filteredStudents.length"
+            [pageSize]="pageSize"
+            [currentPage]="currentPage"
+            (pageChange)="onPageChange($event)">
+          </app-paginator>
+        </div>
       </ng-container>
     </section>
 
@@ -203,4 +192,14 @@
       </button>
     </div>
   </div>
+
+  <app-modal 
+    [isOpen]="showSuccessOverlay" 
+    [title]="successOverlayTitle" 
+    [message]="successOverlayMessage" 
+    type="success"
+    confirmText="حسناً"
+    (confirm)="showSuccessOverlay = false"
+    (closed)="showSuccessOverlay = false">
+  </app-modal>
 </div>

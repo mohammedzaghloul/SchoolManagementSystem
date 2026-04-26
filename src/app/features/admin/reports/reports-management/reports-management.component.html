@@ -1,140 +1,139 @@
-<div class="page-container">
-    <!-- Page Header -->
-    <div class="page-header d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h2 class="page-title text-gradient fw-bold mb-1">التقارير والإحصائيات</h2>
-            <p class="text-muted mb-0">تحليل بيانات الحضور والأداء الفعلي للمؤسسة</p>
+<div class="page-container" dir="rtl">
+  <div class="page-header d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-4">
+    <div>
+      <h2 class="page-title text-gradient fw-bold mb-1">التقارير والإحصائيات</h2>
+      <p class="text-muted mb-0">تحليل حي للحضور والغياب وتوزيع الطلاب حسب الفصول والمرحلة.</p>
+    </div>
+    <div class="header-actions d-flex flex-column flex-md-row gap-2 w-100 w-md-auto">
+      <button class="btn btn-premium-light px-4" (click)="exportPdf()">
+        <i class="fas fa-file-pdf ms-2"></i>
+        <span>تصدير التقرير الحالي</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="card border-0 shadow-sm rounded-4 mb-4 filters-card">
+    <div class="card-body p-4">
+      <div class="row g-3 align-items-end">
+        <div class="col-md-3">
+          <label class="form-label text-secondary fw-semibold small">من تاريخ</label>
+          <input type="date" class="form-control rounded-3" [(ngModel)]="filters.from">
         </div>
-        <div class="d-flex gap-2">
-            <button class="btn btn-premium px-4" (click)="exportPdf()">
-                <i class="fas fa-file-pdf me-2"></i>
-                تصدير التقرير الحالي
-            </button>
+        <div class="col-md-3">
+          <label class="form-label text-secondary fw-semibold small">إلى تاريخ</label>
+          <input type="date" class="form-control rounded-3" [(ngModel)]="filters.to">
         </div>
+        <div class="col-md-3">
+          <label class="form-label text-secondary fw-semibold small">الفصل الدراسي</label>
+          <select class="form-select rounded-3" [(ngModel)]="filters.classRoomId">
+            <option value="">كل الفصول</option>
+            <option *ngFor="let classRoom of classes" [value]="classRoom.id">{{ classRoom.name }}</option>
+          </select>
+        </div>
+        <div class="col-md-3 d-flex gap-2">
+          <button class="btn btn-primary flex-fill rounded-3 py-2 fw-bold" (click)="loadStats()" [disabled]="loading">
+            <i class="fas fa-filter ms-2"></i>
+            {{ loading ? 'جاري التحميل...' : 'عرض التقرير' }}
+          </button>
+          <button class="btn btn-light rounded-3 px-3 fw-bold" (click)="resetFilters()" [disabled]="loading">مسح</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="errorMessage" class="alert alert-danger rounded-4 border-0 shadow-sm">
+    {{ errorMessage }}
+  </div>
+
+  <div class="row g-2 g-md-3 mb-4 stat-grid-mobile">
+    <div class="col-6 col-md-3">
+      <div class="card stat-card shadow-sm border-0 p-3 p-md-4 h-100">
+        <div class="d-flex justify-content-between align-items-center mb-2 mb-md-3">
+          <div class="kpi-icon bg-blue-soft text-blue rounded-3">
+            <i class="fas fa-clipboard-list"></i>
+          </div>
+          <span class="badge bg-primary-subtle text-primary d-none d-md-inline-block">حصص</span>
+        </div>
+        <h4 class="fw-bold mb-1">{{ stats.totalSessions }}</h4>
+        <p class="text-secondary smaller mb-0">إجمالي الحصص</p>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card stat-card shadow-sm border-0 p-3 p-md-4 h-100">
+        <div class="d-flex justify-content-between align-items-center mb-2 mb-md-3">
+          <div class="kpi-icon bg-green-soft text-green rounded-3">
+            <i class="fas fa-user-check"></i>
+          </div>
+          <span class="badge bg-success-subtle text-success d-none d-md-inline-block">حضور</span>
+        </div>
+        <h4 class="fw-bold mb-1">{{ stats.attendanceRate }}%</h4>
+        <p class="text-secondary smaller mb-0">نسبة الحضور</p>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card stat-card shadow-sm border-0 p-3 p-md-4 h-100">
+        <div class="d-flex justify-content-between align-items-center mb-2 mb-md-3">
+          <div class="kpi-icon bg-red-soft text-red rounded-3">
+            <i class="far fa-calendar-times"></i>
+          </div>
+          <span class="badge bg-danger-subtle text-danger d-none d-md-inline-block">غياب</span>
+        </div>
+        <h4 class="fw-bold mb-1">{{ stats.absentDays }}</h4>
+        <p class="text-secondary smaller mb-0">إجمالي الغياب</p>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card stat-card shadow-sm border-0 p-3 p-md-4 h-100">
+        <div class="d-flex justify-content-between align-items-center mb-2 mb-md-3">
+          <div class="kpi-icon bg-blue-soft text-blue rounded-3">
+            <i class="fas fa-users"></i>
+          </div>
+          <span class="badge bg-primary-subtle text-primary d-none d-md-inline-block">طلاب</span>
+        </div>
+        <h4 class="fw-bold mb-1">{{ stats.totalStudents }}</h4>
+        <p class="text-secondary smaller mb-0">إجمالي الطلاب</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-lg-5">
+      <div class="card border-0 shadow-sm rounded-4 h-100 overflow-hidden">
+        <div class="card-header bg-white border-0 pt-4 pb-0 px-4">
+          <h5 class="fw-bold mb-0">توزيع الطلاب حسب المرحلة</h5>
+        </div>
+        <div class="card-body d-flex flex-column align-items-center py-4">
+          <div class="chart-container-donut position-relative mb-4 w-100" style="height: 250px;">
+            <canvas baseChart [data]="donutChartData" [options]="donutChartOptions" [type]="donutChartType"></canvas>
+            <div class="donut-inner-labels d-flex flex-column align-items-center justify-content-center">
+              <span class="h3 fw-bold mb-0">{{ stats.attendanceRate }}%</span>
+              <small class="text-muted">حضور عام</small>
+            </div>
+          </div>
+
+          <div class="legend d-flex flex-wrap justify-content-center gap-3 w-100 px-3">
+            <div *ngFor="let item of stats.gradesDistribution" class="d-flex align-items-center gap-2">
+              <span class="legend-dot" [style.background]="item.color"></span>
+              <span class="text-dark small fw-bold">{{ item.name }}</span>
+              <span class="text-muted small">({{ item.count }} طالب)</span>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <!-- Filters Card -->
-    <div class="card border-0 shadow-sm rounded-4 mb-4">
-        <div class="card-body p-4">
-            <div class="row g-3 align-items-end">
-                <div class="col-md-3">
-                    <label class="form-label text-secondary fw-semibold small">من تاريخ</label>
-                    <input type="date" class="form-control rounded-3">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label text-secondary fw-semibold small">إلى تاريخ</label>
-                    <input type="date" class="form-control rounded-3">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label text-secondary fw-semibold small">الصف الدراسي</label>
-                    <select class="form-select rounded-3">
-                        <option value="">الكل</option>
-                        <option>الأول الإعدادي</option>
-                        <option>الثاني الإعدادي</option>
-                        <option>الثالث الإعدادي</option>
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <button class="btn btn-primary w-100 rounded-3 py-2 fw-bold">
-                        <i class="fas fa-filter me-2"></i>
-                        عرض التقرير
-                    </button>
-                </div>
-            </div>
+    <div class="col-lg-7">
+      <div class="card border-0 shadow-sm rounded-4 h-100 overflow-hidden">
+        <div class="card-header bg-white border-0 pt-4 pb-2 px-4 d-flex justify-content-between align-items-center">
+          <h5 class="fw-bold mb-0">تحليل الحضور آخر 6 أيام</h5>
+          <span class="badge bg-primary-subtle text-primary fw-600">نسبة مئوية</span>
         </div>
+        <div class="card-body px-4 pb-4">
+          <div class="chart-container-bar w-100" style="height: 300px;">
+            <canvas baseChart [data]="barChartData" [options]="barChartOptions" [type]="'bar'"></canvas>
+          </div>
+        </div>
+      </div>
     </div>
-
-    <!-- KPI Cards -->
-    <div class="row g-3 mb-4">
-        <div class="col-md-4">
-            <div class="card stat-card shadow-sm border-0 p-4 h-100">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <div class="kpi-icon bg-blue-soft text-blue rounded-3">
-                        <i class="fas fa-clipboard-list"></i>
-                    </div>
-                    <span class="badge bg-success-subtle text-success">+12%</span>
-                </div>
-                <h3 class="fw-bold mb-1">{{ stats.totalSessions }}</h3>
-                <p class="text-secondary small mb-0">إجمالي الجلسات المكتملة</p>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card stat-card shadow-sm border-0 p-4 h-100">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <div class="kpi-icon bg-red-soft text-red rounded-3">
-                        <i class="far fa-calendar-times"></i>
-                    </div>
-                    <span class="badge bg-danger-subtle text-danger">-2%</span>
-                </div>
-                <h3 class="fw-bold mb-1">{{ stats.absentDays }}</h3>
-                <p class="text-secondary small mb-0">إجمالي أيام الغياب المسجلة</p>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card stat-card shadow-sm border-0 p-4 h-100">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <div class="kpi-icon bg-green-soft text-green rounded-3">
-                        <i class="fas fa-chart-line"></i>
-                    </div>
-                    <span class="badge bg-success-subtle text-success">98%</span>
-                </div>
-                <h3 class="fw-bold mb-1">{{ stats.attendanceRate }}%</h3>
-                <p class="text-secondary small mb-0">متوسط نسبة الحضور العام</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Charts Row -->
-    <div class="row g-3">
-        <!-- Pie Chart -->
-        <div class="col-lg-5">
-            <div class="card border-0 shadow-sm rounded-4 h-100 overflow-hidden">
-                <div class="card-header bg-white border-0 pt-4 pb-0 px-4">
-                    <h5 class="fw-bold mb-0">توزيع الطلاب حسب الصف</h5>
-                </div>
-                <div class="card-body d-flex flex-column align-items-center py-4">
-                    <div class="chart-container-donut position-relative mb-4 w-100" style="height: 250px;">
-                        <canvas baseChart 
-                                [data]="donutChartData"
-                                [options]="donutChartOptions"
-                                [type]="donutChartType">
-                        </canvas>
-                        <div class="donut-inner-labels d-flex flex-column align-items-center justify-content-center">
-                            <span class="h3 fw-bold mb-0">{{ stats.attendanceRate }}%</span>
-                            <small class="text-muted">حضور عام</small>
-                        </div>
-                    </div>
-                    
-                    <div class="legend d-flex flex-wrap justify-content-center gap-3 w-100 px-3">
-                        <div *ngFor="let item of stats.gradesDistribution" class="d-flex align-items-center gap-2">
-                            <span class="legend-dot" [style.background]="item.color"></span>
-                            <span class="text-dark small fw-bold">{{ item.name }}</span>
-                            <span class="text-muted small">({{ item.value }}%)</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Bar Chart / Weekly -->
-        <div class="col-lg-7">
-            <div class="card border-0 shadow-sm rounded-4 h-100 overflow-hidden">
-                <div class="card-header bg-white border-0 pt-4 pb-2 px-4 d-flex justify-content-between align-items-center">
-                    <h5 class="fw-bold mb-0">تحليل الحضور الأسبوعي</h5>
-                    <div class="d-flex gap-2">
-                        <span class="badge bg-primary-subtle text-primary fw-600">آخر 6 أيام</span>
-                    </div>
-                </div>
-                <div class="card-body px-4 pb-4">
-                    <div class="chart-container-bar w-100" style="height: 300px;">
-                        <canvas baseChart
-                                [data]="barChartData"
-                                [options]="barChartOptions"
-                                [type]="'bar'">
-                        </canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+  </div>
 </div>

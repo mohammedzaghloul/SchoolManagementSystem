@@ -294,9 +294,38 @@ public class DashboardsController : BaseApiController
 
             double average = grades.Any() ? Math.Round(grades.Average(g => g.Score), 1) : 0;
             var latestAttendance = attendances.FirstOrDefault();
-            var pendingBalance = tuitionInvoices
+            var childInvoices = tuitionInvoices
                 .Where(t => t.StudentId == child.Id)
-                .Sum(t => t.Amount - t.AmountPaid);
+                .OrderBy(t => t.DueDate)
+                .ToList();
+            var pendingBalance = childInvoices.Sum(t => t.Amount - t.AmountPaid);
+            var assignments = await _context.Assignments
+                .AsNoTracking()
+                .Include(assignment => assignment.Subject)
+                .Include(assignment => assignment.Submissions)
+                .Where(assignment => child.ClassRoomId.HasValue && assignment.ClassRoomId == child.ClassRoomId.Value)
+                .OrderByDescending(assignment => assignment.DueDate)
+                .Take(8)
+                .Select(assignment => new
+                {
+                    assignment.Id,
+                    assignment.Title,
+                    subjectName = assignment.Subject != null ? assignment.Subject.Name : "المادة",
+                    assignment.DueDate,
+                    submittedAt = assignment.Submissions
+                        .Where(submission => submission.StudentId == child.Id)
+                        .Select(submission => (DateTime?)submission.SubmissionDate)
+                        .FirstOrDefault(),
+                    grade = assignment.Submissions
+                        .Where(submission => submission.StudentId == child.Id)
+                        .Select(submission => submission.Grade)
+                        .FirstOrDefault(),
+                    feedback = assignment.Submissions
+                        .Where(submission => submission.StudentId == child.Id)
+                        .Select(submission => submission.TeacherFeedback)
+                        .FirstOrDefault()
+                })
+                .ToListAsync();
 
             attendanceRates.Add(attendanceRate);
             averages.Add(average);
@@ -319,12 +348,76 @@ public class DashboardsController : BaseApiController
                         ? "Present"
                         : latestAttendance.Status ?? "Absent",
                 latestAttendanceAt = latestAttendance?.RecordedAt,
+                attendanceSummary = new
+                {
+                    total = totalAttendances,
+                    present = presentAttendances,
+                    late = attendances.Count(a => string.Equals(a.Status, "Late", StringComparison.OrdinalIgnoreCase)),
+                    absent = absences
+                },
+                recentAttendance = attendances
+                    .Take(6)
+                    .Select(a => new
+                    {
+                        a.Id,
+                        subjectName = a.Session?.Subject?.Name ?? "حصة دراسية",
+                        sessionDate = a.Session?.SessionDate,
+                        a.Status,
+                        a.IsPresent,
+                        a.Method,
+                        a.RecordedAt
+                    }),
+                assignments = assignments.Select(assignment => new
+                {
+                    assignment.Id,
+                    assignment.Title,
+                    assignment.subjectName,
+                    assignment.DueDate,
+                    status = assignment.submittedAt.HasValue
+                        ? assignment.grade.HasValue ? "Graded" : "Submitted"
+                        : assignment.DueDate.Date < DateTime.Today ? "Late" : "Open",
+                    assignment.submittedAt,
+                    assignment.grade,
+                    assignment.feedback
+                }),
+                payments = childInvoices.Select(invoice => new
+                {
+                    invoice.Id,
+                    invoice.Title,
+                    invoice.Term,
+                    invoice.Amount,
+                    invoice.AmountPaid,
+                    remainingAmount = Math.Max(invoice.Amount - invoice.AmountPaid, 0),
+                    invoice.DueDate,
+                    status = invoice.AmountPaid >= invoice.Amount
+                        ? "Paid"
+                        : invoice.DueDate.Date < DateTime.Today
+                            ? "Overdue"
+                            : invoice.AmountPaid > 0 ? "Partial" : "Pending",
+                    invoice.PaymentMethod,
+                    invoice.PaidAt
+                }),
+                gradeBreakdown = grades
+                    .GroupBy(g => g.Subject != null ? g.Subject.Name : "المادة")
+                    .Select(group => new
+                    {
+                        subject = group.Key,
+                        average = Math.Round(group.Average(g => g.Score), 1),
+                        count = group.Count(),
+                        latestScore = group.OrderByDescending(g => g.Date).First().Score,
+                        latestType = group.OrderByDescending(g => g.Date).First().GradeType,
+                        latestDate = group.OrderByDescending(g => g.Date).First().Date
+                    })
+                    .OrderBy(item => item.subject),
                 recentGrades = grades
                     .OrderByDescending(g => g.Date)
+                    .Take(8)
                     .Select(g => new
                     {
-                        subject = g.Subject.Name,
-                        score = g.Score
+                        subject = g.Subject != null ? g.Subject.Name : "المادة",
+                        score = g.Score,
+                        type = g.GradeType,
+                        date = g.Date
                     })
             });
         }
@@ -394,46 +487,100 @@ public class DashboardsController : BaseApiController
 
     [HttpGet("reports-stats")]
     [Authorize(Roles = "Admin")]
-    public async Task<ActionResult<object>> GetReportsStats()
+    public async Task<ActionResult<object>> GetReportsStats([FromQuery] DateTime? from, [FromQuery] DateTime? to, [FromQuery] int? classRoomId)
     {
-        var totalSessions = await _context.Sessions.CountAsync();
-        var totalAttendances = await _context.Attendances.CountAsync();
-        var absentDays = await _context.Attendances.CountAsync(a => !a.IsPresent);
+        var fromDate = from?.Date;
+        var toExclusive = to?.Date.AddDays(1);
+
+        var sessionsQuery = _context.Sessions.AsNoTracking().AsQueryable();
+        if (fromDate.HasValue)
+        {
+            sessionsQuery = sessionsQuery.Where(session => session.SessionDate >= fromDate.Value);
+        }
+
+        if (toExclusive.HasValue)
+        {
+            sessionsQuery = sessionsQuery.Where(session => session.SessionDate < toExclusive.Value);
+        }
+
+        if (classRoomId.HasValue)
+        {
+            sessionsQuery = sessionsQuery.Where(session => session.ClassRoomId == classRoomId.Value);
+        }
+
+        var attendanceQuery = _context.Attendances
+            .AsNoTracking()
+            .Include(attendance => attendance.Session)
+            .Where(attendance => attendance.Session != null);
+
+        if (fromDate.HasValue)
+        {
+            attendanceQuery = attendanceQuery.Where(attendance => attendance.Session!.SessionDate >= fromDate.Value);
+        }
+
+        if (toExclusive.HasValue)
+        {
+            attendanceQuery = attendanceQuery.Where(attendance => attendance.Session!.SessionDate < toExclusive.Value);
+        }
+
+        if (classRoomId.HasValue)
+        {
+            attendanceQuery = attendanceQuery.Where(attendance => attendance.Session!.ClassRoomId == classRoomId.Value);
+        }
+
+        var totalSessions = await sessionsQuery.CountAsync();
+        var totalAttendances = await attendanceQuery.CountAsync();
+        var absentDays = await attendanceQuery.CountAsync(attendance => !attendance.IsPresent);
 
         double attendanceRate = totalAttendances > 0
             ? Math.Round((double)(totalAttendances - absentDays) / totalAttendances * 100, 1)
             : 100;
 
-        var gradesDistribution = await _context.GradeLevels
+        var gradeLevelsQuery = _context.GradeLevels
+            .AsNoTracking()
             .Include(g => g.ClassRooms)
                 .ThenInclude(c => c.Students)
+            .AsQueryable();
+
+        var gradesDistribution = await gradeLevelsQuery
             .Select(g => new
             {
                 name = g.Name,
-                count = g.ClassRooms.SelectMany(c => c.Students).Count()
+                count = g.ClassRooms
+                    .Where(classRoom => !classRoomId.HasValue || classRoom.Id == classRoomId.Value)
+                    .SelectMany(c => c.Students)
+                    .Count()
             })
+            .Where(item => item.count > 0 || !classRoomId.HasValue)
             .ToListAsync();
 
         int totalStudents = gradesDistribution.Sum(x => x.count);
-        var dist = gradesDistribution.Select(g => new
-        {
-            name = g.name,
-            value = totalStudents > 0 ? Math.Round((double)g.count / totalStudents * 100, 0) : 0,
-            color = GetColorForIndex(gradesDistribution.IndexOf(g))
-        }).ToList();
+        var dist = gradesDistribution
+            .Select((g, index) => new
+            {
+                name = g.name,
+                value = totalStudents > 0 ? Math.Round((double)g.count / totalStudents * 100, 0) : 0,
+                count = g.count,
+                color = GetColorForIndex(index)
+            })
+            .ToList();
 
         var weeklyAttendance = new List<int>();
         for (int i = 5; i >= 0; i--)
         {
             var date = SchoolClock.Today.AddDays(-i);
-            var dayAttendances = await _context.Attendances
+            var dayAttendancesQuery = _context.Attendances
+                .AsNoTracking()
                 .Include(a => a.Session)
-                .Where(a => a.Session.SessionDate == date)
-                .CountAsync();
-            var dayPresent = await _context.Attendances
-                .Include(a => a.Session)
-                .Where(a => a.Session.SessionDate == date && a.IsPresent)
-                .CountAsync();
+                .Where(a => a.Session != null && a.Session.SessionDate == date);
+
+            if (classRoomId.HasValue)
+            {
+                dayAttendancesQuery = dayAttendancesQuery.Where(a => a.Session!.ClassRoomId == classRoomId.Value);
+            }
+
+            var dayAttendances = await dayAttendancesQuery.CountAsync();
+            var dayPresent = await dayAttendancesQuery.CountAsync(a => a.IsPresent);
 
             weeklyAttendance.Add(dayAttendances > 0 ? (int)Math.Round((double)dayPresent / dayAttendances * 100) : 0);
         }
@@ -443,6 +590,8 @@ public class DashboardsController : BaseApiController
             totalSessions,
             absentDays,
             attendanceRate,
+            totalAttendances,
+            totalStudents,
             gradesDistribution = dist,
             weeklyAttendance
         });

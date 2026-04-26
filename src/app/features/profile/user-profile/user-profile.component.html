@@ -1,5 +1,6 @@
-<div class="profile-container dark-theme min-vh-100">
+<div class="profile-container min-vh-100">
   <div class="row g-4 justify-content-center">
+    <!-- Profile Sidebar -->
     <div class="col-lg-3 col-md-4">
       <div class="card dark-card border-0 rounded-4 text-center py-5 px-3 h-100">
         <div class="avatar-wrapper mx-auto mb-3 position-relative">
@@ -7,7 +8,7 @@
             <img
               *ngIf="currentUser?.avatar; else iconAvatar"
               [src]="currentUser?.avatar"
-              class="img-fluid rounded-circle h-100 w-100 object-fit-cover shadow-sm"
+              class="img-fluid rounded-circle h-100 w-100 object-fit-cover"
               alt="الصورة الشخصية">
             <ng-template #iconAvatar>
               <span class="avatar-fallback">{{ userInitial }}</span>
@@ -32,49 +33,51 @@
           </button>
         </div>
 
-        <h5 class="fw-bold text-white mt-4 mb-0">{{ currentUser?.fullName || 'مستخدم جديد' }}</h5>
-        <small class="text-muted-dark">{{ getRoleText(currentUser?.role || '') }}</small>
+        <h5 class="fw-bold text-white-premium mt-4 mb-0">{{ currentUser?.fullName || 'مستخدم جديد' }}</h5>
+        <p class="text-muted-dark small mb-0">{{ getRoleText(currentUser?.role || '') }}</p>
       </div>
     </div>
 
+    <!-- Profile Details -->
     <div class="col-lg-8 col-md-8 d-flex flex-column gap-4">
       <form [formGroup]="profileForm" (ngSubmit)="saveProfile()">
         <div class="card dark-card border-0 rounded-4 p-4">
-          <h5 class="fw-bold text-white mb-4 pb-2 border-bottom border-dark-line">المعلومات الشخصية</h5>
+          <h5 class="fw-bold text-white-premium mb-4 pb-2 border-bottom border-dark-line">المعلومات الشخصية</h5>
 
           <div *ngIf="profileError" class="alert alert-danger inline-alert mb-3">{{ profileError }}</div>
           <div *ngIf="profileSuccess" class="alert alert-success inline-alert mb-3">تم حفظ البيانات بنجاح.</div>
 
           <div class="row g-3">
             <div class="col-12">
-              <label class="form-label text-muted-dark small fw-semibold">الاسم الكامل</label>
+              <label class="form-label text-muted-dark small fw-bold">الاسم الكامل</label>
               <div class="input-group dark-input-group">
-                <span class="input-group-text dark-addon"><i class="fas fa-user text-secondary"></i></span>
+                <span class="input-group-text dark-addon"><i class="fas fa-user"></i></span>
                 <input
                   type="text"
                   class="form-control dark-input"
                   formControlName="fullName"
+                  placeholder="أدخل اسمك بالكامل"
                   (input)="clearProfileFeedback()">
               </div>
             </div>
 
             <div class="col-12">
-              <label class="form-label text-muted-dark small fw-semibold">البريد الإلكتروني</label>
+              <label class="form-label text-muted-dark small fw-bold">البريد الإلكتروني</label>
               <div class="input-group dark-input-group">
-                <span class="input-group-text dark-addon"><i class="fas fa-envelope text-secondary"></i></span>
+                <span class="input-group-text dark-addon"><i class="fas fa-envelope"></i></span>
                 <input
                   type="email"
                   class="form-control dark-input"
                   formControlName="email"
                   readonly>
               </div>
-              <small class="field-hint">البريد الحالي للعرض فقط. تعديل البريد غير متاح من هذه الشاشة.</small>
+              <small class="field-hint">البريد الحالي للعرض فقط. لا يمكن تغييره لدواعي الأمان.</small>
             </div>
 
             <div class="col-12">
-              <label class="form-label text-muted-dark small fw-semibold">رقم الهاتف</label>
+              <label class="form-label text-muted-dark small fw-bold">رقم الهاتف</label>
               <div class="input-group dark-input-group">
-                <span class="input-group-text dark-addon"><i class="fas fa-phone text-secondary"></i></span>
+                <span class="input-group-text dark-addon"><i class="fas fa-phone"></i></span>
                 <input
                   type="tel"
                   class="form-control dark-input"
@@ -84,56 +87,63 @@
               </div>
             </div>
 
-            <div class="col-12 mt-2 d-flex align-items-center">
+            <div class="col-12 mt-4 d-flex flex-column align-items-start gap-2">
               <button
                 type="submit"
-                class="btn btn-primary fw-bold px-4 py-2 rounded-3"
-                [disabled]="profileForm.invalid || profileLoading || avatarLoading">
+                class="btn btn-primary fw-bold px-5 py-2 rounded-3 text-white"
+                [disabled]="profileForm.invalid || profileLoading || avatarLoading || profileForm.pristine">
                 <i *ngIf="profileLoading" class="fas fa-spinner fa-spin me-2"></i>
                 حفظ البيانات
               </button>
+              <small *ngIf="profileForm.pristine && !profileLoading" class="text-muted-dark smaller">
+                <i class="fas fa-info-circle me-1"></i> قم بتعديل أي حقل لتفعيل زر الحفظ.
+              </small>
             </div>
           </div>
         </div>
       </form>
 
+      <!-- Security Section -->
       <form [formGroup]="passwordForm" (ngSubmit)="changePassword()">
         <div class="card dark-card border-0 rounded-4 p-4">
-          <h5 class="fw-bold text-white mb-4 pb-2 border-bottom border-dark-line">الأمان وكلمة المرور</h5>
+          <h5 class="fw-bold text-white-premium mb-4 pb-2 border-bottom border-dark-line">الأمان وكلمة المرور</h5>
 
           <div *ngIf="passwordError" class="alert alert-danger inline-alert mb-3">{{ passwordError }}</div>
           <div *ngIf="passwordSuccess" class="alert alert-success inline-alert mb-3">تم تغيير كلمة المرور بنجاح.</div>
 
           <p class="security-note mb-4">
-            أدخل كلمة المرور الحالية كما استخدمتها عند تسجيل الدخول، ثم اختر كلمة مرور جديدة قوية.
+            <i class="fas fa-shield-alt me-2"></i>
+            كلمة المرور الحالية مطلوبة للتغيير، لكنها تظل مخفية دائمًا ولا يمكن عرضها من هنا.
           </p>
 
           <div class="row g-3">
             <div class="col-12">
-              <label class="form-label text-muted-dark small fw-semibold">كلمة المرور الحالية</label>
+              <label class="form-label text-muted-dark small fw-bold">كلمة المرور الحالية</label>
               <div class="input-group dark-input-group">
-                <span class="input-group-text dark-addon"><i class="fas fa-lock text-secondary"></i></span>
+                <span class="input-group-text dark-addon"><i class="fas fa-lock"></i></span>
                 <input
-                  type="text"
+                  type="password"
                   class="form-control dark-input"
                   formControlName="currentPassword"
                   placeholder="أدخل كلمة المرور الحالية"
                   autocomplete="current-password"
                   (input)="clearPasswordFeedback()">
-                <button
-                  type="button"
-                  class="input-group-text dark-addon toggle-pass"
-                  (click)="togglePasswordVisibility('current')">
-                  <i class="fas" [ngClass]="passwordVisibility.current ? 'fa-eye-slash' : 'fa-eye'"></i>
-                </button>
+                <span class="input-group-text dark-addon password-locked" title="كلمة المرور الحالية مخفية دائمًا">
+                  <i class="fas fa-eye-slash"></i>
+                </span>
               </div>
-              <div *ngIf="getCurrentPasswordErrorMessage()" class="field-error">{{ getCurrentPasswordErrorMessage() }}</div>
+              <small class="field-hint">لأمان الحساب، لا يمكن إظهار كلمة المرور الحالية بعد كتابتها.</small>
+              <a routerLink="/forgot-password" class="forgot-password-link">
+                <i class="fas fa-unlock-keyhole"></i>
+                <span>نسيت كلمة المرور؟ استرجعها بكود OTP</span>
+              </a>
+              <div *ngIf="getCurrentPasswordErrorMessage()" class="field-error mt-1 text-danger small fw-bold">{{ getCurrentPasswordErrorMessage() }}</div>
             </div>
 
-            <div class="col-12">
-              <label class="form-label text-muted-dark small fw-semibold">كلمة المرور الجديدة</label>
+            <div class="col-md-6">
+              <label class="form-label text-muted-dark small fw-bold">كلمة المرور الجديدة</label>
               <div class="input-group dark-input-group">
-                <span class="input-group-text dark-addon"><i class="fas fa-lock text-secondary"></i></span>
+                <span class="input-group-text dark-addon"><i class="fas fa-key"></i></span>
                 <input
                   [type]="getPasswordInputType('new')"
                   class="form-control dark-input"
@@ -148,14 +158,13 @@
                   <i class="fas" [ngClass]="passwordVisibility.new ? 'fa-eye-slash' : 'fa-eye'"></i>
                 </button>
               </div>
-              <small class="field-hint">6 أحرف على الأقل، مع حرف كبير وحرف صغير ورقم ورمز خاص.</small>
-              <div *ngIf="getNewPasswordErrorMessage()" class="field-error">{{ getNewPasswordErrorMessage() }}</div>
+              <div *ngIf="getNewPasswordErrorMessage()" class="field-error mt-1 text-danger small fw-bold">{{ getNewPasswordErrorMessage() }}</div>
             </div>
 
-            <div class="col-12">
-              <label class="form-label text-muted-dark small fw-semibold">تأكيد كلمة المرور الجديدة</label>
+            <div class="col-md-6">
+              <label class="form-label text-muted-dark small fw-bold">تأكيد كلمة المرور</label>
               <div class="input-group dark-input-group">
-                <span class="input-group-text dark-addon"><i class="fas fa-lock text-secondary"></i></span>
+                <span class="input-group-text dark-addon"><i class="fas fa-check-circle"></i></span>
                 <input
                   [type]="getPasswordInputType('confirm')"
                   class="form-control dark-input"
@@ -170,16 +179,16 @@
                   <i class="fas" [ngClass]="passwordVisibility.confirm ? 'fa-eye-slash' : 'fa-eye'"></i>
                 </button>
               </div>
-              <div *ngIf="getConfirmPasswordErrorMessage()" class="field-error">{{ getConfirmPasswordErrorMessage() }}</div>
+              <div *ngIf="getConfirmPasswordErrorMessage()" class="field-error mt-1 text-danger small fw-bold">{{ getConfirmPasswordErrorMessage() }}</div>
             </div>
 
-            <div class="col-12 mt-2 d-flex align-items-center">
+            <div class="col-12 mt-3">
               <button
                 type="submit"
                 class="btn btn-danger fw-bold px-4 py-2 rounded-3"
-                [disabled]="passwordLoading">
+                [disabled]="passwordLoading || passwordForm.invalid">
                 <i *ngIf="passwordLoading" class="fas fa-spinner fa-spin me-2"></i>
-                تغيير كلمة المرور
+                تحديث كلمة المرور
               </button>
             </div>
           </div>

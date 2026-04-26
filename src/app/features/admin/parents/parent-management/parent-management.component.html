@@ -1,11 +1,13 @@
 <div class="page-container" dir="rtl">
-    <div class="page-header d-flex justify-content-between align-items-center mb-4">
-        <div>
+    <div class="page-header d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-5 gap-3">
+        <div class="title-group">
             <h2 class="page-title text-gradient fw-bold">إدارة أولياء الأمور</h2>
-            <p class="text-muted mb-0">إجمالي أولياء الأمور: {{ parents.length }}</p>
+            <p class="text-muted-dark mb-0">إجمالي أولياء الأمور: {{ parents.length }}</p>
         </div>
-        <button class="btn btn-premium d-flex align-items-center gap-2" (click)="openAddModal()">
-            <i class="fas fa-plus"></i>
+        <button class="btn btn-add-premium btn-add-parent d-flex align-items-center justify-content-center gap-2" (click)="openAddModal()">
+            <div class="plus-icon-circle">
+                <i class="fas fa-plus"></i>
+            </div>
             <span>إضافة ولي أمر جديد</span>
         </button>
     </div>
@@ -28,8 +30,9 @@
                 {{ error }}
             </div>
 
-            <div class="hint-box mb-4">
-                من هذه الشاشة يضيف الأدمن حساب ولي الأمر، وبعدها يمكن ربطه بالطالب من صفحة إدارة الطلاب.
+            <div class="alert alert-premium-info mb-4" *ngIf="!error">
+                <i class="fas fa-info-circle me-2"></i>
+                <span>من هذه الشاشة يضيف الأدمن حساب ولي الأمر، وبعدها يمكن ربطه بالطالب من صفحة إدارة الطلاب.</span>
             </div>
 
             <div *ngIf="loading" class="text-center py-5">
@@ -39,7 +42,8 @@
                 <p class="mt-2">جاري تحميل أولياء الأمور...</p>
             </div>
 
-            <div class="table-responsive" *ngIf="!loading">
+            <!-- Desktop Table -->
+            <div class="table-responsive d-none d-md-block" *ngIf="!loading">
                 <table class="table custom-table align-middle">
                     <thead>
                         <tr>
@@ -88,6 +92,47 @@
                         </tr>
                     </tbody>
                 </table>
+            </div>
+
+            <!-- Mobile Parent Cards -->
+            <div class="mobile-parent-grid d-block d-md-none" *ngIf="!loading">
+                <div class="parent-mobile-card mb-3" *ngFor="let parent of filteredParents">
+                    <div class="card-top d-flex justify-content-between align-items-center mb-3">
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="avatar-sm bg-soft-blue text-primary">
+                                <i class="fas fa-user-friends"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-0 fw-bold">{{ parent.fullName }}</h6>
+                                <span class="small text-muted">#{{ parent.id }}</span>
+                            </div>
+                        </div>
+                        <span class="badge bg-info-subtle text-info rounded-pill">{{ parent.childrenCount || 0 }} أبناء</span>
+                    </div>
+                    
+                    <div class="card-body p-0">
+                        <div class="info-row d-flex align-items-center mb-2">
+                            <i class="fas fa-envelope text-muted me-2 small"></i>
+                            <span class="small teacher-email">{{ parent.email }}</span>
+                        </div>
+                        <div class="info-row d-flex align-items-center mb-3">
+                            <i class="fas fa-phone text-muted me-2 small"></i>
+                            <span class="small">{{ parent.phone || '—' }}</span>
+                        </div>
+                        
+                        <div class="card-actions d-flex gap-2 border-top pt-3">
+                            <button class="btn btn-premium-light btn-sm flex-grow-1" (click)="openEditModal(parent)">
+                                <i class="far fa-edit me-1"></i> تعديل
+                            </button>
+                            <button class="btn btn-outline-danger btn-sm px-3" (click)="deleteParent(parent)">
+                                <i class="far fa-trash-alt"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div *ngIf="filteredParents.length === 0" class="text-center py-4">
+                     <p class="text-muted">لا يوجد نتائج</p>
+                </div>
             </div>
         </div>
     </div>

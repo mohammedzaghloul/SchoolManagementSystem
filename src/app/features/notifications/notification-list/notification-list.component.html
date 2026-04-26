@@ -1,67 +1,61 @@
-<!-- features/notifications/notification-list/notification-list.component.html -->
-<div class="notifications-container" dir="rtl">
-  <!-- Header -->
-  <div class="notifications-header">
-    <div class="header-title">
-      <h1>الإشعارات</h1>
-      <span class="unread-badge" *ngIf="unreadCount > 0">{{ unreadCount }} جديد</span>
+<main class="notifications-page" dir="rtl">
+  <section class="notifications-hero">
+    <div>
+      <span>مركز الإشعارات</span>
+      <h1>كل التنبيهات في مكان واحد</h1>
+      <p>تابع رسائل الشات، الحضور، الدرجات، المدفوعات، وأي تحديث مهم داخل النظام.</p>
     </div>
-    
-    <div class="header-actions">
-      <button class="btn-text" (click)="markAllAsRead()" [disabled]="unreadCount === 0">
+
+    <div class="notifications-hero__actions">
+      <strong *ngIf="unreadCount > 0">{{ unreadCount }} غير مقروء</strong>
+      <button type="button" (click)="markAllAsRead()" [disabled]="unreadCount === 0">
         <i class="fas fa-check-double"></i>
-        تحديد الكل كمقروء
+        تعليم الكل كمقروء
       </button>
     </div>
-  </div>
+  </section>
 
-  <!-- Notifications List -->
-  <div class="notifications-list" infinite-scroll [infiniteScrollDistance]="2" 
-       (scrolled)="onScroll()">
-    
-    <div class="notification-item" *ngFor="let notif of notifications"
-         [class.unread]="!notif.isRead"
+  <section class="notifications-list" aria-label="قائمة الإشعارات">
+    <article class="notification-row" *ngFor="let notif of notifications"
+         [class.notification-row--unread]="!notif.isRead"
          (click)="markAsRead(notif.id)">
-      
       <div class="notification-icon" [style.background-color]="getNotificationColor(notif.type) + '20'">
-        <i class="fas" [ngClass]="getNotificationIcon(notif.type)" 
+        <i class="fas" [ngClass]="getNotificationIcon(notif.type)"
            [style.color]="getNotificationColor(notif.type)"></i>
       </div>
-      
+
       <div class="notification-content">
         <div class="notification-header">
-          <h4>{{ notif.title }}</h4>
-          <span class="notification-time">{{ notif.createdAt | date:'short' }}</span>
-        </div>
-        
-        <p class="notification-message">{{ notif.message }}</p>
-        
-        <div class="notification-footer">
-          <span class="notification-type" [style.background-color]="getNotificationColor(notif.type) + '20'"
+          <div>
+            <span class="notification-type" [style.background-color]="getNotificationColor(notif.type) + '20'"
                 [style.color]="getNotificationColor(notif.type)">
-            {{ notif.type }}
-          </span>
-          
-          <button class="btn-delete" (click)="deleteNotification(notif.id); $event.stopPropagation()">
-            <i class="fas fa-trash"></i>
-          </button>
+              {{ getNotificationLabel(notif.type) }}
+            </span>
+            <h2>{{ notif.title }}</h2>
+          </div>
+          <time>{{ notif.createdAt | date:'short' }}</time>
         </div>
+
+        <p>{{ notif.message }}</p>
       </div>
-      
-      <div class="unread-dot" *ngIf="!notif.isRead"></div>
-    </div>
 
-    <!-- Loading More -->
-    <div class="loading-more" *ngIf="loading">
+      <button type="button" class="btn-delete" aria-label="حذف الإشعار"
+          (click)="deleteNotification(notif.id); $event.stopPropagation()">
+        <i class="fas fa-trash"></i>
+      </button>
+    </article>
+
+    <div class="loading-more" *ngIf="loading" aria-busy="true">
       <div class="spinner-small"></div>
-      <span>جاري تحميل المزيد...</span>
+      <span>جارٍ تحميل المزيد...</span>
     </div>
 
-    <!-- Empty State -->
     <div class="empty-state" *ngIf="notifications.length === 0 && !loading">
-      <i class="fas fa-bell-slash"></i>
-      <h3>لا توجد إشعارات</h3>
-      <p>سوف تظهر هنا الإشعارات الجديدة عند ورودها</p>
+      <div class="empty-state__icon">
+        <i class="fas fa-bell-slash"></i>
+      </div>
+      <h2>لا توجد إشعارات</h2>
+      <p>عند وصول رسالة أو تنبيه جديد، سيظهر هنا فورًا.</p>
     </div>
-  </div>
-</div>
+  </section>
+</main>

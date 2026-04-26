@@ -29,4 +29,8 @@
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Remove="Services\OnnxFaceRecognitionService.cs" />
+  </ItemGroup>
+
 </Project>

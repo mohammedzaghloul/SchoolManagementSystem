@@ -56,7 +56,9 @@ export class VideosComponent implements OnInit {
     }
   }
 
-  playVideo(video: Video) {
+  async playVideo(video: Video) {
+    this.incrementVideoViews(video);
+
     const youtubeId = this.extractYouTubeId(video.url);
     if (youtubeId) {
       this.selectedVideoUrl = this.sanitizer.bypassSecurityTrustResourceUrl(`https://www.youtube.com/embed/${youtubeId}?autoplay=1`);
@@ -65,6 +67,15 @@ export class VideosComponent implements OnInit {
     } else {
       // For non-YouTube or invalid IDs, open in a new tab to avoid frame errors
       window.open(video.url, '_blank');
+    }
+  }
+
+  private async incrementVideoViews(video: Video): Promise<void> {
+    try {
+      const result = await this.videoService.incrementViews(video.id);
+      video.views = result.views;
+    } catch {
+      video.views = (video.views || 0) + 1;
     }
   }
 

@@ -5,8 +5,8 @@
   <div class="shell-content">
     <section class="hero-panel">
       <div class="hero-copy">
-        <span class="eyebrow">Teacher Attendance Desk</span>
-        <h1>نظام رصد غياب الحصص اليومية</h1>
+        <span class="eyebrow">إدارة حضور المدرس</span>
+        <h1>نظام رصد الحضور والغياب اليومي</h1>
         <p>
           كل حصصك المجدولة لليوم في شاشة واحدة، مع مؤشرات سريعة للحصص التي تحتاج رصد،
           وحالة نافذة الرصد، ووصول سريع إلى المسارات اليدوية وFace ID وQR.
@@ -20,7 +20,7 @@
           </button>
 
           <label class="date-picker-field">
-            <span>تاريخ التجربة</span>
+            <span>تاريخ الحصص</span>
             <input type="date" [(ngModel)]="selectedDate" (change)="onDateChanged()" [disabled]="loading">
           </label>
 
@@ -49,13 +49,14 @@
           <input
             type="search"
             [(ngModel)]="searchTerm"
+            (ngModelChange)="onFilterChange()"
             placeholder="بحث عن مادة أو فصل أو صف..."
           >
         </label>
 
         <label class="select-field">
           <span>الفصل</span>
-          <select [(ngModel)]="classFilter">
+          <select [(ngModel)]="classFilter" (ngModelChange)="onFilterChange()">
             <option value="all">كل الفصول</option>
             <option *ngFor="let option of classOptions" [value]="option">{{ option }}</option>
           </select>
@@ -63,7 +64,7 @@
 
         <label class="select-field">
           <span>الحالة</span>
-          <select [(ngModel)]="statusFilter">
+          <select [(ngModel)]="statusFilter" (ngModelChange)="onFilterChange()">
             <option value="all">كل الحالات</option>
             <option value="needs-attention">تحتاج رصد</option>
             <option value="recorded">تم رصدها</option>
@@ -109,29 +110,34 @@
 
     <section *ngIf="loading" class="loading-panel">
       <div class="spinner-border text-primary" role="status"></div>
-      <p>جارٍ تحميل حصص المعلم من قاعدة البيانات...</p>
+      <p>جارٍ تحميل الحصص...</p>
     </section>
 
-    <section class="session-grid" *ngIf="!loading && filteredSessions.length > 0">
-      <article class="session-card" *ngFor="let session of filteredSessions; trackBy: trackBySession">
+    <section class="session-grid" *ngIf="!loading && visibleSessions.length > 0">
+      <article class="session-card" *ngFor="let session of visibleSessions; trackBy: trackBySession">
         <div class="card-head">
           <div>
             <h2>{{ session.subjectName }}</h2>
             <p>{{ session.gradeName || 'الصف غير محدد' }} - {{ session.classRoomName }}</p>
           </div>
-          <span class="status-pill" [ngClass]="getSessionStatusClass(session)">
-            {{ getSessionStatusLabel(session) }}
+          <span class="status-pill" [ngClass]="session.computedStatusClass">
+            {{ session.computedStatusLabel }}
           </span>
         </div>
 
         <div class="meta-row">
-          <span><i class="fas fa-clock"></i>{{ formatTime(session.startTime) }}<ng-container *ngIf="session.endTime"> - {{ formatTime(session.endTime) }}</ng-container></span>
+          <span><i class="fas fa-clock"></i>{{ session.computedStartTime }}<ng-container *ngIf="session.endTime"> - {{ session.computedEndTime }}</ng-container></span>
           <span><i class="fas fa-users"></i>{{ session.studentCount || 0 }} طالب</span>
           <span><i class="fas fa-list-check"></i>{{ session.attendanceCount || 0 }} تم رصدهم</span>
-          <span><i class="fas fa-bolt"></i>{{ getAttendanceTypeLabel(session) }}</span>
+          <span><i class="fas fa-bolt"></i>{{ session.computedTypeLabel }}</span>
         </div>
 
-        <div class="window-chip" [ngClass]="getWindowBadgeClass(session)">
+        <div class="methods-chip">
+          <i class="fas fa-layer-group"></i>
+          <span>{{ session.computedModesLabel }}</span>
+        </div>
+
+        <div class="window-chip" [ngClass]="session.computedWindowBadgeClass">
           <i class="fas fa-hourglass-half"></i>
           <span>{{ session.attendanceWindowLabel || 'لا توجد تفاصيل متاحة لنافذة الرصد' }}</span>
         </div>
@@ -139,17 +145,17 @@
         <div class="progress-block">
           <div class="progress-head">
             <strong>مؤشر الرصد</strong>
-            <span>{{ getAttendanceSummary(session) }}</span>
+            <span>{{ session.computedAttendanceSummary }}</span>
           </div>
           <div class="progress-track">
-            <div class="progress-fill" [style.width.%]="getAttendanceProgress(session)"></div>
+            <div class="progress-fill" [style.width.%]="session.computedAttendanceProgress"></div>
           </div>
         </div>
 
         <div class="action-grid">
           <a
             class="action-btn manual"
-            [class.action-disabled]="getActionDisabled(session)"
+            [class.action-disabled]="session.computedActionDisabled"
             [routerLink]="['/teacher/attendance/manual']"
             [queryParams]="{ sessionId: session.id, date: selectedDate }">
             <i class="fas fa-clipboard-check"></i>
@@ -157,7 +163,7 @@
           </a>
           <a
             class="action-btn face"
-            [class.action-disabled]="getActionDisabled(session)"
+            [class.action-disabled]="session.computedActionDisabled"
             [routerLink]="['/teacher/attendance/face']"
             [queryParams]="{ sessionId: session.id, date: selectedDate }">
             <i class="fas fa-camera"></i>
@@ -165,7 +171,7 @@
           </a>
           <a
             class="action-btn qr"
-            [class.action-disabled]="getActionDisabled(session)"
+            [class.action-disabled]="session.computedActionDisabled"
             [routerLink]="['/teacher/attendance/qr']"
             [queryParams]="{ sessionId: session.id, date: selectedDate }">
             <i class="fas fa-qrcode"></i>
@@ -173,6 +179,15 @@
           </a>
         </div>
       </article>
+
+      <div class="pagination-wrapper" *ngIf="filteredSessions.length > pageSize">
+        <app-paginator
+          [totalItems]="filteredSessions.length"
+          [pageSize]="pageSize"
+          [currentPage]="currentPage"
+          (pageChange)="onPageChange($event)">
+        </app-paginator>
+      </div>
     </section>
 
     <section class="empty-state" *ngIf="!loading && filteredSessions.length === 0 && !errorMessage">

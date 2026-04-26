@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ClassRoomService } from '../../../../core/services/classroom.service';
@@ -16,7 +16,7 @@ import { ConfirmDialogComponent, ConfirmDialogData } from '../../../../shared/co
     templateUrl: './class-management.component.html',
     styleUrls: ['./class-management.component.css']
 })
-export class ClassManagementComponent implements OnInit {
+export class ClassManagementComponent implements OnInit, OnDestroy {
     classes: ClassRoom[] = [];
     grades: GradeLevel[] = [];
     loading = false;
@@ -36,6 +36,10 @@ export class ClassManagementComponent implements OnInit {
 
     async ngOnInit() {
         await Promise.all([this.loadClasses(), this.loadGrades()]);
+    }
+
+    ngOnDestroy(): void {
+        document.body.classList.remove('modal-open-fix');
     }
 
     async loadClasses() {
@@ -67,7 +71,16 @@ export class ClassManagementComponent implements OnInit {
 
     async loadGrades() {
         try {
-            this.grades = await this.gradeService.getGrades();
+            const allGrades = await this.gradeService.getGrades();
+            const uniqueGrades = [];
+            const seen = new Set();
+            for (const g of allGrades) {
+                if (!seen.has(g.name)) {
+                    seen.add(g.name);
+                    uniqueGrades.push(g);
+                }
+            }
+            this.grades = uniqueGrades;
         } catch { }
     }
 
@@ -75,12 +88,19 @@ export class ClassManagementComponent implements OnInit {
         this.isEditMode = false;
         this.currentClass = { name: '', gradeLevelId: this.grades[0]?.id || null, capacity: 30 };
         this.showModal = true;
+        document.body.classList.add('modal-open-fix');
     }
 
     openEditModal(item: ClassRoom) {
         this.isEditMode = true;
         this.currentClass = { ...item };
         this.showModal = true;
+        document.body.classList.add('modal-open-fix');
+    }
+
+    closeModal(): void {
+        this.showModal = false;
+        document.body.classList.remove('modal-open-fix');
     }
 
     async saveClass() {
@@ -91,12 +111,18 @@ export class ClassManagementComponent implements OnInit {
         this.submitting = true;
         try {
             if (this.isEditMode) {
-                await this.classService.update(this.currentClass.id, this.currentClass);
+                const updatePayload = {
+                    id: this.currentClass.id,
+                    name: this.currentClass.name,
+                    gradeLevelId: Number(this.currentClass.gradeLevelId),
+                    capacity: this.currentClass.capacity
+                };
+                await this.classService.update(this.currentClass.id, updatePayload);
             } else {
                 await this.classService.create(this.currentClass);
             }
             await this.loadClasses();
-            this.showModal = false;
+            this.closeModal();
         } catch (err: any) {
             alert('خطأ في الحفظ');
         } finally {
@@ -121,6 +147,7 @@ export class ClassManagementComponent implements OnInit {
                 try {
                     await this.classService.delete(id);
                     this.classes = this.classes.filter(c => c.id !== id);
+                    this.applyFilter(); // Update UI immediately
                 } catch (err: any) {
                     alert('عفواً، لا يمكن حذف هذا الفصل لأنه مرتبط بطلاب أو مواد دراسية. يجب نقل الطلاب وحذف الارتباطات أولاً.');
                 }

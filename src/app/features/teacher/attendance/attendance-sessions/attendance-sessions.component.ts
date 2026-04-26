@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { AuthService } from '../../../../core/services/auth.service';
 import { SessionService } from '../../../../core/services/session.service';
+import { PaginatorComponent } from '../../../../shared/components/paginator/paginator.component';
 
 interface TeacherAttendanceSession {
   id: number;
@@ -27,7 +28,7 @@ interface TeacherAttendanceSession {
 @Component({
   selector: 'app-attendance-sessions',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, PaginatorComponent],
   templateUrl: './attendance-sessions.component.html',
   styleUrls: ['./attendance-sessions.component.css']
 })
@@ -40,6 +41,21 @@ export class AttendanceSessionsComponent implements OnInit {
   searchTerm = '';
   statusFilter = 'all';
   classFilter = 'all';
+
+  currentPage = 1;
+  pageSize = 100;
+  visibleSessions: (TeacherAttendanceSession & {
+    computedStatusClass?: string;
+    computedStatusLabel?: string;
+    computedStartTime?: string;
+    computedEndTime?: string;
+    computedTypeLabel?: string;
+    computedModesLabel?: string;
+    computedWindowBadgeClass?: string;
+    computedAttendanceSummary?: string;
+    computedAttendanceProgress?: number;
+    computedActionDisabled?: boolean;
+  })[] = [];
 
   constructor(
     private sessionService: SessionService,
@@ -74,6 +90,33 @@ export class AttendanceSessionsComponent implements OnInit {
 
   get totalSessions(): number {
     return this.filteredSessions.length;
+  }
+
+  updateVisibleSessions() {
+    const start = (this.currentPage - 1) * this.pageSize;
+    this.visibleSessions = this.filteredSessions.slice(start, start + this.pageSize).map(session => ({
+      ...session,
+      computedStatusClass: this.getSessionStatusClass(session),
+      computedStatusLabel: this.getSessionStatusLabel(session),
+      computedStartTime: this.formatTime(session.startTime),
+      computedEndTime: this.formatTime(session.endTime),
+      computedTypeLabel: this.getAttendanceTypeLabel(session),
+      computedModesLabel: this.getAttendanceModesLabel(session),
+      computedWindowBadgeClass: this.getWindowBadgeClass(session),
+      computedAttendanceSummary: this.getAttendanceSummary(session),
+      computedAttendanceProgress: this.getAttendanceProgress(session),
+      computedActionDisabled: this.getActionDisabled(session)
+    }));
+  }
+
+  onPageChange(page: number) {
+    this.currentPage = page;
+    this.updateVisibleSessions();
+  }
+
+  onFilterChange() {
+    this.currentPage = 1; // reset to page 1 on filter
+    this.updateVisibleSessions();
   }
 
   get recordedSessionsCount(): number {
@@ -122,11 +165,14 @@ export class AttendanceSessionsComponent implements OnInit {
       const user = this.authService.getCurrentUser();
       const teacherId = user?.id;
       const response: any = await this.sessionService.getTeacherSessions(teacherId, this.selectedDate);
-      this.sessions = Array.isArray(response) ? response : response?.data || [];
+      const sessions: TeacherAttendanceSession[] = Array.isArray(response) ? response : response?.data || [];
+      this.sessions = sessions.sort((first, second) => this.getTimeValue(first.startTime) - this.getTimeValue(second.startTime));
       this.lastUpdated = new Date();
+      this.updateVisibleSessions();
     } catch (error: any) {
       this.sessions = [];
       this.errorMessage = error?.message || 'تعذر تحميل حصص اليوم من قاعدة البيانات.';
+      this.updateVisibleSessions();
     } finally {
       this.loading = false;
     }
@@ -221,12 +267,16 @@ export class AttendanceSessionsComponent implements OnInit {
     }
   }
 
+  getAttendanceModesLabel(session: TeacherAttendanceSession): string {
+    return `QR + Face ID + يدوي${session.attendanceType ? ` · الافتراضي ${this.getAttendanceTypeLabel(session)}` : ''}`;
+  }
+
   getWindowBadgeClass(session: TeacherAttendanceSession): string {
     return `window-${session.attendanceWindowStatus || 'upcoming'}`;
   }
 
   getActionDisabled(session: TeacherAttendanceSession): boolean {
-    return !session.canRecordAttendance;
+    return !session.id;
   }
 
   async shiftSelectedDate(days: number): Promise<void> {
@@ -271,5 +321,19 @@ export class AttendanceSessionsComponent implements OnInit {
     const month = String(value.getMonth() + 1).padStart(2, '0');
     const day = String(value.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
+  }
+
+  private getTimeValue(value?: string): number {
+    if (!value) {
+      return Number.MAX_SAFE_INTEGER;
+    }
+
+    const parsed = new Date(value);
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed.getTime();
+    }
+
+    const [hours, minutes] = value.split(':').map(part => Number(part));
+    return (Number.isFinite(hours) ? hours : 99) * 60 + (Number.isFinite(minutes) ? minutes : 0);
   }
 }

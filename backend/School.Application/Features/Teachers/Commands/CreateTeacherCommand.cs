@@ -10,6 +10,7 @@ public class CreateTeacherCommand : IRequest<int>
     public string Email { get; set; }
     public string Phone { get; set; }
     public string? Password { get; set; }
+    public int? SubjectId { get; set; }
     public bool IsActive { get; set; } = true;
 }
 

@@ -84,6 +84,24 @@ export interface CreateAdminSessionResult {
   attendanceType: string;
 }
 
+export interface AdminSessionTeacherOption {
+  id: number;
+  fullName: string;
+}
+
+export interface AdminSessionClassRoomOption {
+  id: number;
+  name: string;
+  gradeLevelId: number;
+  gradeLevelName?: string;
+  capacity?: number;
+}
+
+export interface AdminSessionCreateMetadata {
+  teachers: AdminSessionTeacherOption[];
+  classRooms: AdminSessionClassRoomOption[];
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -124,12 +142,20 @@ export class SessionService {
     return this.api.post<CreateAdminSessionResult>('/api/Sessions', data);
   }
 
+  async deleteSession(id: number): Promise<{ message: string }> {
+    return this.api.delete<{ message: string }>(`/api/Sessions/${id}`);
+  }
+
   async getAdminScheduleOverview(startDate: string, endDate: string, term: string = 'all'): Promise<AdminScheduleOverview> {
     return this.api.get<AdminScheduleOverview>('/api/Sessions/admin/schedule-overview', {
       startDate,
       endDate,
       term
     });
+  }
+
+  async getAdminCreateMetadata(): Promise<AdminSessionCreateMetadata> {
+    return this.api.get<AdminSessionCreateMetadata>('/api/Sessions/admin/create-metadata');
   }
 
   async generateTermSchedule(payload: GenerateTermSchedulePayload): Promise<GenerateTermScheduleResult> {
@@ -247,7 +273,7 @@ export class SessionService {
       attendanceRecorded,
       attendanceStatus: status,
       attendanceMethod: attendance?.method,
-      canMarkWithQr: !!(startDate && endDate && startDate <= now && endDate >= now && !attendanceRecorded && attendanceType.toLowerCase() === 'qr')
+      canMarkWithQr: !!(startDate && endDate && startDate <= now && endDate >= now && !attendanceRecorded)
     };
   }
 

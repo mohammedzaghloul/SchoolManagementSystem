@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -16,7 +16,7 @@ import { ConfirmDialogComponent, ConfirmDialogData } from '../../../../shared/co
   templateUrl: './teacher-management.component.html',
   styleUrls: ['./teacher-management.component.css']
 })
-export class TeacherManagementComponent implements OnInit {
+export class TeacherManagementComponent implements OnInit, OnDestroy {
   teachers: any[] = [];
   filteredTeachers: any[] = [];
   subjects: any[] = [];
@@ -26,6 +26,7 @@ export class TeacherManagementComponent implements OnInit {
   error = '';
   searchTerm = '';
   selectedSubject = 'all';
+  selectedStatus = 'all';
 
   // Modal State
   showModal = false;
@@ -47,15 +48,37 @@ export class TeacherManagementComponent implements OnInit {
   ) { }
 
   async ngOnInit() {
-    await Promise.all([
-      this.loadTeachers(),
-      this.loadMeta()
-    ]);
+    this.loading = true;
+    try {
+      await this.loadMeta();
+      await this.loadTeachers();
+    } finally {
+      this.loading = false;
+    }
+  }
+
+  ngOnDestroy(): void {
+    document.body.classList.remove('modal-open-fix');
   }
 
   async loadMeta() {
     try {
-      this.subjects = await this.subjectService.getAll();
+      const allSubjects = await this.subjectService.getAll();
+      const uniqueSubjects = [];
+      const seenNames = new Set();
+      for (const s of allSubjects) {
+          if (!seenNames.has(s.name)) {
+              seenNames.add(s.name);
+              uniqueSubjects.push(s);
+          }
+      }
+      this.subjects = uniqueSubjects;
+      
+      // Ensure there's a 'General/Unspecified' option if needed
+      if (!this.subjects.find(s => s.id === null)) {
+        // We don't add it to the list, we just handle it in the UI
+      }
+      
       this.classRooms = await this.classRoomService.getAll();
     } catch (err) {
       console.error('Meta load error', err);
@@ -66,7 +89,14 @@ export class TeacherManagementComponent implements OnInit {
     this.loading = true;
     this.error = '';
     try {
-      this.teachers = await this.teacherService.getTeachers();
+      const result = await this.teacherService.getTeachers();
+      this.teachers = result.map(t => {
+        if (!t.subjectName && t.subjectId) {
+          const sub = this.subjects.find(s => s.id == t.subjectId);
+          if (sub) t.subjectName = sub.name;
+        }
+        return t;
+      });
       this.applyFilter();
     } catch (err: any) {
       this.error = err?.message || 'حدث خطأ في تحميل بيانات المدرسين';
@@ -90,6 +120,10 @@ export class TeacherManagementComponent implements OnInit {
       filtered = filtered.filter(t => t.subjectId == this.selectedSubject);
     }
 
+    if (this.selectedStatus !== 'all') {
+      filtered = filtered.filter(t => t.isActive === (this.selectedStatus === 'active'));
+    }
+
     this.filteredTeachers = filtered;
   }
 
@@ -104,16 +138,19 @@ export class TeacherManagementComponent implements OnInit {
       isActive: true
     };
     this.showModal = true;
+    document.body.classList.add('modal-open-fix');
   }
 
   openEditModal(teacher: any) {
     this.isEditMode = true;
     this.currentTeacher = { ...teacher };
     this.showModal = true;
+    document.body.classList.add('modal-open-fix');
   }
 
   closeModal() {
     this.showModal = false;
+    document.body.classList.remove('modal-open-fix');
   }
 
   async saveTeacher() {
@@ -134,7 +171,16 @@ export class TeacherManagementComponent implements OnInit {
       }
 
       if (this.isEditMode) {
-        await this.teacherService.updateTeacher(this.currentTeacher.id, payload);
+        // Prepare clean payload for update (strip nested objects)
+        const updatePayload = {
+          id: payload.id,
+          fullName: payload.fullName,
+          email: payload.email,
+          phone: payload.phone,
+          subjectId: payload.subjectId,
+          isActive: payload.isActive
+        };
+        await this.teacherService.updateTeacher(this.currentTeacher.id, updatePayload);
       } else {
         await this.teacherService.createTeacher(payload);
       }
@@ -166,6 +212,11 @@ export class TeacherManagementComponent implements OnInit {
               this.teachers = this.teachers.filter(t => t.id !== id);
               this.applyFilter();
             } catch (err: any) {
+              const message = err?.message || err?.error?.message;
+              if (message) {
+                alert(message);
+                return;
+              }
               alert('عفواً، لا يمكن حذف المعلم لأنه مرتبط بمواد أو جداول دراسية. يجب حذف الارتباط أولاً.');
             }
         }

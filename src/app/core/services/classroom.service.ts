@@ -37,7 +37,8 @@ export class ClassRoomService {
     return this.api.get(`/api/ClassRoom/${classId}/students`);
   }
 
-  async getTeacherClasses(teacherId: number): Promise<ClassRoom[]> {
-    return this.api.get<ClassRoom[]>(`/api/ClassRoom/teacher/${teacherId}`);
+  async getTeacherClasses(teacherId?: number): Promise<ClassRoom[]> {
+    const suffix = teacherId && teacherId > 0 ? `/${teacherId}` : '';
+    return this.api.get<ClassRoom[]>(`/api/ClassRooms/teacher${suffix}`);
   }
 }

@@ -1,69 +1,87 @@
-<div class="assignments-container dark-theme min-vh-100">
-    <!-- Page Header -->
-    <div class="page-header d-flex justify-content-between align-items-center mb-4">
-        <h2 class="page-title text-white fw-bold mb-0">الواجبات والمهام</h2>
-    </div>
-
-    <!-- Filter Tabs -->
-    <div class="filter-tabs d-flex gap-2 mb-4">
-        <button class="filter-tab" [class.active]="activeTab === 'all'" (click)="applyTab('all')">الكل</button>
-        <button class="filter-tab" [class.active]="activeTab === 'pending'" (click)="applyTab('pending')">قيد
-            الانتظار</button>
-        <button class="filter-tab" [class.active]="activeTab === 'completed'"
-            (click)="applyTab('completed')">مكتملة</button>
-    </div>
-
-    <!-- Assignments List -->
-    <div class="assignments-list d-flex flex-column gap-3">
-        <div *ngIf="loading" class="text-center py-5">
-            <div class="spinner-border text-primary"></div>
+<div class="assignments-shell" dir="rtl">
+    <!-- Header -->
+    <header class="page-header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+        <div>
+            <p class="eyebrow mb-1">Assignments</p>
+            <h1 class="page-title mb-0">الواجبات الدراسية</h1>
+            <p class="text-muted-dark small mb-0 mt-1">قائمة المهام والواجبات المطلوبة منك هذا الفصل.</p>
         </div>
 
-        <div *ngIf="!loading && filteredAssignments.length === 0" class="text-center py-5 text-muted-dark">
-            <i class="fas fa-tasks fs-1 mb-3"></i>
-            <p>لا توجد واجبات منزلية حالياً</p>
+        <!-- Tab Pills -->
+        <div class="tab-pills">
+            <button class="tab-pill" [class.active]="activeTab === 'all'" (click)="applyTab('all')">الكل</button>
+            <button class="tab-pill" [class.active]="activeTab === 'pending'" (click)="applyTab('pending')">
+                <i class="fas fa-clock me-1"></i> بانتظار التسليم
+            </button>
+            <button class="tab-pill" [class.active]="activeTab === 'completed'" (click)="applyTab('completed')">
+                <i class="fas fa-check-circle me-1"></i> تم التسليم
+            </button>
         </div>
+    </header>
 
-        <div *ngFor="let a of filteredAssignments"
-            class="assignment-item dark-card rounded-4 p-4 d-flex justify-content-between align-items-center">
-            <div class="d-flex align-items-center gap-3">
-                <div class="d-flex flex-column">
-                    <span class="fw-bold text-white mb-1" [class.text-decoration-line-through]="a.isSubmitted">{{
-                        a.title }}</span>
-                    <p class="small text-muted mb-2">{{ a.description }}</p>
-                    <div class="d-flex align-items-center gap-3">
-                        <span class="subject-tag">{{ a.subjectName }}</span>
-                        <small class="text-muted-dark d-flex align-items-center gap-1">
-                            <i class="far fa-calendar-alt fs-xs"></i>
-                            آخر موعد: {{ a.dueDate | date:'mediumDate' }}
-                        </small>
-                    </div>
+    <!-- Loading -->
+    <div class="text-center py-5" *ngIf="loading">
+        <div class="spinner-border text-primary spinner-border-sm"></div>
+        <p class="text-muted-dark small mt-2">جاري تحميل الواجبات...</p>
+    </div>
+
+    <!-- Error -->
+    <div class="alert-dark-error mb-4" *ngIf="error && !loading">
+        <i class="fas fa-exclamation-triangle me-2"></i> {{ error }}
+    </div>
+
+    <!-- Assignment List -->
+    <div class="assignments-list" *ngIf="!loading">
+        <div class="assignment-row" *ngFor="let item of filteredAssignments">
+            <!-- Icon -->
+            <div class="assignment-icon">
+                <i class="fas fa-file-alt text-primary"></i>
+            </div>
+
+            <!-- Details -->
+            <div class="assignment-details flex-grow-1">
+                <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                    <span class="subject-tag">{{ item.subjectName }}</span>
+                    <span class="status-chip" [ngClass]="item.isSubmitted ? 'chip-success' : 'chip-pending'">
+                        <i class="fas fa-circle-dot me-1" style="font-size:0.5rem"></i>
+                        {{ item.isSubmitted ? 'مكتمل' : 'متبقي' }}
+                    </span>
+                </div>
+                <h5 class="assignment-title">{{ item.title }}</h5>
+                <div class="d-flex align-items-center gap-3 mt-1">
+                    <span class="due-date">
+                        <i class="far fa-calendar me-1"></i>
+                        آخر موعد: {{ item.dueDate | date:'d MMM yyyy' }}
+                    </span>
                 </div>
             </div>
 
-            <div class="d-flex flex-column align-items-end gap-2 text-end">
-                <span *ngIf="a.isSubmitted" class="status-badge badge-done">
-                    <i class="fas fa-check-circle me-1"></i>
-                    تم التسليم
-                </span>
-                <span *ngIf="!a.isSubmitted" class="status-badge badge-late">
-                    <i class="far fa-clock me-1"></i>
-                    قيد الانتظار
-                </span>
-
-                <input type="file" #fileInput hidden (change)="onFileSelected($event, a.id!)">
-                
-                <button *ngIf="!a.isSubmitted" [disabled]="submittingAssignmentId === a.id"
-                    (click)="fileInput.click()" class="btn btn-primary btn-sm px-4 rounded-3">
-                    <i class="fas fa-upload me-1"></i>
-                    تسليم الواجب
-                </button>
-                <a *ngIf="a.attachmentUrl" [href]="a.attachmentUrl" target="_blank"
-                    class="btn btn-outline-secondary btn-sm px-3 rounded-3">
-                    <i class="fas fa-download me-1"></i>
-                    تحميل المرفق
-                </a>
+            <!-- Action -->
+            <div class="assignment-action">
+                <ng-container *ngIf="!item.isSubmitted">
+                    <label class="btn-submit" [class.loading]="submittingAssignmentId === (item.id ?? -1)">
+                        <i class="fas fa-cloud-upload-alt me-2" *ngIf="submittingAssignmentId !== (item.id ?? -1)"></i>
+                        <div class="spinner-border spinner-border-sm me-2"
+                            *ngIf="submittingAssignmentId === (item.id ?? -1)"></div>
+                        {{ submittingAssignmentId === (item.id ?? -1) ? 'جاري الرفع...' : 'تسليم الآن' }}
+                        <input type="file" class="d-none" (change)="onFileSelected($event, item.id ?? 0)"
+                            [disabled]="submittingAssignmentId !== null">
+                    </label>
+                </ng-container>
+                <ng-container *ngIf="item.isSubmitted">
+                    <span class="submitted-badge">
+                        <i class="fas fa-check me-1"></i> مكتمل
+                    </span>
+                </ng-container>
             </div>
+        </div>
+
+        <!-- Empty State -->
+        <div class="empty-state" *ngIf="filteredAssignments.length === 0">
+            <i class="fas fa-clipboard-check empty-icon"></i>
+            <p class="empty-title">لا توجد واجبات</p>
+            <p class="empty-sub">{{ activeTab === 'completed' ? 'لم تسلم أي واجبات بعد.' : 'رائع! أنت منجز كل واجباتك
+                🎉' }}</p>
         </div>
     </div>
 </div>

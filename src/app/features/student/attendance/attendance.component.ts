@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { AttendanceService } from '../../../core/services/attendance.service';
 import { SessionService } from '../../../core/services/session.service';
+import { PaginatorComponent } from '../../../shared/components/paginator/paginator.component';
 
 type AttendanceStatus = 'present' | 'absent' | 'late' | 'neutral';
 type SessionState = 'recorded' | 'active' | 'locked' | 'done' | 'upcoming';
@@ -55,7 +56,7 @@ interface AttendanceInsightCard {
 @Component({
   selector: 'app-attendance',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, PaginatorComponent],
   templateUrl: './attendance.component.html',
   styleUrls: ['./attendance.component.css']
 })
@@ -63,6 +64,11 @@ export class AttendanceComponent implements OnInit, OnDestroy {
   loading = true;
   errorMsg = '';
   records: AttendanceRecord[] = [];
+  visibleRecords: (AttendanceRecord & {
+    computedStatusClass?: string;
+    computedStatusLabel?: string;
+    computedMethodLabel?: string;
+  })[] = [];
   todaySessions: StudentAttendanceSession[] = [];
   activeSession: StudentAttendanceSession | null = null;
   nextSession: StudentAttendanceSession | null = null;
@@ -78,6 +84,9 @@ export class AttendanceComponent implements OnInit, OnDestroy {
 
   countdownMessage = '';
   private timerInterval: ReturnType<typeof setInterval> | null = null;
+
+  currentPage = 1;
+  pageSize = 5;
 
   constructor(
     private attendanceService: AttendanceService,
@@ -161,8 +170,19 @@ export class AttendanceComponent implements OnInit, OnDestroy {
     return 'سيظهر هنا تلقائيًا أول ما تكون هناك حصة متاحة أو نشطة لك.';
   }
 
-  get recentRecords(): AttendanceRecord[] {
-    return this.records.slice(0, 8);
+  updateVisibleRecords() {
+    const start = (this.currentPage - 1) * this.pageSize;
+    this.visibleRecords = this.records.slice(start, start + this.pageSize).map(record => ({
+      ...record,
+      computedStatusClass: this.getStatusClass(record),
+      computedStatusLabel: this.getStatusLabel(record),
+      computedMethodLabel: this.getMethodLabel(record.method)
+    }));
+  }
+
+  onPageChange(page: number) {
+    this.currentPage = page;
+    this.updateVisibleRecords();
   }
 
   get hasSessionsToday(): boolean {
@@ -317,9 +337,11 @@ export class AttendanceComponent implements OnInit, OnDestroy {
         ? this.normalizeRecords(fetchedRecords)
         : this.mergeWithMockRecords(fetchedRecords);
       this.summary = this.buildSummary(statsResponse, this.records, fetchedRecords.length < 8);
+      this.updateVisibleRecords();
     } catch {
       this.records = this.getMockRecords();
       this.summary = this.calculateSummary(this.records);
+      this.updateVisibleRecords();
     }
   }
 

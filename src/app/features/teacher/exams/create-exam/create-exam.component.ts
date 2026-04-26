@@ -59,6 +59,13 @@ export class CreateExamComponent implements OnInit {
   currentStep = 1;
   totalSteps = 3;
   loading = false;
+  dependenciesLoading = false;
+  dependencyError = '';
+  examTypes = [
+    { value: 'midterm', label: 'منتصف الفصل' },
+    { value: 'final', label: 'نهائي' },
+    { value: 'quiz', label: 'اختبار قصير' }
+  ];
 
   constructor(
     private fb: FormBuilder,
@@ -97,6 +104,22 @@ export class CreateExamComponent implements OnInit {
   isEditMode = false;
   examId: number | null = null;
 
+  get selectedClassRoomId(): number {
+    return Number(this.examForm.get('classRoomId')?.value || 0);
+  }
+
+  get filteredSubjects(): Subject[] {
+    if (!this.selectedClassRoomId) {
+      return [];
+    }
+
+    const classSubjects = this.subjects.filter(subject =>
+      !subject.classRoomId || Number(subject.classRoomId) === this.selectedClassRoomId
+    );
+
+    return this.getUniqueSubjects(classSubjects);
+  }
+
   async ngOnInit() {
     this.examId = Number(this.route.snapshot.paramMap.get('id'));
     if (this.examId) {
@@ -104,10 +127,17 @@ export class CreateExamComponent implements OnInit {
     }
 
     // Load dropdown options first
-    await Promise.all([
-      this.loadClasses(),
-      this.loadSubjects()
-    ]);
+    this.dependenciesLoading = true;
+    this.dependencyError = '';
+
+    try {
+      await Promise.all([
+        this.loadClasses(),
+        this.loadSubjects()
+      ]);
+    } finally {
+      this.dependenciesLoading = false;
+    }
 
     // Now load and patch exam data if in edit mode
     if (this.isEditMode && this.examId) {
@@ -162,26 +192,102 @@ export class CreateExamComponent implements OnInit {
   }
 
   async loadClasses(): Promise<void> {
-    const user = this.auth.getCurrentUser();
-    const id = user ? Number(user.id) : 0;
-    const teacherId = isNaN(id) ? 0 : id;
-    console.log('[CreateExam] Loading classes for teacherId:', teacherId);
-    this.classes = await this.classService.getTeacherClasses(teacherId);
+    try {
+      const teacherId = this.getNumericTeacherId();
+      const classes = await this.classService.getTeacherClasses(teacherId);
+      this.classes = this.normalizeList(classes);
+
+      if (this.classes.length === 0) {
+        this.classes = this.normalizeList(await this.classService.getClassRooms());
+      }
+    } catch (error) {
+      console.error('[CreateExam] Error loading classes:', error);
+      const fallbackClasses = await this.classService.getClassRooms().catch((): ClassRoom[] => []);
+      this.classes = this.normalizeList<ClassRoom>(fallbackClasses);
+      this.setDependencyError();
+    }
+  }
+
+  onClassRoomChange(): void {
+    const currentSubjectId = Number(this.examForm.get('subjectId')?.value || 0);
+    const subjectStillAvailable = this.filteredSubjects.some(subject => Number(subject.id) === currentSubjectId);
+
+    if (!subjectStillAvailable) {
+      this.examForm.get('subjectId')?.setValue('');
+    }
   }
 
   async loadSubjects(): Promise<void> {
-    const user = this.auth.getCurrentUser();
-    const id = user ? Number(user.id) : 0;
-    const teacherId = isNaN(id) ? 0 : id;
-    console.log('[CreateExam] Loading subjects for teacherId:', teacherId);
-    this.subjects = await this.subjectService.getTeacherSubjects(teacherId);
+    try {
+      const teacherId = this.getNumericTeacherId();
+      const subjects = await this.subjectService.getTeacherSubjects(teacherId);
+      this.subjects = this.normalizeList(subjects).filter(subject => subject.isActive !== false);
+
+      if (this.subjects.length === 0) {
+        this.subjects = this.normalizeList(await this.subjectService.getSubjects())
+          .filter(subject => subject.isActive !== false);
+      }
+    } catch (error) {
+      console.error('[CreateExam] Error loading subjects:', error);
+      const fallbackSubjects = await this.subjectService.getSubjects().catch((): Subject[] => []);
+      this.subjects = this.normalizeList<Subject>(fallbackSubjects)
+        .filter(subject => subject.isActive !== false);
+      this.setDependencyError();
+    }
+  }
+
+  private getNumericTeacherId(): number | undefined {
+    const id = Number(this.auth.getCurrentUser()?.id);
+    return Number.isFinite(id) && id > 0 ? id : undefined;
+  }
+
+  private normalizeList<T>(value: T[] | { data?: T[] } | null | undefined): T[] {
+    if (Array.isArray(value)) {
+      return value;
+    }
+
+    if (value && Array.isArray(value.data)) {
+      return value.data;
+    }
+
+    return [];
+  }
+
+  private getUniqueSubjects(subjects: Subject[]): Subject[] {
+    const seen = new Set<string>();
+
+    return subjects.filter(subject => {
+      const key = `${subject.classRoomId || this.selectedClassRoomId}-${this.normalizeSubjectName(subject.name)}`;
+      if (seen.has(key)) {
+        return false;
+      }
+
+      seen.add(key);
+      return true;
+    });
+  }
+
+  private normalizeSubjectName(name: string | undefined): string {
+    return (name || '').trim().replace(/\s+/g, ' ').toLowerCase();
+  }
+
+  private setDependencyError(): void {
+    this.dependencyError = 'تعذر تحميل بعض البيانات، فتم عرض البيانات المتاحة بدلًا منها.';
   }
 
   nextStep(): void {
     if (this.currentStep < this.totalSteps) {
       // Validate current step
-      if (this.currentStep === 1 && this.examForm.get('title')?.invalid) {
-        this.notification.warning('يرجى إدخال عنوان الاختبار');
+      if (this.currentStep === 1 && (
+        this.examForm.get('title')?.invalid ||
+        this.examForm.get('classRoomId')?.invalid ||
+        this.examForm.get('subjectId')?.invalid ||
+        this.examForm.get('type')?.invalid
+      )) {
+        ['title', 'classRoomId', 'subjectId', 'type'].forEach(controlName =>
+          this.examForm.get(controlName)?.markAsTouched()
+        );
+        this.notification.warning('يرجى إكمال معلومات الاختبار الأساسية');
         return;
       }
 
