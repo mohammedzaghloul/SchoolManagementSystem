@@ -1,126 +1,155 @@
 <div class="upload-status-page" dir="rtl">
   <section class="page-hero">
     <div class="title-block">
-      <span class="hero-badge">متابعة الدرجات</span>
-      <h1>حالة رفع الدرجات</h1>
-      <p>الحالة العامة: <strong [class.done]="isCompleted">{{ status?.statusLabel || 'prog' }}</strong></p>
+      <span class="hero-badge">Grade Management</span>
+      <h1>إدارة نشر ومتابعة الدرجات</h1>
+      <p>الحالة العامة: <strong [class.done]="isCompleted">{{ dashboard?.globalStatus || 'In Progress' }}</strong></p>
     </div>
 
-    <button class="refresh-btn" type="button" (click)="loadStatus()" [disabled]="loading">
+    <button class="refresh-btn" type="button" (click)="loadDashboard()" [disabled]="loadingDashboard">
       <i class="fas fa-rotate"></i>
-      {{ loading ? 'جاري التحديث...' : 'تحديث' }}
+      {{ loadingDashboard ? 'جاري التحديث...' : 'تحديث' }}
     </button>
+  </section>
+
+  <section class="publish-card">
+    <div class="publish-head">
+      <div>
+        <h2>نشر جلسة درجات</h2>
+        <p>النشر حسب كل الفصول أو فصل واحد أو مرحلة دراسية كاملة.</p>
+      </div>
+      <button class="refresh-btn" type="button" (click)="publishSessions()" [disabled]="publishing || loadingMeta">
+        <i class="fas fa-paper-plane"></i>
+        {{ publishing ? 'جاري النشر...' : 'نشر' }}
+      </button>
+    </div>
+
+    <div class="filters-card publish-grid">
+      <label class="field">
+        <span>النطاق</span>
+        <select [(ngModel)]="publishForm.scope" [disabled]="publishing || loadingMeta">
+          <option *ngFor="let scope of scopes" [value]="scope.value">{{ scope.label }}</option>
+        </select>
+      </label>
+
+      <label class="field" *ngIf="publishForm.scope === 'GradeLevel'">
+        <span>المرحلة الدراسية</span>
+        <select [(ngModel)]="publishForm.gradeLevelId" [disabled]="publishing || loadingMeta">
+          <option *ngFor="let grade of gradeLevels" [ngValue]="grade.id">{{ grade.name }}</option>
+        </select>
+      </label>
+
+      <label class="field" *ngIf="publishForm.scope === 'Class'">
+        <span>الفصل</span>
+        <select [(ngModel)]="publishForm.classId" [disabled]="publishing || loadingMeta">
+          <option *ngFor="let classRoom of classRooms" [ngValue]="classRoom.id">{{ classRoom.name }}</option>
+        </select>
+      </label>
+
+      <label class="field">
+        <span>المادة</span>
+        <select [(ngModel)]="publishForm.subjectId" [disabled]="publishing || loadingMeta">
+          <option *ngFor="let subject of subjects" [ngValue]="subject.id">{{ subject.name }}</option>
+        </select>
+      </label>
+
+      <label class="field">
+        <span>النوع</span>
+        <select [(ngModel)]="publishForm.type" [disabled]="publishing">
+          <option *ngFor="let type of gradeTypes" [value]="type">{{ type }}</option>
+        </select>
+      </label>
+
+      <label class="field">
+        <span>التاريخ</span>
+        <input type="date" [(ngModel)]="publishForm.date" [disabled]="publishing">
+      </label>
+
+      <label class="field">
+        <span>Deadline</span>
+        <input type="datetime-local" [(ngModel)]="publishForm.deadline" [disabled]="publishing">
+      </label>
+    </div>
   </section>
 
   <section class="filters-card">
     <label class="field">
-      <span>نوع الدرجة</span>
-      <select [(ngModel)]="selectedGradeType" (change)="onFilterChanged()" [disabled]="loading">
+      <span>فلترة النوع</span>
+      <select [(ngModel)]="selectedMonitorType" (change)="onMonitorFilterChanged()" [disabled]="loadingDashboard">
+        <option value="">كل الأنواع</option>
         <option *ngFor="let type of gradeTypes" [value]="type">{{ type }}</option>
       </select>
     </label>
 
     <label class="field">
-      <span>تاريخ الرصد</span>
-      <input type="date" [(ngModel)]="selectedDate" (change)="onFilterChanged()" [disabled]="loading">
+      <span>فلترة التاريخ</span>
+      <input type="date" [(ngModel)]="selectedMonitorDate" (change)="onMonitorFilterChanged()" [disabled]="loadingDashboard">
     </label>
   </section>
 
-  <section class="summary-grid" *ngIf="status">
+  <section class="summary-grid" *ngIf="dashboard">
     <article class="summary-card" [class.complete]="isCompleted">
       <span>الحالة</span>
-      <strong>{{ status.statusLabel }}</strong>
+      <strong>{{ dashboard.globalStatus }}</strong>
     </article>
     <article class="summary-card">
-      <span>المدرسون</span>
-      <strong>{{ status.completeTeachers }} / {{ status.totalTeachers }}</strong>
+      <span>الجلسات</span>
+      <strong>{{ dashboard.totalSessions }}</strong>
     </article>
     <article class="summary-card">
-      <span>المواد المعتمدة</span>
-      <strong>{{ status.confirmedSubjects }} / {{ status.totalSubjects }}</strong>
+      <span>Approved</span>
+      <strong>{{ dashboard.approvedSessions }}</strong>
     </article>
     <article class="summary-card">
-      <span>نسبة الاكتمال</span>
-      <strong>{{ status.completionPercent }}%</strong>
+      <span>In Progress</span>
+      <strong>{{ dashboard.inProgressSessions }}</strong>
     </article>
   </section>
 
-  <section class="progress-card" *ngIf="status">
-    <div class="progress-head">
-      <span>{{ status.statusLabel }}</span>
-      <strong>{{ status.completionPercent }}%</strong>
-    </div>
-    <div class="progress-track">
-      <div class="progress-fill" [style.width.%]="status.completionPercent" [class.done]="isCompleted"></div>
-    </div>
-  </section>
-
-  <section class="state-card" *ngIf="loading">
+  <section class="state-card" *ngIf="loadingDashboard">
     <div class="spinner-border text-primary" role="status"></div>
-    <p>جاري تحميل حالة المدرسين...</p>
+    <p>جاري تحميل متابعة جلسات الدرجات...</p>
   </section>
 
-  <section class="state-card error" *ngIf="!loading && errorMessage">
+  <section class="state-card error" *ngIf="!loadingDashboard && errorMessage">
     <i class="fas fa-triangle-exclamation"></i>
     <p>{{ errorMessage }}</p>
-    <button class="refresh-btn ghost" type="button" (click)="loadStatus()">إعادة المحاولة</button>
+    <button class="refresh-btn ghost" type="button" (click)="loadDashboard()">إعادة المحاولة</button>
   </section>
 
-  <section class="state-card" *ngIf="!loading && !errorMessage && status && teachers.length === 0">
+  <section class="state-card" *ngIf="!loadingDashboard && !errorMessage && sessions.length === 0">
     <i class="fas fa-inbox"></i>
-    <p>لا توجد مواد مرتبطة بمدرسين لهذا اليوم.</p>
+    <p>لا توجد جلسات درجات منشورة حتى الآن.</p>
   </section>
 
-  <section class="teachers-list" *ngIf="!loading && !errorMessage && teachers.length > 0">
-    <article class="teacher-card" *ngFor="let teacher of teachers; trackBy: trackByTeacher" [class.complete]="teacher.isComplete">
+  <section class="teachers-list" *ngIf="!loadingDashboard && !errorMessage && sessions.length > 0">
+    <article class="teacher-card" *ngFor="let session of sessions; trackBy: trackBySession" [class.complete]="session.status === 'Approved'">
       <div class="teacher-head">
-        <div class="teacher-avatar">{{ teacher.teacherName.charAt(0) }}</div>
+        <div class="teacher-avatar">{{ session.teacherName.charAt(0) }}</div>
         <div class="teacher-main">
-          <h2>{{ teacher.teacherName }} <span>({{ getTeacherSubjectSummary(teacher) }})</span></h2>
-          <p *ngIf="teacher.teacherEmail">{{ teacher.teacherEmail }}</p>
+          <h2>{{ session.teacherName }} <span>({{ session.subjectName }})</span></h2>
+          <p>{{ session.className }} · {{ session.gradeLevelName || 'مرحلة غير محددة' }} · {{ session.type }} · {{ session.date | date:'d/M/yyyy' }}</p>
         </div>
-        <span class="status-chip" [class.done]="teacher.isComplete">
-          <i class="fas" [class.fa-circle-check]="teacher.isComplete" [class.fa-clock]="!teacher.isComplete"></i>
-          {{ teacher.isComplete ? 'تم' : 'جاري' }}
+        <span class="status-chip" [class.done]="session.status === 'Approved'">
+          <i class="fas" [class.fa-circle-check]="session.status === 'Approved'" [class.fa-clock]="session.status !== 'Approved'"></i>
+          {{ statusLabel(session.status) }}
         </span>
       </div>
 
       <div class="teacher-progress">
         <div>
-          <span>{{ teacher.confirmedSubjects }} / {{ teacher.totalSubjects }} مواد</span>
-          <strong>{{ getTeacherCompletionPercent(teacher) }}%</strong>
+          <span>{{ session.gradedStudents }} / {{ session.totalStudents }} طلاب</span>
+          <strong>{{ session.progressPercent }}%</strong>
         </div>
         <div class="teacher-progress-track">
-          <span [style.width.%]="getTeacherCompletionPercent(teacher)" [class.done]="teacher.isComplete"></span>
+          <span [style.width.%]="session.progressPercent" [class.done]="session.status === 'Approved'"></span>
         </div>
       </div>
 
       <div class="teacher-stats">
-        <span>{{ teacher.confirmedSubjects }} معتمد</span>
-        <span>{{ teacher.pendingSubjects }} قيد الرفع</span>
-        <span *ngIf="getFirstPendingSubjectName(teacher) as pendingSubject">
-          المتبقي: {{ pendingSubject }}
-        </span>
-      </div>
-
-      <button class="details-toggle" type="button" (click)="toggleTeacherDetails(teacher.teacherId)">
-        <i class="fas" [class.fa-chevron-down]="!isTeacherExpanded(teacher.teacherId)" [class.fa-chevron-up]="isTeacherExpanded(teacher.teacherId)"></i>
-        {{ isTeacherExpanded(teacher.teacherId) ? 'إخفاء التفاصيل' : 'عرض تفاصيل المواد' }}
-      </button>
-
-      <div class="subjects-grid" *ngIf="isTeacherExpanded(teacher.teacherId)">
-        <div class="subject-row" *ngFor="let subject of teacher.subjects; trackBy: trackBySubject" [class.done]="subject.isConfirmed">
-          <div>
-            <strong>{{ subject.subjectName }}</strong>
-            <span>{{ subject.classRoomName }}</span>
-          </div>
-          <div class="subject-numbers">
-            <span>{{ subject.gradedStudents }} / {{ subject.totalStudents }}</span>
-            <small *ngIf="subject.missingGradesCount > 0">متبقي {{ subject.missingGradesCount }}</small>
-            <small *ngIf="subject.confirmedAt">{{ subject.confirmedAt | date:'short' }}</small>
-          </div>
-          <span class="mini-chip" [class.done]="subject.isConfirmed">{{ subject.statusLabel }}</span>
-        </div>
+        <span>{{ session.gradedStudents }} completed</span>
+        <span>{{ session.missingGradesCount }} missing</span>
+        <span *ngIf="session.deadline">Deadline: {{ session.deadline | date:'short' }}</span>
       </div>
     </article>
   </section>

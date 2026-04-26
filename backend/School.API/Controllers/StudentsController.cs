@@ -9,6 +9,7 @@ using School.Application.Interfaces;
 using School.Domain.Entities;
 using School.Infrastructure.Data;
 using School.Infrastructure.Identity;
+using System.Security.Claims;
 
 namespace School.API.Controllers;
 
@@ -33,13 +34,16 @@ public class StudentsController : BaseApiController
     }
 
     [HttpGet("search")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin,Parent")]
     public async Task<ActionResult<IReadOnlyList<StudentSearchResultDto>>> SearchStudents(
         [FromQuery] string? q,
         [FromQuery] int limit = 10,
         CancellationToken cancellationToken = default)
     {
-        var result = await _studentQueryService.SearchStudentsAsync(q, limit, cancellationToken);
+        var parentId = User.IsInRole("Parent")
+            ? await GetCurrentParentIdAsync(cancellationToken)
+            : null;
+        var result = await _studentQueryService.SearchStudentsAsync(q, limit, parentId, cancellationToken);
         return Ok(result);
     }
 
@@ -52,11 +56,16 @@ public class StudentsController : BaseApiController
     }
 
     [HttpGet("{id:int}/dashboard")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin,Parent")]
     public async Task<ActionResult<StudentDashboardDto>> GetStudentDashboard(
         int id,
         CancellationToken cancellationToken = default)
     {
+        if (!await CanReadStudentAsync(id, cancellationToken))
+        {
+            return Forbid();
+        }
+
         var result = await _studentQueryService.GetStudentDashboardAsync(id, cancellationToken);
         if (result == null)
         {
@@ -67,11 +76,16 @@ public class StudentsController : BaseApiController
     }
 
     [HttpGet("{id:int}/grades")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin,Parent")]
     public async Task<ActionResult<IReadOnlyList<StudentGradeDto>>> GetStudentGradesForDashboard(
         int id,
         CancellationToken cancellationToken = default)
     {
+        if (!await CanReadStudentAsync(id, cancellationToken))
+        {
+            return Forbid();
+        }
+
         var result = await _studentQueryService.GetStudentGradesAsync(id, cancellationToken);
         if (result == null)
         {
@@ -82,11 +96,16 @@ public class StudentsController : BaseApiController
     }
 
     [HttpGet("{id:int}/attendance")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin,Parent")]
     public async Task<ActionResult<IReadOnlyList<StudentAttendanceDto>>> GetStudentAttendanceForDashboard(
         int id,
         CancellationToken cancellationToken = default)
     {
+        if (!await CanReadStudentAsync(id, cancellationToken))
+        {
+            return Forbid();
+        }
+
         var result = await _studentQueryService.GetStudentAttendanceAsync(id, cancellationToken);
         if (result == null)
         {
@@ -361,6 +380,41 @@ public class StudentsController : BaseApiController
         {
             await _roleManager.CreateAsync(new IdentityRole(roleName));
         }
+    }
+
+    private async Task<bool> CanReadStudentAsync(int studentId, CancellationToken cancellationToken)
+    {
+        if (User.IsInRole("Admin"))
+        {
+            return true;
+        }
+
+        if (!User.IsInRole("Parent"))
+        {
+            return false;
+        }
+
+        var parentId = await GetCurrentParentIdAsync(cancellationToken);
+        return parentId.HasValue && await _context.Students
+            .AsNoTracking()
+            .AnyAsync(student => student.Id == studentId && student.ParentId == parentId.Value, cancellationToken);
+    }
+
+    private async Task<int?> GetCurrentParentIdAsync(CancellationToken cancellationToken)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var email = User.FindFirstValue(ClaimTypes.Email);
+
+        if (string.IsNullOrWhiteSpace(userId) && string.IsNullOrWhiteSpace(email))
+        {
+            return null;
+        }
+
+        return await _context.Parents
+            .AsNoTracking()
+            .Where(parent => parent.UserId == userId || parent.Email == email)
+            .Select(parent => (int?)parent.Id)
+            .FirstOrDefaultAsync(cancellationToken);
     }
 
     private static string? Normalize(string? value)

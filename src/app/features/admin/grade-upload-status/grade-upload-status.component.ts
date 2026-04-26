@@ -2,13 +2,18 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
+import { ClassRoom } from '../../../core/models/class.model';
+import { GradeLevel } from '../../../core/models/grade.model';
+import { Subject } from '../../../core/models/subject.model';
+import { ClassRoomService } from '../../../core/services/classroom.service';
 import {
-  AdminGradeUploadStatusResponse,
-  AdminGradeUploadSubjectStatus,
-  AdminGradeUploadTeacherStatus,
-  GradeService
+  AdminGradeSessionsDashboard,
+  GradeService,
+  GradeSessionMonitor,
+  PublishGradeSessionsRequest
 } from '../../../core/services/grade.service';
 import { NotificationService } from '../../../core/services/notification.service';
+import { SubjectService } from '../../../core/services/subject.service';
 
 @Component({
   selector: 'app-grade-upload-status',
@@ -18,95 +23,140 @@ import { NotificationService } from '../../../core/services/notification.service
   styleUrls: ['./grade-upload-status.component.css']
 })
 export class GradeUploadStatusComponent implements OnInit {
-  readonly gradeTypes = ['واجب', 'اختبار', 'مشاركة', 'شفوي', 'تقييم'];
+  readonly gradeTypes = ['Exam', 'Homework', 'Activity'];
+  readonly scopes = [
+    { value: 'GradeLevel', label: 'مرحلة دراسية' },
+    { value: 'Class', label: 'فصل محدد' },
+    { value: 'All', label: 'كل الفصول' }
+  ];
 
-  selectedGradeType = 'واجب';
-  selectedDate = this.getDateInputValue(new Date());
-  status: AdminGradeUploadStatusResponse | null = null;
-  loading = false;
+  classRooms: ClassRoom[] = [];
+  gradeLevels: GradeLevel[] = [];
+  subjects: Subject[] = [];
+  dashboard: AdminGradeSessionsDashboard | null = null;
+
+  publishForm: PublishGradeSessionsRequest = {
+    scope: 'GradeLevel',
+    classId: null,
+    gradeLevelId: null,
+    subjectId: 0,
+    type: 'Homework',
+    date: this.getDateInputValue(new Date()),
+    deadline: null
+  };
+
+  selectedMonitorType = '';
+  selectedMonitorDate = '';
+  loadingMeta = false;
+  publishing = false;
+  loadingDashboard = false;
   errorMessage = '';
-  private expandedTeacherIds = new Set<number>();
 
   constructor(
     private gradeService: GradeService,
+    private classRoomService: ClassRoomService,
+    private subjectService: SubjectService,
     private notify: NotificationService
   ) {}
 
   async ngOnInit(): Promise<void> {
-    await this.loadStatus();
+    await Promise.all([
+      this.loadMeta(),
+      this.loadDashboard()
+    ]);
   }
 
-  get teachers(): AdminGradeUploadTeacherStatus[] {
-    return this.status?.teachers || [];
+  get sessions(): GradeSessionMonitor[] {
+    return this.dashboard?.sessions || [];
   }
 
   get isCompleted(): boolean {
-    return this.status?.status === 'COMPLETED';
+    return this.dashboard?.globalStatus === 'Completed';
   }
 
-  async loadStatus(): Promise<void> {
-    this.loading = true;
-    this.errorMessage = '';
-
+  async loadMeta(): Promise<void> {
+    this.loadingMeta = true;
     try {
-      this.status = await this.gradeService.getAdminGradeUploadStatus(
-        this.selectedGradeType,
-        this.selectedDate
-      );
+      const [classRooms, gradeLevels, subjects] = await Promise.all([
+        this.classRoomService.getClassRooms(),
+        this.gradeService.getGrades(),
+        this.subjectService.getSubjects()
+      ]);
+
+      this.classRooms = classRooms || [];
+      this.gradeLevels = gradeLevels || [];
+      this.subjects = (subjects || []).filter(subject => subject.isActive !== false);
+      this.publishForm.gradeLevelId = this.gradeLevels[0]?.id || null;
+      this.publishForm.classId = this.classRooms[0]?.id || null;
+      this.publishForm.subjectId = this.subjects[0]?.id || 0;
     } catch (error: any) {
-      this.status = null;
-      this.errorMessage = error?.message || 'تعذر تحميل حالة رفع الدرجات.';
+      this.errorMessage = error?.message || 'تعذر تحميل بيانات النشر.';
       this.notify.error(this.errorMessage);
     } finally {
-      this.loading = false;
+      this.loadingMeta = false;
     }
   }
 
-  async onFilterChanged(): Promise<void> {
-    await this.loadStatus();
-  }
-
-  trackByTeacher(_: number, teacher: AdminGradeUploadTeacherStatus): number {
-    return teacher.teacherId;
-  }
-
-  trackBySubject(_: number, subject: AdminGradeUploadSubjectStatus): number {
-    return subject.subjectId;
-  }
-
-  getTeacherCompletionPercent(teacher: AdminGradeUploadTeacherStatus): number {
-    if (teacher.totalSubjects <= 0) {
-      return teacher.isComplete ? 100 : 0;
-    }
-
-    return Math.round((teacher.confirmedSubjects / teacher.totalSubjects) * 100);
-  }
-
-  getTeacherSubjectSummary(teacher: AdminGradeUploadTeacherStatus): string {
-    const subjects = Array.from(new Set(teacher.subjects.map(subject => subject.subjectName).filter(Boolean)));
-    if (subjects.length === 0) {
-      return 'بدون مواد';
-    }
-
-    const visibleSubjects = subjects.slice(0, 2).join('، ');
-    return subjects.length > 2 ? `${visibleSubjects} +${subjects.length - 2}` : visibleSubjects;
-  }
-
-  getFirstPendingSubjectName(teacher: AdminGradeUploadTeacherStatus): string | null {
-    return teacher.subjects.find(subject => !subject.isConfirmed)?.subjectName || null;
-  }
-
-  isTeacherExpanded(teacherId: number): boolean {
-    return this.expandedTeacherIds.has(teacherId);
-  }
-
-  toggleTeacherDetails(teacherId: number): void {
-    if (this.expandedTeacherIds.has(teacherId)) {
-      this.expandedTeacherIds.delete(teacherId);
+  async publishSessions(): Promise<void> {
+    if (!this.publishForm.subjectId) {
+      this.notify.warning('اختر المادة أولًا.');
       return;
     }
 
-    this.expandedTeacherIds.add(teacherId);
+    if (this.publishForm.scope === 'Class' && !this.publishForm.classId) {
+      this.notify.warning('اختر الفصل أولًا.');
+      return;
+    }
+
+    if (this.publishForm.scope === 'GradeLevel' && !this.publishForm.gradeLevelId) {
+      this.notify.warning('اختر المرحلة الدراسية أولًا.');
+      return;
+    }
+
+    this.publishing = true;
+    try {
+      const result = await this.gradeService.publishGradeSessions({
+        ...this.publishForm,
+        deadline: this.publishForm.deadline || null
+      });
+      this.notify.success(`تم نشر ${result.createdCount} جلسة. المكرر: ${result.duplicateCount}.`);
+      await this.loadDashboard();
+    } catch (error: any) {
+      this.notify.error(error?.message || 'تعذر نشر جلسات الدرجات.');
+    } finally {
+      this.publishing = false;
+    }
+  }
+
+  async loadDashboard(): Promise<void> {
+    this.loadingDashboard = true;
+    this.errorMessage = '';
+    try {
+      this.dashboard = await this.gradeService.getAdminGradeSessionsDashboard(
+        this.selectedMonitorType || undefined,
+        this.selectedMonitorDate || undefined
+      );
+    } catch (error: any) {
+      this.dashboard = null;
+      this.errorMessage = error?.message || 'تعذر تحميل متابعة الدرجات.';
+      this.notify.error(this.errorMessage);
+    } finally {
+      this.loadingDashboard = false;
+    }
+  }
+
+  async onMonitorFilterChanged(): Promise<void> {
+    await this.loadDashboard();
+  }
+
+  trackBySession(_: number, session: GradeSessionMonitor): number {
+    return session.sessionId;
+  }
+
+  statusLabel(status: string): string {
+    if (status === 'Approved') return 'Approved';
+    if (status === 'InProgress') return 'In Progress';
+    return 'Not Started';
   }
 
   private getDateInputValue(date: Date): string {

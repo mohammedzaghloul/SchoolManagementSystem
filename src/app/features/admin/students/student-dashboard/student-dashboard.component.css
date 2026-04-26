@@ -530,6 +530,11 @@ td small {
   color: #b91c1c;
 }
 
+.score-pill.missing {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
 .score-pill,
 .status-pill {
   display: inline-flex;

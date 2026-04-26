@@ -183,6 +183,10 @@
   align-items: end;
 }
 
+.toolbar-grid.session-toolbar {
+  grid-template-columns: minmax(18rem, 2fr) minmax(12rem, 1fr);
+}
+
 .field,
 .score-field,
 .notes-field {

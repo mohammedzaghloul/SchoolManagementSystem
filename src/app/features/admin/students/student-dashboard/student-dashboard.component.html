@@ -161,8 +161,8 @@
                 </td>
                 <td>{{ grade.gradeType }}</td>
                 <td>
-                  <span class="score-pill" [ngClass]="scoreClass(grade.score)">
-                    {{ formatPercent(grade.score) }}
+                  <span class="score-pill" [ngClass]="grade.isGraded ? scoreClass(grade.score) : 'missing'">
+                    {{ gradeDisplay(grade) }}
                   </span>
                 </td>
                 <td>{{ grade.date | date:'d/M/yyyy' }}</td>

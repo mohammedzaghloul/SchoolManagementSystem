@@ -1,115 +1,68 @@
 <div class="grades-page" dir="rtl">
   <section class="grades-hero">
     <div>
-      <span class="hero-badge">درجات المدرس</span>
-      <h1>رصد درجات الطلاب بواسطة المدرس</h1>
-      <p>
-        هذه الشاشة مخصصة للمدرس فقط لإدخال درجات طلاب مادته حسب نوع التقييم والتاريخ،
-        بينما صفحة الأدمن الخاصة بالمستويات الدراسية تظل كما هي.
-      </p>
+      <span class="hero-badge">Teacher Grade Sessions</span>
+      <h1>رصد درجات الطلاب</h1>
+      <p>اختر جلسة منشورة من الأدمن، أدخل الدرجات، ثم اعتمد الرفع عند اكتمال كل الطلاب.</p>
     </div>
 
     <div class="hero-actions">
-      <span class="status-pill" [class.done]="isCurrentGradebookConfirmed">
-        <i class="fas" [class.fa-circle-check]="isCurrentGradebookConfirmed" [class.fa-clock]="!isCurrentGradebookConfirmed"></i>
-        {{ uploadStatusLabel }}
+      <span class="status-pill" [class.done]="gradebook?.isApproved">
+        <i class="fas" [class.fa-circle-check]="gradebook?.isApproved" [class.fa-clock]="!gradebook?.isApproved"></i>
+        {{ statusLabel }}
       </span>
-      <button class="save-btn" type="button" (click)="saveGrades()" [disabled]="saving || loadingGradebook || !students.length">
-      <i class="fas fa-floppy-disk"></i>
-      {{ saving ? 'جارٍ حفظ الدرجات...' : 'حفظ الدرجات' }}
+      <button class="save-btn" type="button" (click)="saveGrades()" [disabled]="!canSave">
+        <i class="fas fa-floppy-disk"></i>
+        {{ saving ? 'جاري الحفظ...' : 'حفظ الدرجات' }}
       </button>
-      <button
-        class="confirm-btn"
-        type="button"
-        (click)="confirmGradeUpload(true)"
-        [disabled]="!canConfirmUpload"
-        *ngIf="!isCurrentGradebookConfirmed">
-        <i class="fas fa-cloud-arrow-up"></i>
-        {{ confirming ? 'جاري الاعتماد...' : 'اعتماد الرفع' }}
-      </button>
-      <button
-        class="ghost-btn"
-        type="button"
-        (click)="confirmGradeUpload(false)"
-        [disabled]="confirming || saving || loadingGradebook"
-        *ngIf="isCurrentGradebookConfirmed">
-        <i class="fas fa-rotate-left"></i>
-        إلغاء الاعتماد
+      <button class="confirm-btn" type="button" (click)="approveUpload()" [disabled]="!canApproveUpload">
+        <i class="fas fa-circle-check"></i>
+        {{ approving ? 'جاري الاعتماد...' : 'اعتماد الرفع' }}
       </button>
     </div>
   </section>
 
   <section class="toolbar-card">
-    <div class="toolbar-grid">
+    <div class="toolbar-grid session-toolbar">
       <label class="field">
-        <span>الفصل</span>
-        <select [(ngModel)]="selectedClassRoomId" (change)="onClassRoomChanged()" [disabled]="loadingSubjects || saving">
-          <option [ngValue]="null">اختر الفصل</option>
-          <option *ngFor="let classRoom of availableClasses" [ngValue]="classRoom.id">
-            {{ classRoom.name }}
+        <span>الجلسة</span>
+        <select [(ngModel)]="selectedSessionId" (change)="onSessionChanged()" [disabled]="loadingSessions || saving || approving">
+          <option [ngValue]="null">اختر جلسة درجات</option>
+          <option *ngFor="let session of sessions" [ngValue]="session.sessionId">
+            {{ session.className }} · {{ session.subjectName }} · {{ session.type }} · {{ session.date | date:'d/M/yyyy' }}
           </option>
         </select>
-      </label>
-
-      <label class="field">
-        <span>المادة</span>
-        <select
-          [(ngModel)]="selectedSubjectId"
-          (change)="onSelectionChanged()"
-          [disabled]="loadingSubjects || saving || !selectedClassRoomId"
-          [attr.disabled]="loadingSubjects || saving || !selectedClassRoomId ? true : null">
-          <option [ngValue]="null">{{ selectedClassRoomId ? 'اختر المادة' : 'اختر الفصل أولاً' }}</option>
-          <option *ngFor="let subject of filteredSubjects" [ngValue]="subject.id">
-            {{ subject.name }}
-          </option>
-        </select>
-        <small *ngIf="!loadingSubjects && selectedClassRoomId && filteredSubjects.length === 0">
-          لا توجد مواد متاحة لهذا الفصل.
-        </small>
-      </label>
-
-      <label class="field">
-        <span>نوع الدرجة</span>
-        <select [(ngModel)]="selectedGradeType" (change)="onSelectionChanged()" [disabled]="loadingGradebook || saving">
-          <option *ngFor="let type of gradeTypes" [value]="type">{{ type }}</option>
-        </select>
-      </label>
-
-      <label class="field">
-        <span>تاريخ التقييم</span>
-        <input type="date" [(ngModel)]="selectedDate" (change)="onSelectionChanged()" [disabled]="loadingGradebook || saving">
       </label>
 
       <label class="field search-field">
         <span>بحث سريع</span>
-        <input type="search" [(ngModel)]="searchTerm" (ngModelChange)="onFilterChange()" placeholder="ابحث عن طالب بالاسم أو البريد">
+        <input type="search" [(ngModel)]="searchTerm" placeholder="ابحث باسم الطالب">
       </label>
     </div>
 
     <div class="subject-meta" *ngIf="gradebook">
       <span><i class="fas fa-book-open"></i>{{ gradebook.subjectName }}</span>
-      <span><i class="fas fa-users"></i>{{ gradebook.classRoomName }}</span>
-      <span><i class="fas fa-clipboard-list"></i>{{ gradebook.gradeType }}</span>
-      <span [class.confirmed-meta]="isCurrentGradebookConfirmed">
-        <i class="fas" [class.fa-circle-check]="isCurrentGradebookConfirmed" [class.fa-clock]="!isCurrentGradebookConfirmed"></i>
-        {{ uploadStatusLabel }}
+      <span><i class="fas fa-users"></i>{{ gradebook.className }}</span>
+      <span><i class="fas fa-clipboard-list"></i>{{ gradebook.type }}</span>
+      <span [class.confirmed-meta]="gradebook.isApproved">
+        <i class="fas" [class.fa-circle-check]="gradebook.isApproved" [class.fa-clock]="!gradebook.isApproved"></i>
+        {{ statusLabel }}
       </span>
-      <span *ngIf="confirmedAt"><i class="fas fa-calendar-check"></i>{{ confirmedAt | date:'short' }}</span>
+      <span *ngIf="gradebook.deadline"><i class="fas fa-hourglass-half"></i>{{ gradebook.deadline | date:'short' }}</span>
     </div>
 
-    <div class="compat-banner" *ngIf="usingFallbackData">
-      <i class="fas fa-circle-info"></i>
-      <span>تم تحميل الطلاب من الفصل مباشرة لأن خدمة كشف الدرجات غير متاحة في الخادم الحالي.</span>
+    <div class="compat-banner" *ngIf="gradebook?.isLocked">
+      <i class="fas fa-lock"></i>
+      <span>{{ gradebook?.isApproved ? 'تم اعتماد هذه الجلسة ولا يمكن تعديلها.' : 'انتهى موعد التعديل لهذه الجلسة.' }}</span>
     </div>
   </section>
 
-  <section class="empty-state choose-state" *ngIf="!loadingSubjects && !selectedSubjectId && !loadErrorMessage">
-    <i class="fas fa-book-open"></i>
-    <h2>اختر الفصل والمادة لبدء رصد الدرجات</h2>
-    <p>بعد اختيار الفصل ستظهر مواد هذا الفصل فقط بدون تكرار.</p>
+  <section class="empty-state choose-state" *ngIf="!loadingSessions && sessions.length === 0 && !loadErrorMessage">
+    <i class="fas fa-inbox"></i>
+    <h2>لا توجد جلسات درجات منشورة لك حتى الآن</h2>
   </section>
 
-  <section class="summary-grid" *ngIf="selectedSubjectId && !loadErrorMessage">
+  <section class="summary-grid" *ngIf="gradebook && !loadErrorMessage">
     <article class="summary-card">
       <span>إجمالي الطلاب</span>
       <strong>{{ totalStudents }}</strong>
@@ -119,19 +72,19 @@
       <strong>{{ enteredGradesCount }}</strong>
     </article>
     <article class="summary-card warning">
-      <span>بانتظار الإدخال</span>
+      <span>Not Graded</span>
       <strong>{{ pendingGradesCount }}</strong>
     </article>
     <article class="summary-card info">
-      <span>متوسط الدرجات</span>
-      <strong>{{ averageScore }}</strong>
+      <span>Progress</span>
+      <strong>{{ gradebook.progressPercent }}%</strong>
     </article>
   </section>
 
-  <section class="table-card" *ngIf="selectedSubjectId">
+  <section class="table-card" *ngIf="selectedSessionId">
     <div class="loading-state" *ngIf="loadingGradebook">
       <div class="spinner-border text-primary" role="status"></div>
-      <p>جارٍ تحميل كشف الطلاب والدرجات الحالية...</p>
+      <p>جاري تحميل كشف الطلاب...</p>
     </div>
 
     <div class="error-state" *ngIf="!loadingGradebook && loadErrorMessage">
@@ -141,86 +94,59 @@
       <button class="ghost-btn" type="button" (click)="loadGradebook()">إعادة المحاولة</button>
     </div>
 
-    <div class="empty-state" *ngIf="!loadingGradebook && !loadErrorMessage && students.length === 0">
-      <i class="fas fa-pen-to-square"></i>
-      <h2>لا توجد بيانات درجات لهذه المادة الآن</h2>
-      <p>اختر مادة أخرى أو تأكد أن المادة مرتبطة بفصل يحتوي على طلاب.</p>
-    </div>
-
-    <ng-container *ngIf="!loadingGradebook && !loadErrorMessage && students.length > 0">
+    <ng-container *ngIf="!loadingGradebook && !loadErrorMessage && gradebook">
       <div class="table-head">
         <div>
           <h2>كشف إدخال الدرجات</h2>
           <p>المعروض الآن {{ filteredStudents.length }} من {{ totalStudents }} طالب</p>
         </div>
         <div class="table-actions">
-        <button class="save-btn secondary" type="button" (click)="saveGrades()" [disabled]="saving">
-          <i class="fas fa-cloud-arrow-up"></i>
-          {{ saving ? 'جارٍ الحفظ...' : 'حفظ الآن' }}
-        </button>
-      </div>
-
-        <button class="confirm-btn secondary" type="button" (click)="confirmGradeUpload(true)" [disabled]="!canConfirmUpload" *ngIf="!isCurrentGradebookConfirmed">
-          <i class="fas fa-circle-check"></i>
-          {{ confirming ? 'جاري الاعتماد...' : 'اعتماد الرفع' }}
-        </button>
+          <button class="save-btn secondary" type="button" (click)="saveGrades()" [disabled]="!canSave">
+            <i class="fas fa-cloud-arrow-up"></i>
+            {{ saving ? 'جاري الحفظ...' : 'حفظ الآن' }}
+          </button>
+          <button class="confirm-btn secondary" type="button" (click)="approveUpload()" [disabled]="!canApproveUpload">
+            <i class="fas fa-circle-check"></i>
+            {{ approving ? 'جاري الاعتماد...' : 'اعتماد الرفع' }}
+          </button>
+        </div>
       </div>
 
       <div class="roster-grid">
-        <article class="grade-card" *ngFor="let student of paginatedStudents; trackBy: trackByStudent">
+        <article class="grade-card" *ngFor="let student of filteredStudents; trackBy: trackByStudent">
           <div class="grade-card-main">
-            <div class="student-avatar">{{ student.fullName.charAt(0) }}</div>
+            <div class="student-avatar">{{ student.studentName.charAt(0) }}</div>
             <div class="student-info">
-              <h3>{{ student.fullName }}</h3>
-              <p *ngIf="student.email">{{ student.email }}</p>
-            </div>
-            <div class="student-meta-desktop" *ngIf="student.lastUpdatedAt">
-              <span class="meta-date">{{ student.lastUpdatedAt | date:'short' }}</span>
+              <h3>{{ student.studentName }}</h3>
+              <p>{{ student.isGraded ? ((student.percentage || 0) + '%') : 'Not Graded' }}</p>
             </div>
           </div>
 
           <div class="grade-card-inputs">
             <label class="score-field">
-              <span>الدرجة:</span>
+              <span>Score</span>
               <input
                 type="number"
                 min="0"
-                max="100"
+                [max]="student.maxScore"
                 step="0.01"
                 [ngModel]="student.score"
                 (ngModelChange)="updateScore(student, $event)"
-                [disabled]="saving">
+                [disabled]="saving || gradebook.isLocked">
             </label>
-            <label class="notes-field">
-              <span>ملاحظات:</span>
+            <label class="score-field">
+              <span>Max Score</span>
               <input
-                type="text"
-                [(ngModel)]="student.notes"
-                placeholder="أضف ملاحظة مختصرة..."
-                [disabled]="saving">
+                type="number"
+                min="1"
+                step="0.01"
+                [ngModel]="student.maxScore"
+                (ngModelChange)="updateMaxScore(student, $event)"
+                [disabled]="saving || gradebook.isLocked">
             </label>
           </div>
         </article>
       </div>
-
-      <div class="pagination-wrapper" *ngIf="filteredStudents.length > 0">
-        <app-paginator
-          [totalItems]="filteredStudents.length"
-          [pageSize]="pageSize"
-          [currentPage]="currentPage"
-          (pageChange)="onPageChange($event)">
-        </app-paginator>
-      </div>
     </ng-container>
   </section>
-
-  <app-modal
-    [isOpen]="showSuccessModal"
-    title="تم حفظ الدرجات"
-    [message]="successModalMessage"
-    type="success"
-    confirmText="حسنًا"
-    (confirm)="showSuccessModal = false"
-    (closed)="showSuccessModal = false">
-  </app-modal>
 </div>

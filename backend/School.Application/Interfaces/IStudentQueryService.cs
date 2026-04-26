@@ -7,6 +7,7 @@ public interface IStudentQueryService
     Task<IReadOnlyList<StudentSearchResultDto>> SearchStudentsAsync(
         string? query,
         int limit,
+        int? parentId = null,
         CancellationToken cancellationToken = default);
 
     Task<StudentDashboardDto?> GetStudentDashboardAsync(

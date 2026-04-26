@@ -21,7 +21,10 @@ public class SchoolDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<Attendance> Attendances { get; set; }
     public DbSet<Exam> Exams { get; set; }
     public DbSet<ExamResult> ExamResults { get; set; }
+    public DbSet<GradeSession> GradeSessions { get; set; }
+    public DbSet<Grade> Grades { get; set; }
     public DbSet<GradeRecord> GradeRecords { get; set; }
+    public DbSet<GradeUpload> GradeUploads { get; set; }
     public DbSet<GradeUploadConfirmation> GradeUploadConfirmations { get; set; }
     public DbSet<EmailOtp> EmailOtps { get; set; }
     public DbSet<Message> Messages { get; set; }
@@ -121,6 +124,68 @@ public class SchoolDbContext : IdentityDbContext<ApplicationUser>
             .WithMany(e => e.ExamResults)
             .HasForeignKey(er => er.ExamId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<GradeSession>(entity =>
+        {
+            entity.Property(item => item.Type)
+                .HasMaxLength(50)
+                .IsRequired();
+
+            entity.Property(item => item.Date)
+                .HasColumnType("date");
+
+            entity.Property(item => item.Deadline)
+                .HasColumnType("datetime2");
+
+            entity.HasIndex(item => new { item.ClassId, item.SubjectId, item.Type, item.Date })
+                .IsUnique();
+
+            entity.HasOne(item => item.ClassRoom)
+                .WithMany()
+                .HasForeignKey(item => item.ClassId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(item => item.Subject)
+                .WithMany()
+                .HasForeignKey(item => item.SubjectId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        builder.Entity<Grade>(entity =>
+        {
+            entity.HasIndex(item => new { item.StudentId, item.SessionId })
+                .IsUnique();
+
+            entity.HasOne(item => item.Student)
+                .WithMany()
+                .HasForeignKey(item => item.StudentId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(item => item.Session)
+                .WithMany(session => session.Grades)
+                .HasForeignKey(item => item.SessionId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<GradeUpload>(entity =>
+        {
+            entity.Property(item => item.Status)
+                .HasMaxLength(30)
+                .IsRequired();
+
+            entity.HasIndex(item => new { item.TeacherId, item.SessionId })
+                .IsUnique();
+
+            entity.HasOne(item => item.Teacher)
+                .WithMany()
+                .HasForeignKey(item => item.TeacherId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(item => item.Session)
+                .WithMany(session => session.Uploads)
+                .HasForeignKey(item => item.SessionId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
 
         builder.Entity<GradeUploadConfirmation>(entity =>
         {

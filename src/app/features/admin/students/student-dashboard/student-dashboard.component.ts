@@ -190,6 +190,18 @@ export class StudentDashboardComponent implements OnInit, OnDestroy {
     return 'low';
   }
 
+  gradeDisplay(grade: StudentGradeSummary): string {
+    if (!grade.isGraded) {
+      return 'Not Graded';
+    }
+
+    if (grade.rawScore !== null && typeof grade.rawScore !== 'undefined' && grade.maxScore) {
+      return `${grade.rawScore} / ${grade.maxScore}`;
+    }
+
+    return this.formatPercent(grade.score);
+  }
+
   formatPercent(value: number | null | undefined): string {
     const safeValue = Number.isFinite(value) ? Number(value) : 0;
     return `${safeValue.toFixed(1)}%`;

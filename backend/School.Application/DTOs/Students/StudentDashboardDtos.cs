@@ -41,12 +41,18 @@ public sealed class StudentDashboardDto
 public sealed class StudentGradeDto
 {
     public int Id { get; set; }
+    public int? SessionId { get; set; }
     public int SubjectId { get; set; }
     public string SubjectName { get; set; } = string.Empty;
     public string? TeacherName { get; set; }
     public string GradeType { get; set; } = string.Empty;
     public double Score { get; set; }
+    public double? RawScore { get; set; }
+    public double? MaxScore { get; set; }
+    public double Percentage { get; set; }
+    public bool IsGraded { get; set; } = true;
     public DateTime Date { get; set; }
+    public DateTime? Deadline { get; set; }
     public string? Notes { get; set; }
     public bool IsApproved { get; set; }
     public string ApprovalStatus { get; set; } = "IN_PROGRESS";

@@ -76,12 +76,18 @@ export interface StudentDashboard {
 
 export interface StudentGradeSummary {
     id: number;
+    sessionId?: number | null;
     subjectId: number;
     subjectName: string;
     teacherName?: string;
     gradeType: string;
     score: number;
+    rawScore?: number | null;
+    maxScore?: number | null;
+    percentage: number;
+    isGraded: boolean;
     date: string;
+    deadline?: string | null;
     notes?: string;
     isApproved: boolean;
     approvalStatus: 'COMPLETED' | 'IN_PROGRESS' | string;

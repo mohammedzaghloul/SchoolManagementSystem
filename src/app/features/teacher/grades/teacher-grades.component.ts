@@ -4,132 +4,59 @@ import { FormsModule } from '@angular/forms';
 
 import {
   GradeService,
-  TeacherGradebookResponse,
-  TeacherGradebookStudent
+  TeacherGradeSessionOption,
+  TeacherSessionGradeStudent,
+  TeacherSessionGradebook
 } from '../../../core/services/grade.service';
 import { NotificationService } from '../../../core/services/notification.service';
-import { ClassRoomService } from '../../../core/services/classroom.service';
-import { SubjectService } from '../../../core/services/subject.service';
-import { AuthService } from '../../../core/services/auth.service';
-import { ClassRoom } from '../../../core/models/class.model';
-import { Subject } from '../../../core/models/subject.model';
-import { PaginatorComponent } from '../../../shared/components/paginator/paginator.component';
-import { ModalComponent } from '../../../shared/components/modal/modal.component';
 
-interface EditableGradeStudent extends TeacherGradebookStudent {
+interface EditableSessionGradeStudent extends TeacherSessionGradeStudent {
   score: number | null;
-  notes: string;
+  maxScore: number;
 }
 
 @Component({
   selector: 'app-teacher-grades',
   standalone: true,
-  imports: [CommonModule, FormsModule, PaginatorComponent, ModalComponent],
+  imports: [CommonModule, FormsModule],
   templateUrl: './teacher-grades.component.html',
   styleUrls: ['./teacher-grades.component.css']
 })
 export class TeacherGradesComponent implements OnInit {
-  readonly gradeTypes = ['واجب', 'اختبار', 'مشاركة', 'شفوي', 'تقييم'];
-
-  classes: ClassRoom[] = [];
-  subjects: Subject[] = [];
-  students: EditableGradeStudent[] = [];
-  gradebook: TeacherGradebookResponse | null = null;
-
-  selectedClassRoomId: number | null = null;
-  selectedSubjectId: number | null = null;
-  selectedGradeType = 'واجب';
-  selectedDate = this.getDateInputValue(new Date());
+  sessions: TeacherGradeSessionOption[] = [];
+  gradebook: TeacherSessionGradebook | null = null;
+  students: EditableSessionGradeStudent[] = [];
+  selectedSessionId: number | null = null;
   searchTerm = '';
 
-  loadingSubjects = false;
+  loadingSessions = false;
   loadingGradebook = false;
   saving = false;
-  confirming = false;
+  approving = false;
   loadErrorMessage = '';
-  usingFallbackData = false;
-  isCurrentGradebookConfirmed = false;
-  confirmedAt: string | null = null;
-  serverMissingGradesCount = 0;
-
-  showSuccessModal = false;
-  successModalMessage = '';
-
-  currentPage = 1;
-  pageSize = 100;
 
   constructor(
-    private classRoomService: ClassRoomService,
-    private subjectService: SubjectService,
     private gradeService: GradeService,
-    private notify: NotificationService,
-    private authService: AuthService
+    private notify: NotificationService
   ) {}
 
   async ngOnInit(): Promise<void> {
-    await this.loadSubjects();
+    await this.loadSessions();
   }
 
-  get selectedSubject(): Subject | undefined {
-    return this.subjects.find(subject => subject.id === this.selectedSubjectId);
+  get selectedSession(): TeacherGradeSessionOption | undefined {
+    return this.sessions.find(session => session.sessionId === this.selectedSessionId);
   }
 
-  get availableClasses(): ClassRoom[] {
-    const subjectClassIds = new Set(
-      this.subjects
-        .map(subject => Number(subject.classRoomId || 0))
-        .filter(classRoomId => classRoomId > 0)
-    );
-
-    if (!subjectClassIds.size) {
-      return this.classes;
-    }
-
-    const classesById = new Map(this.classes.map(classRoom => [Number(classRoom.id), classRoom]));
-
-    return Array.from(subjectClassIds)
-      .map(classRoomId => classesById.get(classRoomId) || {
-        id: classRoomId,
-        name: `الفصل ${classRoomId}`,
-        gradeLevelId: 0
-      })
-      .sort((first, second) => first.name.localeCompare(second.name, 'ar'));
-  }
-
-  get filteredSubjects(): Subject[] {
-    const classRoomId = Number(this.selectedClassRoomId || 0);
-    const subjects = classRoomId
-      ? this.subjects.filter(subject => Number(subject.classRoomId || 0) === classRoomId)
-      : this.subjects.filter(subject => !subject.classRoomId);
-
-    return this.getUniqueSubjects(subjects);
-  }
-
-  get filteredStudents(): EditableGradeStudent[] {
-    const search = this.searchTerm.trim().toLowerCase();
-
+  get filteredStudents(): EditableSessionGradeStudent[] {
+    const term = this.searchTerm.trim().toLowerCase();
     return this.students.filter(student =>
-      !search ||
-      student.fullName.toLowerCase().includes(search) ||
-      (student.email || '').toLowerCase().includes(search)
+      !term || student.studentName.toLowerCase().includes(term)
     );
   }
 
   get totalStudents(): number {
     return this.students.length;
-  }
-
-  get paginatedStudents(): EditableGradeStudent[] {
-    const start = (this.currentPage - 1) * this.pageSize;
-    return this.filteredStudents.slice(start, start + this.pageSize);
-  }
-
-  onPageChange(page: number) {
-    this.currentPage = page;
-  }
-
-  onFilterChange() {
-    this.currentPage = 1;
   }
 
   get enteredGradesCount(): number {
@@ -140,281 +67,149 @@ export class TeacherGradesComponent implements OnInit {
     return Math.max(this.totalStudents - this.enteredGradesCount, 0);
   }
 
-  get averageScore(): number {
-    const scoredStudents = this.students.filter(student => student.score !== null);
-    if (!scoredStudents.length) {
-      return 0;
-    }
-
-    const total = scoredStudents.reduce((sum, student) => sum + Number(student.score || 0), 0);
-    return Math.round(total / scoredStudents.length);
-  }
-
-  get canConfirmUpload(): boolean {
-    return Boolean(this.selectedSubjectId)
-      && this.students.length > 0
-      && this.pendingGradesCount === 0
-      && !this.isCurrentGradebookConfirmed
-      && !this.loadingGradebook
+  get canSave(): boolean {
+    return Boolean(this.gradebook)
+      && !this.gradebook!.isLocked
       && !this.saving
-      && !this.confirming;
+      && !this.loadingGradebook
+      && this.students.some(student => student.score !== null);
   }
 
-  get uploadStatusLabel(): string {
-    return this.isCurrentGradebookConfirmed ? 'تم رفع الدرجات' : 'قيد رصد الدرجات';
+  get canApproveUpload(): boolean {
+    return Boolean(this.gradebook)
+      && !this.gradebook!.isLocked
+      && !this.approving
+      && !this.saving
+      && this.totalStudents > 0
+      && this.pendingGradesCount === 0;
   }
 
-  async loadSubjects(): Promise<void> {
-    this.loadingSubjects = true;
+  get statusLabel(): string {
+    if (!this.gradebook) return 'Not Started';
+    if (this.gradebook.status === 'Approved') return 'Approved';
+    if (this.gradebook.status === 'InProgress') return 'In Progress';
+    return 'Not Started';
+  }
+
+  async loadSessions(): Promise<void> {
+    this.loadingSessions = true;
     this.loadErrorMessage = '';
 
     try {
-      const [classes, subjects] = await Promise.all([
-        this.loadTeacherClasses(),
-        this.loadTeacherSubjects()
-      ]);
-
-      this.classes = classes;
-      this.subjects = subjects.filter(subject => subject.isActive !== false);
-
-      if (!this.selectedClassRoomId && this.availableClasses.length > 0) {
-        this.selectedClassRoomId = this.availableClasses[0].id;
-      }
-
-      if (!this.selectedSubjectId && this.filteredSubjects.length > 0) {
-        this.selectedSubjectId = this.filteredSubjects[0].id;
-      }
-
-      if (this.selectedSubjectId) {
+      this.sessions = await this.gradeService.getTeacherGradeSessions();
+      this.selectedSessionId = this.sessions[0]?.sessionId || null;
+      if (this.selectedSessionId) {
         await this.loadGradebook();
       }
     } catch (error: any) {
-      this.loadErrorMessage = error?.message || 'تعذر تحميل مواد المدرس.';
+      this.loadErrorMessage = error?.message || 'تعذر تحميل جلسات الدرجات.';
       this.notify.error(this.loadErrorMessage);
     } finally {
-      this.loadingSubjects = false;
+      this.loadingSessions = false;
     }
-  }
-
-  async onSelectionChanged(): Promise<void> {
-    await this.loadGradebook();
-  }
-
-  async onClassRoomChanged(): Promise<void> {
-    this.selectedSubjectId = this.filteredSubjects[0]?.id || null;
-    await this.loadGradebook();
   }
 
   async loadGradebook(): Promise<void> {
-    if (!this.selectedSubjectId) {
+    if (!this.selectedSessionId) {
       this.gradebook = null;
       this.students = [];
-      this.loadErrorMessage = '';
-      this.usingFallbackData = false;
-      this.isCurrentGradebookConfirmed = false;
-      this.confirmedAt = null;
-      this.serverMissingGradesCount = 0;
       return;
     }
 
-    this.currentPage = 1;
     this.loadingGradebook = true;
     this.loadErrorMessage = '';
-    this.usingFallbackData = false;
 
     try {
-      const response = await this.gradeService.getTeacherGradebook(
-        this.selectedSubjectId,
-        this.selectedGradeType,
-        this.selectedDate
-      );
-
-      this.gradebook = response;
-      this.students = (response.students || []).map(student => ({
+      this.gradebook = await this.gradeService.getTeacherSessionGradebook(this.selectedSessionId);
+      this.students = (this.gradebook.students || []).map(student => ({
         ...student,
         score: student.score ?? null,
-        notes: student.notes || ''
+        maxScore: student.maxScore || 100
       }));
-      this.isCurrentGradebookConfirmed = response.isConfirmed === true;
-      this.confirmedAt = response.confirmedAt || null;
-      this.serverMissingGradesCount = response.missingGradesCount ?? this.pendingGradesCount;
     } catch (error: any) {
       this.gradebook = null;
       this.students = [];
-      this.isCurrentGradebookConfirmed = false;
-      this.confirmedAt = null;
-      this.serverMissingGradesCount = 0;
-      this.loadErrorMessage = this.getGradebookErrorMessage(error);
+      this.loadErrorMessage = error?.message || 'تعذر تحميل كشف الدرجات.';
       this.notify.error(this.loadErrorMessage);
     } finally {
       this.loadingGradebook = false;
     }
   }
 
-  updateScore(student: EditableGradeStudent, value: string | number | null): void {
+  async onSessionChanged(): Promise<void> {
+    await this.loadGradebook();
+  }
+
+  updateScore(student: EditableSessionGradeStudent, value: string | number | null): void {
     if (value === null || value === '' || typeof value === 'undefined') {
       student.score = null;
       return;
     }
 
     const parsed = Number(value);
-    if (Number.isNaN(parsed)) {
+    if (!Number.isFinite(parsed)) {
       student.score = null;
       return;
     }
 
-    student.score = Math.min(100, Math.max(0, parsed));
+    student.score = Math.min(student.maxScore, Math.max(0, parsed));
+  }
+
+  updateMaxScore(student: EditableSessionGradeStudent, value: string | number | null): void {
+    const parsed = Number(value);
+    student.maxScore = Number.isFinite(parsed) && parsed > 0 ? parsed : 100;
+    if (student.score !== null && student.score > student.maxScore) {
+      student.score = student.maxScore;
+    }
   }
 
   async saveGrades(): Promise<void> {
-    if (!this.selectedClassRoomId || !this.selectedSubjectId) {
-      this.notify.warning('اختر الفصل والمادة أولًا.');
-      return;
-    }
-
-    const grades = this.students
-      .filter(student => student.score !== null)
-      .map(student => ({
-        id: student.existingGradeId ?? null,
-        studentId: student.id,
-        score: Number(student.score),
-        notes: student.notes?.trim() || null
-      }));
-
-    if (!grades.length) {
-      this.notify.warning('أدخل درجة واحدة على الأقل قبل الحفظ.');
+    if (!this.selectedSessionId || !this.canSave) {
       return;
     }
 
     this.saving = true;
-
     try {
-      if (this.usingFallbackData) {
-        this.notify.info('تم تحميل الطلاب من الفصل مباشرة. إذا ظهر خطأ في الحفظ فحدّث الـbackend الحالي ثم أعد المحاولة.');
-      }
-
-      const result = await this.gradeService.saveTeacherGradebook({
-        subjectId: this.selectedSubjectId,
-        gradeType: this.selectedGradeType,
-        date: this.selectedDate,
-        grades
+      const result = await this.gradeService.saveTeacherSessionGrades({
+        sessionId: this.selectedSessionId,
+        grades: this.students
+          .filter(student => student.score !== null)
+          .map(student => ({
+            studentId: student.studentId,
+            score: Number(student.score),
+            maxScore: student.maxScore
+          }))
       });
 
-      this.notify.success(result.message || 'تم حفظ الدرجات بنجاح.');
-      this.successModalMessage = result.message || 'تم حفظ جميع التعديلات في قاعدة البيانات بنجاح.';
-      this.showSuccessModal = true;
-
-      this.loadErrorMessage = '';
+      this.notify.success(result.message || 'تم حفظ الدرجات.');
       await this.loadGradebook();
+      await this.loadSessions();
     } catch (error: any) {
-      this.notify.error(error?.message || 'حدث خطأ أثناء حفظ الدرجات.');
+      this.notify.error(error?.message || 'تعذر حفظ الدرجات.');
     } finally {
       this.saving = false;
     }
   }
 
-  async confirmGradeUpload(isConfirmed = true): Promise<void> {
-    if (!this.selectedSubjectId) {
-      this.notify.warning('اختر المادة أولًا.');
+  async approveUpload(): Promise<void> {
+    if (!this.selectedSessionId || !this.canApproveUpload) {
       return;
     }
 
-    if (isConfirmed && this.pendingGradesCount > 0) {
-      this.notify.warning(`لا يمكن اعتماد الرفع قبل إدخال درجات كل الطلاب. المتبقي: ${this.pendingGradesCount}.`);
-      return;
-    }
-
-    this.confirming = true;
-
+    this.approving = true;
     try {
-      const result = await this.gradeService.confirmTeacherGradebook({
-        subjectId: this.selectedSubjectId,
-        gradeType: this.selectedGradeType,
-        date: this.selectedDate,
-        isConfirmed
-      });
-
-      this.isCurrentGradebookConfirmed = result.isConfirmed;
-      this.confirmedAt = result.confirmedAt || null;
-      this.serverMissingGradesCount = result.missingGradesCount;
-      this.notify.success(result.statusLabel || (result.isConfirmed ? 'تم اعتماد رفع الدرجات.' : 'تم إلغاء اعتماد الرفع.'));
+      const result = await this.gradeService.approveTeacherSession(this.selectedSessionId);
+      this.notify.success(result.message || 'تم اعتماد رفع الدرجات.');
       await this.loadGradebook();
+      await this.loadSessions();
     } catch (error: any) {
-      this.notify.error(error?.message || 'تعذر تحديث حالة رفع الدرجات.');
+      this.notify.error(error?.message || 'تعذر اعتماد رفع الدرجات.');
     } finally {
-      this.confirming = false;
+      this.approving = false;
     }
   }
 
-  trackByStudent(_: number, student: EditableGradeStudent): number {
-    return student.id;
-  }
-
-  private getDateInputValue(date: Date): string {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  }
-
-  private async loadTeacherClasses(): Promise<ClassRoom[]> {
-    try {
-      const classes = await this.classRoomService.getTeacherClasses(this.getNumericTeacherId());
-      return this.normalizeList<ClassRoom>(classes);
-    } catch {
-      return [];
-    }
-  }
-
-  private async loadTeacherSubjects(): Promise<Subject[]> {
-    try {
-      const subjects = this.normalizeList(await this.subjectService.getTeacherSubjects(this.getNumericTeacherId()));
-      return subjects;
-    } catch {
-      return [];
-    }
-  }
-
-  private getNumericTeacherId(): number | undefined {
-    const id = Number(this.authService.getCurrentUser()?.id);
-    return Number.isFinite(id) && id > 0 ? id : undefined;
-  }
-
-  private normalizeList<T>(value: T[] | { data?: T[] } | null | undefined): T[] {
-    if (Array.isArray(value)) {
-      return value;
-    }
-
-    if (value && Array.isArray(value.data)) {
-      return value.data;
-    }
-
-    return [];
-  }
-
-  private getUniqueSubjects(subjects: Subject[]): Subject[] {
-    const seen = new Set<string>();
-
-    return subjects.filter(subject => {
-      const key = `${Number(subject.classRoomId || this.selectedClassRoomId || 0)}-${this.normalizeSubjectName(subject.name)}`;
-      if (seen.has(key)) {
-        return false;
-      }
-
-      seen.add(key);
-      return true;
-    });
-  }
-
-  private normalizeSubjectName(name: string | undefined): string {
-    return (name || '').trim().replace(/\s+/g, ' ').toLowerCase();
-  }
-
-  private getGradebookErrorMessage(error: any): string {
-    if (error?.status === 404) {
-      return 'خدمة كشف درجات المدرس غير متاحة في الخادم الحالي. أعد تشغيل الـbackend ثم جرّب مرة أخرى.';
-    }
-
-    return error?.message || 'تعذر تحميل كشف الدرجات.';
+  trackByStudent(_: number, student: EditableSessionGradeStudent): number {
+    return student.studentId;
   }
 }

@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using School.Application.DTOs.Students;
 using School.Application.Interfaces;
+using School.Domain.Entities;
 using School.Infrastructure.Data;
 
 namespace School.Infrastructure.Services;
@@ -23,6 +24,7 @@ public sealed class StudentQueryService : IStudentQueryService
     public async Task<IReadOnlyList<StudentSearchResultDto>> SearchStudentsAsync(
         string? query,
         int limit,
+        int? parentId = null,
         CancellationToken cancellationToken = default)
     {
         var normalizedLimit = Math.Clamp(limit <= 0 ? DefaultSearchLimit : limit, 1, MaxSearchLimit);
@@ -33,6 +35,11 @@ public sealed class StudentQueryService : IStudentQueryService
             .Include(student => student.ClassRoom)
             .ThenInclude(classRoom => classRoom!.GradeLevel)
             .AsQueryable();
+
+        if (parentId.HasValue)
+        {
+            students = students.Where(student => student.ParentId == parentId.Value);
+        }
 
         if (!string.IsNullOrWhiteSpace(trimmedQuery))
         {
@@ -92,7 +99,8 @@ public sealed class StudentQueryService : IStudentQueryService
         var assignments = await GetStudentAssignmentsAsync(studentId, student.ClassRoomId, cancellationToken);
         var gradeUploadStatus = await GetStudentGradeUploadStatusAsync(student.ClassRoomId, cancellationToken);
 
-        var averageGrade = grades.Count == 0 ? 0 : Math.Round(grades.Average(grade => grade.Score), 1);
+        var gradedRows = grades.Where(grade => grade.IsGraded).ToList();
+        var averageGrade = gradedRows.Count == 0 ? 0 : Math.Round(gradedRows.Average(grade => grade.Score), 1);
         var attendancePercent = attendance.Count == 0
             ? 0
             : Math.Round(attendance.Count(item => item.IsPresent) * 100.0 / attendance.Count, 1);
@@ -131,14 +139,19 @@ public sealed class StudentQueryService : IStudentQueryService
         int studentId,
         CancellationToken cancellationToken = default)
     {
-        var exists = await _context.Students
+        var student = await _context.Students
             .AsNoTracking()
-            .AnyAsync(student => student.Id == studentId, cancellationToken);
+            .Select(item => new { item.Id, item.ClassRoomId })
+            .FirstOrDefaultAsync(item => item.Id == studentId, cancellationToken);
 
-        if (!exists)
+        if (student == null)
         {
             return null;
         }
+
+        var sessionGrades = student.ClassRoomId.HasValue
+            ? await GetSessionGradesAsync(studentId, student.ClassRoomId.Value, cancellationToken)
+            : [];
 
         var gradeRows = await _context.GradeRecords
             .AsNoTracking()
@@ -170,7 +183,7 @@ public sealed class StudentQueryService : IStudentQueryService
             .GroupBy(item => BuildConfirmationKey(item.SubjectId, item.TeacherId, item.GradeType, item.Date))
             .ToDictionary(group => group.Key, group => group.OrderByDescending(item => item.Id).First());
 
-        return gradeRows.Select(grade =>
+        var legacyGrades = gradeRows.Select(grade =>
         {
             var key = BuildConfirmationKey(
                 grade.SubjectId,
@@ -188,12 +201,25 @@ public sealed class StudentQueryService : IStudentQueryService
                 TeacherName = grade.TeacherName,
                 GradeType = grade.GradeType,
                 Score = grade.Score,
+                RawScore = grade.Score,
+                MaxScore = 100,
+                Percentage = grade.Score,
+                IsGraded = true,
                 Date = grade.Date,
                 Notes = grade.Notes,
                 IsApproved = isApproved,
                 ApprovalStatus = isApproved ? "COMPLETED" : "IN_PROGRESS"
             };
         }).ToList();
+
+        return sessionGrades
+            .Concat(legacyGrades.Where(legacy => sessionGrades.All(current =>
+                current.SubjectId != legacy.SubjectId ||
+                current.GradeType != legacy.GradeType ||
+                current.Date.Date != legacy.Date.Date)))
+            .OrderByDescending(grade => grade.Date)
+            .ThenBy(grade => grade.SubjectName)
+            .ToList();
     }
 
     public async Task<IReadOnlyList<StudentAttendanceDto>?> GetStudentAttendanceAsync(
@@ -286,6 +312,67 @@ public sealed class StudentQueryService : IStudentQueryService
             .ToListAsync(cancellationToken);
     }
 
+    private async Task<List<StudentGradeDto>> GetSessionGradesAsync(
+        int studentId,
+        int classRoomId,
+        CancellationToken cancellationToken)
+    {
+        var sessions = await _context.GradeSessions
+            .AsNoTracking()
+            .Include(session => session.Subject)
+            .ThenInclude(subject => subject!.Teacher)
+            .Include(session => session.Uploads)
+            .Where(session => session.ClassId == classRoomId)
+            .OrderByDescending(session => session.Date)
+            .ThenBy(session => session.Subject!.Name)
+            .ToListAsync(cancellationToken);
+
+        if (sessions.Count == 0)
+        {
+            return [];
+        }
+
+        var sessionIds = sessions.Select(session => session.Id).ToList();
+        var grades = await _context.Grades
+            .AsNoTracking()
+            .Where(grade => grade.StudentId == studentId && sessionIds.Contains(grade.SessionId))
+            .ToListAsync(cancellationToken);
+        var gradesBySessionId = grades.ToDictionary(grade => grade.SessionId);
+
+        return sessions.Select(session =>
+        {
+            gradesBySessionId.TryGetValue(session.Id, out var grade);
+            var percentage = grade != null && grade.MaxScore > 0
+                ? Math.Round(grade.Score * 100.0 / grade.MaxScore, 1)
+                : 0;
+            var upload = session.Uploads
+                .OrderByDescending(item => item.UpdatedAt)
+                .ThenByDescending(item => item.Id)
+                .FirstOrDefault();
+            var approved = upload?.Status == GradeUploadStatuses.Approved;
+
+            return new StudentGradeDto
+            {
+                Id = grade?.Id ?? 0,
+                SessionId = session.Id,
+                SubjectId = session.SubjectId,
+                SubjectName = session.Subject?.Name ?? "المادة",
+                TeacherName = session.Subject?.Teacher?.FullName,
+                GradeType = session.Type,
+                Score = percentage,
+                RawScore = grade?.Score,
+                MaxScore = grade?.MaxScore,
+                Percentage = percentage,
+                IsGraded = grade != null,
+                Date = session.Date,
+                Deadline = session.Deadline,
+                Notes = grade == null ? "Not Graded" : null,
+                IsApproved = approved,
+                ApprovalStatus = approved ? "COMPLETED" : "IN_PROGRESS"
+            };
+        }).ToList();
+    }
+
     private async Task<GradeUploadStatus> GetStudentGradeUploadStatusAsync(
         int? classRoomId,
         CancellationToken cancellationToken)
@@ -293,6 +380,28 @@ public sealed class StudentQueryService : IStudentQueryService
         if (!classRoomId.HasValue)
         {
             return new GradeUploadStatus(false, 0, 0);
+        }
+
+        var sessionIds = await _context.GradeSessions
+            .AsNoTracking()
+            .Where(session => session.ClassId == classRoomId.Value)
+            .Select(session => session.Id)
+            .ToListAsync(cancellationToken);
+
+        if (sessionIds.Count > 0)
+        {
+            var approvedUploads = await _context.GradeUploads
+                .AsNoTracking()
+                .Where(upload => sessionIds.Contains(upload.SessionId))
+                .Where(upload => upload.Status == GradeUploadStatuses.Approved)
+                .Select(upload => upload.SessionId)
+                .Distinct()
+                .CountAsync(cancellationToken);
+
+            return new GradeUploadStatus(
+                approvedUploads == sessionIds.Count,
+                sessionIds.Count,
+                approvedUploads);
         }
 
         var subjects = await _context.Subjects
@@ -333,6 +442,7 @@ public sealed class StudentQueryService : IStudentQueryService
     {
         var alerts = new List<StudentAlertDto>();
         var lowestSubject = grades
+            .Where(grade => grade.IsGraded)
             .GroupBy(grade => grade.SubjectName)
             .Select(group => new { Subject = group.Key, Average = group.Average(item => item.Score) })
             .Where(item => item.Average < 65)

@@ -101,6 +101,122 @@ export interface AdminGradeUploadStatusResponse {
   teachers: AdminGradeUploadTeacherStatus[];
 }
 
+export interface PublishGradeSessionsRequest {
+  scope: 'All' | 'Class' | 'GradeLevel';
+  classId?: number | null;
+  gradeLevelId?: number | null;
+  subjectId: number;
+  type: string;
+  date: string;
+  deadline?: string | null;
+}
+
+export interface PublishGradeSessionsResult {
+  createdCount: number;
+  duplicateCount: number;
+  skippedCount: number;
+  skippedClasses: string[];
+  createdSessions: PublishedGradeSession[];
+}
+
+export interface PublishedGradeSession {
+  sessionId: number;
+  classId: number;
+  className: string;
+  subjectId: number;
+  subjectName: string;
+  teacherId: number;
+  teacherName: string;
+  type: string;
+  date: string;
+  deadline?: string | null;
+}
+
+export interface AdminGradeSessionsDashboard {
+  globalStatus: 'Completed' | 'In Progress' | string;
+  totalSessions: number;
+  approvedSessions: number;
+  inProgressSessions: number;
+  sessions: GradeSessionMonitor[];
+}
+
+export interface GradeSessionMonitor {
+  sessionId: number;
+  className: string;
+  gradeLevelName?: string | null;
+  subjectName: string;
+  type: string;
+  date: string;
+  deadline?: string | null;
+  teacherId: number;
+  teacherName: string;
+  totalStudents: number;
+  gradedStudents: number;
+  missingGradesCount: number;
+  progressPercent: number;
+  status: 'NotStarted' | 'InProgress' | 'Approved' | string;
+}
+
+export interface TeacherGradeSessionOption {
+  sessionId: number;
+  classId: number;
+  className: string;
+  gradeLevelName?: string | null;
+  subjectId: number;
+  subjectName: string;
+  type: string;
+  date: string;
+  deadline?: string | null;
+  status: 'NotStarted' | 'InProgress' | 'Approved' | string;
+  progressPercent: number;
+}
+
+export interface TeacherSessionGradebook {
+  sessionId: number;
+  className: string;
+  subjectName: string;
+  type: string;
+  date: string;
+  deadline?: string | null;
+  isApproved: boolean;
+  isDeadlinePassed: boolean;
+  isLocked: boolean;
+  status: 'NotStarted' | 'InProgress' | 'Approved' | string;
+  totalStudents: number;
+  gradedStudents: number;
+  missingGradesCount: number;
+  progressPercent: number;
+  students: TeacherSessionGradeStudent[];
+}
+
+export interface TeacherSessionGradeStudent {
+  studentId: number;
+  studentName: string;
+  gradeId?: number | null;
+  score?: number | null;
+  maxScore: number;
+  percentage?: number | null;
+  isGraded: boolean;
+}
+
+export interface SaveTeacherSessionGradesRequest {
+  sessionId: number;
+  grades: Array<{
+    studentId: number;
+    score?: number | null;
+    maxScore: number;
+  }>;
+}
+
+export interface GradeOperationResult {
+  success: boolean;
+  message: string;
+  totalStudents: number;
+  gradedStudents: number;
+  missingGradesCount: number;
+  status: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -158,5 +274,33 @@ export class GradeService {
       gradeType,
       date
     });
+  }
+
+  async publishGradeSessions(data: PublishGradeSessionsRequest): Promise<PublishGradeSessionsResult> {
+    return this.api.post<PublishGradeSessionsResult>('/api/GradeManagement/sessions/publish', data);
+  }
+
+  async getAdminGradeSessionsDashboard(type?: string, date?: string): Promise<AdminGradeSessionsDashboard> {
+    const params: any = {};
+    if (type) params.type = type;
+    if (date) params.date = date;
+    return this.api.get<AdminGradeSessionsDashboard>('/api/GradeManagement/admin/dashboard', params);
+  }
+
+  async getTeacherGradeSessions(teacherId?: number): Promise<TeacherGradeSessionOption[]> {
+    const params = teacherId && teacherId > 0 ? { teacherId } : undefined;
+    return this.api.get<TeacherGradeSessionOption[]>('/api/GradeManagement/teacher/sessions', params);
+  }
+
+  async getTeacherSessionGradebook(sessionId: number): Promise<TeacherSessionGradebook> {
+    return this.api.get<TeacherSessionGradebook>(`/api/GradeManagement/teacher/sessions/${sessionId}/gradebook`);
+  }
+
+  async saveTeacherSessionGrades(data: SaveTeacherSessionGradesRequest): Promise<GradeOperationResult> {
+    return this.api.post<GradeOperationResult>('/api/GradeManagement/teacher/grades', data);
+  }
+
+  async approveTeacherSession(sessionId: number): Promise<GradeOperationResult> {
+    return this.api.post<GradeOperationResult>(`/api/GradeManagement/teacher/sessions/${sessionId}/approve`, {});
   }
 }

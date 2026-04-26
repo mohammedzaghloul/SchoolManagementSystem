@@ -244,6 +244,10 @@ const routes: Routes = [
             {
                 path: 'payments',
                 loadComponent: () => import('./features/parent/payments/payments.component').then(m => m.PaymentsComponent)
+            },
+            {
+                path: 'student-dashboard',
+                loadComponent: () => import('./features/admin/students/student-dashboard/student-dashboard.component').then(m => m.StudentDashboardComponent)
             }
         ]
     },
