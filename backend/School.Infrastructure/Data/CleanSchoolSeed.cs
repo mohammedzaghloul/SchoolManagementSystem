@@ -135,6 +135,9 @@ public static class CleanSchoolSeed
     {
         var deleteTables = new[]
         {
+            "Grades",
+            "GradeUploads",
+            "GradeSessions",
             "QuestionChoices",
             "Questions",
             "ExamResults",
@@ -176,6 +179,9 @@ public static class CleanSchoolSeed
             "Exams",
             "ExamResults",
             "GradeLevels",
+            "Grades",
+            "GradeUploads",
+            "GradeSessions",
             "GradeRecords",
             "Messages",
             "Parents",
