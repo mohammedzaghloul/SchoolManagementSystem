@@ -83,6 +83,7 @@
 }
 
 .save-btn,
+.confirm-btn,
 .ghost-btn {
   min-height: 42px;
   display: inline-flex;
@@ -104,15 +105,37 @@
   box-shadow: 0 14px 28px rgba(37, 99, 235, 0.18);
 }
 
-.save-btn.secondary {
+.save-btn.secondary,
+.confirm-btn.secondary {
   box-shadow: none;
+}
+
+.hero-actions,
+.table-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.confirm-btn {
+  border: 0;
+  background: #16a34a;
+  color: #ffffff;
+  box-shadow: 0 14px 28px rgba(22, 163, 74, 0.16);
 }
 
 .save-btn:hover:not(:disabled) {
   background: var(--primary-dark);
 }
 
+.confirm-btn:hover:not(:disabled) {
+  background: #15803d;
+}
+
 .save-btn:disabled,
+.confirm-btn:disabled,
 .ghost-btn:disabled {
   opacity: 0.58;
   cursor: not-allowed;
@@ -123,6 +146,28 @@
   border: 1px solid #bfdbfe;
   background: #eff6ff;
   color: var(--primary-dark);
+}
+
+.status-pill {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.7rem;
+  border: 1px solid #fde68a;
+  border-radius: 999px;
+  background: #fffbeb;
+  color: #92400e;
+  font-size: 0.78rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.status-pill.done,
+.confirmed-meta {
+  border-color: #bbf7d0 !important;
+  background: #f0fdf4 !important;
+  color: #166534 !important;
 }
 
 .toolbar-card {

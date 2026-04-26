@@ -9,10 +9,34 @@
       </p>
     </div>
 
-    <button class="save-btn" type="button" (click)="saveGrades()" [disabled]="saving || loadingGradebook || !students.length">
+    <div class="hero-actions">
+      <span class="status-pill" [class.done]="isCurrentGradebookConfirmed">
+        <i class="fas" [class.fa-circle-check]="isCurrentGradebookConfirmed" [class.fa-clock]="!isCurrentGradebookConfirmed"></i>
+        {{ uploadStatusLabel }}
+      </span>
+      <button class="save-btn" type="button" (click)="saveGrades()" [disabled]="saving || loadingGradebook || !students.length">
       <i class="fas fa-floppy-disk"></i>
       {{ saving ? 'جارٍ حفظ الدرجات...' : 'حفظ الدرجات' }}
-    </button>
+      </button>
+      <button
+        class="confirm-btn"
+        type="button"
+        (click)="confirmGradeUpload(true)"
+        [disabled]="!canConfirmUpload"
+        *ngIf="!isCurrentGradebookConfirmed">
+        <i class="fas fa-cloud-arrow-up"></i>
+        {{ confirming ? 'جاري الاعتماد...' : 'اعتماد الرفع' }}
+      </button>
+      <button
+        class="ghost-btn"
+        type="button"
+        (click)="confirmGradeUpload(false)"
+        [disabled]="confirming || saving || loadingGradebook"
+        *ngIf="isCurrentGradebookConfirmed">
+        <i class="fas fa-rotate-left"></i>
+        إلغاء الاعتماد
+      </button>
+    </div>
   </section>
 
   <section class="toolbar-card">
@@ -66,6 +90,11 @@
       <span><i class="fas fa-book-open"></i>{{ gradebook.subjectName }}</span>
       <span><i class="fas fa-users"></i>{{ gradebook.classRoomName }}</span>
       <span><i class="fas fa-clipboard-list"></i>{{ gradebook.gradeType }}</span>
+      <span [class.confirmed-meta]="isCurrentGradebookConfirmed">
+        <i class="fas" [class.fa-circle-check]="isCurrentGradebookConfirmed" [class.fa-clock]="!isCurrentGradebookConfirmed"></i>
+        {{ uploadStatusLabel }}
+      </span>
+      <span *ngIf="confirmedAt"><i class="fas fa-calendar-check"></i>{{ confirmedAt | date:'short' }}</span>
     </div>
 
     <div class="compat-banner" *ngIf="usingFallbackData">
@@ -124,9 +153,16 @@
           <h2>كشف إدخال الدرجات</h2>
           <p>المعروض الآن {{ filteredStudents.length }} من {{ totalStudents }} طالب</p>
         </div>
+        <div class="table-actions">
         <button class="save-btn secondary" type="button" (click)="saveGrades()" [disabled]="saving">
           <i class="fas fa-cloud-arrow-up"></i>
           {{ saving ? 'جارٍ الحفظ...' : 'حفظ الآن' }}
+        </button>
+      </div>
+
+        <button class="confirm-btn secondary" type="button" (click)="confirmGradeUpload(true)" [disabled]="!canConfirmUpload" *ngIf="!isCurrentGradebookConfirmed">
+          <i class="fas fa-circle-check"></i>
+          {{ confirming ? 'جاري الاعتماد...' : 'اعتماد الرفع' }}
         </button>
       </div>
 

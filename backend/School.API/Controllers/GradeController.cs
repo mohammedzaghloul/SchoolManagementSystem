@@ -122,6 +122,20 @@ public class GradeController : BaseApiController
         var gradesByStudentId = existingGrades
             .GroupBy(grade => grade.StudentId)
             .ToDictionary(group => group.Key, group => group.First());
+        var studentIds = students.Select(student => student.Id).ToHashSet();
+        var gradedStudentIds = existingGrades
+            .Where(grade => studentIds.Contains(grade.StudentId))
+            .Select(grade => grade.StudentId)
+            .Distinct()
+            .ToHashSet();
+        var missingGradesCount = Math.Max(students.Count - gradedStudentIds.Count, 0);
+        var confirmation = await _context.GradeUploadConfirmations
+            .AsNoTracking()
+            .FirstOrDefaultAsync(item =>
+                item.SubjectId == subject!.Id &&
+                item.TeacherId == subject.TeacherId &&
+                item.GradeType == normalizedGradeType &&
+                item.Date == effectiveDate);
 
         return Ok(new
         {
@@ -131,6 +145,11 @@ public class GradeController : BaseApiController
             classRoomName = subject.ClassRoom?.Name ?? "غير محدد",
             gradeType = normalizedGradeType,
             date = effectiveDate,
+            isConfirmed = confirmation?.IsConfirmed == true,
+            confirmedAt = confirmation?.ConfirmedAt,
+            missingGradesCount,
+            status = confirmation?.IsConfirmed == true ? "COMPLETED" : "IN_PROGRESS",
+            statusLabel = confirmation?.IsConfirmed == true ? "تم رفع الدرجات" : "قيد رصد الدرجات",
             students = students.Select(student =>
             {
                 gradesByStudentId.TryGetValue(student.Id, out var existingGrade);
@@ -262,6 +281,238 @@ public class GradeController : BaseApiController
         });
     }
 
+    [HttpPost("teacher/gradebook/confirm")]
+    [Authorize(Roles = "Teacher,Admin")]
+    public async Task<IActionResult> ConfirmTeacherGradebook([FromBody] TeacherGradebookConfirmRequest request)
+    {
+        if (request.SubjectId <= 0)
+        {
+            return BadRequest(new { message = "يرجى اختيار المادة أولًا." });
+        }
+
+        var (subject, errorResult) = await ResolveManagedSubjectAsync(request.SubjectId);
+        if (errorResult != null)
+        {
+            return errorResult;
+        }
+
+        if (!subject!.TeacherId.HasValue)
+        {
+            return BadRequest(new { message = "لا يوجد مدرس مسؤول عن هذه المادة." });
+        }
+
+        var effectiveDate = NormalizeDate(request.Date);
+        var normalizedGradeType = NormalizeGradeType(request.GradeType);
+        var coverage = await GetGradeCoverageAsync(subject.Id, subject.ClassRoomId!.Value, normalizedGradeType, effectiveDate);
+
+        if (request.IsConfirmed && coverage.TotalStudents == 0)
+        {
+            return BadRequest(new { message = "لا يوجد طلاب في هذا الفصل لاعتماد رفع الدرجات." });
+        }
+
+        if (request.IsConfirmed && coverage.MissingGradesCount > 0)
+        {
+            return BadRequest(new
+            {
+                message = $"لا يمكن اعتماد الرفع قبل إدخال درجات كل الطلاب. المتبقي: {coverage.MissingGradesCount}.",
+                coverage.MissingGradesCount
+            });
+        }
+
+        var confirmation = await _context.GradeUploadConfirmations.FirstOrDefaultAsync(item =>
+            item.SubjectId == subject.Id &&
+            item.TeacherId == subject.TeacherId.Value &&
+            item.GradeType == normalizedGradeType &&
+            item.Date == effectiveDate);
+
+        if (confirmation == null)
+        {
+            confirmation = new GradeUploadConfirmation
+            {
+                SubjectId = subject.Id,
+                TeacherId = subject.TeacherId.Value,
+                GradeType = normalizedGradeType,
+                Date = effectiveDate
+            };
+
+            _context.GradeUploadConfirmations.Add(confirmation);
+        }
+
+        confirmation.IsConfirmed = request.IsConfirmed;
+        confirmation.ConfirmedAt = request.IsConfirmed ? DateTime.UtcNow : null;
+        confirmation.UpdatedAt = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync();
+
+        return Ok(new
+        {
+            success = true,
+            isConfirmed = confirmation.IsConfirmed,
+            confirmedAt = confirmation.ConfirmedAt,
+            coverage.TotalStudents,
+            coverage.GradedStudents,
+            coverage.MissingGradesCount,
+            status = confirmation.IsConfirmed ? "COMPLETED" : "IN_PROGRESS",
+            statusLabel = confirmation.IsConfirmed ? "تم رفع الدرجات" : "قيد رصد الدرجات"
+        });
+    }
+
+    [HttpGet("upload-status")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> GetGradeUploadStatus([FromQuery] string? gradeType, [FromQuery] DateTime? date)
+    {
+        var effectiveDate = NormalizeDate(date);
+        var normalizedGradeType = NormalizeGradeType(gradeType);
+
+        var subjects = await _context.Subjects
+            .AsNoTracking()
+            .Include(subject => subject.Teacher)
+            .Include(subject => subject.ClassRoom)
+            .Where(subject => subject.IsActive)
+            .Where(subject => subject.TeacherId.HasValue)
+            .Where(subject => subject.ClassRoomId.HasValue)
+            .OrderBy(subject => subject.Teacher!.FullName)
+            .ThenBy(subject => subject.ClassRoom!.Name)
+            .ThenBy(subject => subject.Name)
+            .Select(subject => new
+            {
+                subject.Id,
+                SubjectName = subject.Name,
+                subject.TeacherId,
+                TeacherName = subject.Teacher!.FullName,
+                TeacherEmail = subject.Teacher.Email,
+                subject.ClassRoomId,
+                ClassRoomName = subject.ClassRoom!.Name
+            })
+            .ToListAsync();
+
+        var subjectIds = subjects.Select(subject => subject.Id).ToList();
+        var classRoomIds = subjects
+            .Select(subject => subject.ClassRoomId!.Value)
+            .Distinct()
+            .ToList();
+
+        var studentCounts = await _context.Students
+            .AsNoTracking()
+            .Where(student => student.IsActive)
+            .Where(student => student.ClassRoomId.HasValue && classRoomIds.Contains(student.ClassRoomId.Value))
+            .GroupBy(student => student.ClassRoomId!.Value)
+            .Select(group => new { ClassRoomId = group.Key, Count = group.Count() })
+            .ToDictionaryAsync(item => item.ClassRoomId, item => item.Count);
+
+        var gradeCounts = await _context.GradeRecords
+            .AsNoTracking()
+            .Where(grade => subjectIds.Contains(grade.SubjectId))
+            .Where(grade => grade.GradeType == normalizedGradeType)
+            .Where(grade => grade.Date.Date == effectiveDate)
+            .GroupBy(grade => grade.SubjectId)
+            .Select(group => new
+            {
+                SubjectId = group.Key,
+                Count = group.Select(grade => grade.StudentId).Distinct().Count()
+            })
+            .ToDictionaryAsync(item => item.SubjectId, item => item.Count);
+
+        var confirmations = await _context.GradeUploadConfirmations
+            .AsNoTracking()
+            .Where(item => subjectIds.Contains(item.SubjectId))
+            .Where(item => item.GradeType == normalizedGradeType)
+            .Where(item => item.Date == effectiveDate)
+            .ToListAsync();
+        var confirmationsBySubject = confirmations
+            .GroupBy(item => item.SubjectId)
+            .ToDictionary(group => group.Key, group => group.OrderByDescending(item => item.Id).First());
+
+        var subjectStatuses = subjects.Select(subject =>
+        {
+            studentCounts.TryGetValue(subject.ClassRoomId!.Value, out var totalStudents);
+            gradeCounts.TryGetValue(subject.Id, out var gradedStudents);
+            confirmationsBySubject.TryGetValue(subject.Id, out var confirmation);
+            var isConfirmed = confirmation?.IsConfirmed == true;
+
+            return new GradeUploadSubjectStatus(
+                subject.Id,
+                subject.SubjectName ?? "المادة",
+                subject.TeacherId!.Value,
+                subject.TeacherName ?? "مدرس",
+                subject.TeacherEmail,
+                subject.ClassRoomId.Value,
+                subject.ClassRoomName ?? "غير محدد",
+                totalStudents,
+                gradedStudents,
+                Math.Max(totalStudents - gradedStudents, 0),
+                isConfirmed,
+                confirmation?.ConfirmedAt,
+                confirmation?.UpdatedAt);
+        }).ToList();
+
+        var teacherStatuses = subjectStatuses
+            .GroupBy(item => new { item.TeacherId, item.TeacherName, item.TeacherEmail })
+            .Select(group =>
+            {
+                var subjectsForTeacher = group
+                    .OrderBy(item => item.ClassRoomName)
+                    .ThenBy(item => item.SubjectName)
+                    .ToList();
+                var totalSubjects = subjectsForTeacher.Count;
+                var confirmedSubjects = subjectsForTeacher.Count(item => item.IsConfirmed);
+                var isComplete = totalSubjects > 0 && confirmedSubjects == totalSubjects;
+
+                return new
+                {
+                    group.Key.TeacherId,
+                    group.Key.TeacherName,
+                    group.Key.TeacherEmail,
+                    totalSubjects,
+                    confirmedSubjects,
+                    pendingSubjects = Math.Max(totalSubjects - confirmedSubjects, 0),
+                    isComplete,
+                    status = isComplete ? "COMPLETED" : "IN_PROGRESS",
+                    statusLabel = isComplete ? "تم رفع درجات المدرس" : "قيد الرصد",
+                    subjects = subjectsForTeacher.Select(item => new
+                    {
+                        item.SubjectId,
+                        item.SubjectName,
+                        item.ClassRoomId,
+                        item.ClassRoomName,
+                        item.TotalStudents,
+                        item.GradedStudents,
+                        item.MissingGradesCount,
+                        item.IsConfirmed,
+                        item.ConfirmedAt,
+                        item.UpdatedAt,
+                        status = item.IsConfirmed ? "COMPLETED" : "IN_PROGRESS",
+                        statusLabel = item.IsConfirmed ? "تم رفع الدرجات" : "قيد الرصد"
+                    })
+                };
+            })
+            .OrderBy(item => item.isComplete)
+            .ThenBy(item => item.TeacherName)
+            .ToList();
+
+        var totalTeachers = teacherStatuses.Count;
+        var completeTeachers = teacherStatuses.Count(item => item.isComplete);
+        var totalSubjectsCount = subjectStatuses.Count;
+        var confirmedSubjectsCount = subjectStatuses.Count(item => item.IsConfirmed);
+        var allConfirmed = totalSubjectsCount > 0 && confirmedSubjectsCount == totalSubjectsCount;
+
+        return Ok(new
+        {
+            gradeType = normalizedGradeType,
+            date = effectiveDate,
+            status = allConfirmed ? "COMPLETED" : "IN_PROGRESS",
+            statusLabel = allConfirmed ? "تم رفع درجات" : "prog",
+            totalTeachers,
+            completeTeachers,
+            pendingTeachers = Math.Max(totalTeachers - completeTeachers, 0),
+            totalSubjects = totalSubjectsCount,
+            confirmedSubjects = confirmedSubjectsCount,
+            pendingSubjects = Math.Max(totalSubjectsCount - confirmedSubjectsCount, 0),
+            completionPercent = totalSubjectsCount == 0 ? 0 : (int)Math.Round(confirmedSubjectsCount * 100.0 / totalSubjectsCount),
+            teachers = teacherStatuses
+        });
+    }
+
     [HttpPost]
     [Authorize(Roles = "Teacher,Admin")]
     public async Task<IActionResult> UpsertGrade([FromBody] GradeRecord grade)
@@ -385,6 +636,37 @@ public class GradeController : BaseApiController
             .FirstOrDefaultAsync(teacher => teacher.UserId == userId || teacher.Email == email);
     }
 
+    private async Task<GradeCoverage> GetGradeCoverageAsync(
+        int subjectId,
+        int classRoomId,
+        string gradeType,
+        DateTime date)
+    {
+        var activeStudents = _context.Students
+            .AsNoTracking()
+            .Where(student => student.IsActive)
+            .Where(student => student.ClassRoomId == classRoomId);
+
+        var totalStudents = await activeStudents.CountAsync();
+        var gradedStudents = await _context.GradeRecords
+            .AsNoTracking()
+            .Where(grade => grade.SubjectId == subjectId)
+            .Where(grade => grade.GradeType == gradeType)
+            .Where(grade => grade.Date.Date == date)
+            .Join(
+                activeStudents,
+                grade => grade.StudentId,
+                student => student.Id,
+                (grade, _) => grade.StudentId)
+            .Distinct()
+            .CountAsync();
+
+        return new GradeCoverage(
+            totalStudents,
+            gradedStudents,
+            Math.Max(totalStudents - gradedStudents, 0));
+    }
+
     private static string NormalizeGradeType(string? gradeType)
     {
         return string.IsNullOrWhiteSpace(gradeType) ? "واجب" : gradeType.Trim();
@@ -403,6 +685,14 @@ public class GradeController : BaseApiController
         public List<TeacherGradebookGradeItem> Grades { get; set; } = [];
     }
 
+    public sealed class TeacherGradebookConfirmRequest
+    {
+        public int SubjectId { get; set; }
+        public string? GradeType { get; set; }
+        public DateTime? Date { get; set; }
+        public bool IsConfirmed { get; set; } = true;
+    }
+
     public sealed class TeacherGradebookGradeItem
     {
         public int? Id { get; set; }
@@ -410,4 +700,24 @@ public class GradeController : BaseApiController
         public double? Score { get; set; }
         public string? Notes { get; set; }
     }
+
+    private sealed record GradeCoverage(
+        int TotalStudents,
+        int GradedStudents,
+        int MissingGradesCount);
+
+    private sealed record GradeUploadSubjectStatus(
+        int SubjectId,
+        string SubjectName,
+        int TeacherId,
+        string TeacherName,
+        string? TeacherEmail,
+        int ClassRoomId,
+        string ClassRoomName,
+        int TotalStudents,
+        int GradedStudents,
+        int MissingGradesCount,
+        bool IsConfirmed,
+        DateTime? ConfirmedAt,
+        DateTime? UpdatedAt);
 }

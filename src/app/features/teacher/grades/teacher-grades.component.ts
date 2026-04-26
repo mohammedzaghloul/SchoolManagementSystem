@@ -45,8 +45,12 @@ export class TeacherGradesComponent implements OnInit {
   loadingSubjects = false;
   loadingGradebook = false;
   saving = false;
+  confirming = false;
   loadErrorMessage = '';
   usingFallbackData = false;
+  isCurrentGradebookConfirmed = false;
+  confirmedAt: string | null = null;
+  serverMissingGradesCount = 0;
 
   showSuccessModal = false;
   successModalMessage = '';
@@ -146,6 +150,20 @@ export class TeacherGradesComponent implements OnInit {
     return Math.round(total / scoredStudents.length);
   }
 
+  get canConfirmUpload(): boolean {
+    return Boolean(this.selectedSubjectId)
+      && this.students.length > 0
+      && this.pendingGradesCount === 0
+      && !this.isCurrentGradebookConfirmed
+      && !this.loadingGradebook
+      && !this.saving
+      && !this.confirming;
+  }
+
+  get uploadStatusLabel(): string {
+    return this.isCurrentGradebookConfirmed ? 'تم رفع الدرجات' : 'قيد رصد الدرجات';
+  }
+
   async loadSubjects(): Promise<void> {
     this.loadingSubjects = true;
     this.loadErrorMessage = '';
@@ -193,6 +211,9 @@ export class TeacherGradesComponent implements OnInit {
       this.students = [];
       this.loadErrorMessage = '';
       this.usingFallbackData = false;
+      this.isCurrentGradebookConfirmed = false;
+      this.confirmedAt = null;
+      this.serverMissingGradesCount = 0;
       return;
     }
 
@@ -214,9 +235,15 @@ export class TeacherGradesComponent implements OnInit {
         score: student.score ?? null,
         notes: student.notes || ''
       }));
+      this.isCurrentGradebookConfirmed = response.isConfirmed === true;
+      this.confirmedAt = response.confirmedAt || null;
+      this.serverMissingGradesCount = response.missingGradesCount ?? this.pendingGradesCount;
     } catch (error: any) {
       this.gradebook = null;
       this.students = [];
+      this.isCurrentGradebookConfirmed = false;
+      this.confirmedAt = null;
+      this.serverMissingGradesCount = 0;
       this.loadErrorMessage = this.getGradebookErrorMessage(error);
       this.notify.error(this.loadErrorMessage);
     } finally {
@@ -283,6 +310,39 @@ export class TeacherGradesComponent implements OnInit {
       this.notify.error(error?.message || 'حدث خطأ أثناء حفظ الدرجات.');
     } finally {
       this.saving = false;
+    }
+  }
+
+  async confirmGradeUpload(isConfirmed = true): Promise<void> {
+    if (!this.selectedSubjectId) {
+      this.notify.warning('اختر المادة أولًا.');
+      return;
+    }
+
+    if (isConfirmed && this.pendingGradesCount > 0) {
+      this.notify.warning(`لا يمكن اعتماد الرفع قبل إدخال درجات كل الطلاب. المتبقي: ${this.pendingGradesCount}.`);
+      return;
+    }
+
+    this.confirming = true;
+
+    try {
+      const result = await this.gradeService.confirmTeacherGradebook({
+        subjectId: this.selectedSubjectId,
+        gradeType: this.selectedGradeType,
+        date: this.selectedDate,
+        isConfirmed
+      });
+
+      this.isCurrentGradebookConfirmed = result.isConfirmed;
+      this.confirmedAt = result.confirmedAt || null;
+      this.serverMissingGradesCount = result.missingGradesCount;
+      this.notify.success(result.statusLabel || (result.isConfirmed ? 'تم اعتماد رفع الدرجات.' : 'تم إلغاء اعتماد الرفع.'));
+      await this.loadGradebook();
+    } catch (error: any) {
+      this.notify.error(error?.message || 'تعذر تحديث حالة رفع الدرجات.');
+    } finally {
+      this.confirming = false;
     }
   }
 

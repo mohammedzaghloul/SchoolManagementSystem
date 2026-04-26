@@ -20,6 +20,11 @@ export interface TeacherGradebookResponse {
   classRoomName: string;
   gradeType: string;
   date: string;
+  isConfirmed?: boolean;
+  confirmedAt?: string | null;
+  missingGradesCount?: number;
+  status?: 'IN_PROGRESS' | 'COMPLETED';
+  statusLabel?: string;
   students: TeacherGradebookStudent[];
 }
 
@@ -33,6 +38,67 @@ export interface TeacherGradebookSaveRequest {
     score: number;
     notes?: string | null;
   }>;
+}
+
+export interface TeacherGradebookConfirmRequest {
+  subjectId: number;
+  gradeType: string;
+  date: string;
+  isConfirmed: boolean;
+}
+
+export interface TeacherGradebookConfirmResponse {
+  success: boolean;
+  isConfirmed: boolean;
+  confirmedAt?: string | null;
+  totalStudents: number;
+  gradedStudents: number;
+  missingGradesCount: number;
+  status: 'IN_PROGRESS' | 'COMPLETED';
+  statusLabel: string;
+}
+
+export interface AdminGradeUploadSubjectStatus {
+  subjectId: number;
+  subjectName: string;
+  classRoomId: number;
+  classRoomName: string;
+  totalStudents: number;
+  gradedStudents: number;
+  missingGradesCount: number;
+  isConfirmed: boolean;
+  confirmedAt?: string | null;
+  updatedAt?: string | null;
+  status: 'IN_PROGRESS' | 'COMPLETED';
+  statusLabel: string;
+}
+
+export interface AdminGradeUploadTeacherStatus {
+  teacherId: number;
+  teacherName: string;
+  teacherEmail?: string | null;
+  totalSubjects: number;
+  confirmedSubjects: number;
+  pendingSubjects: number;
+  isComplete: boolean;
+  status: 'IN_PROGRESS' | 'COMPLETED';
+  statusLabel: string;
+  subjects: AdminGradeUploadSubjectStatus[];
+}
+
+export interface AdminGradeUploadStatusResponse {
+  gradeType: string;
+  date: string;
+  status: 'IN_PROGRESS' | 'COMPLETED';
+  statusLabel: string;
+  totalTeachers: number;
+  completeTeachers: number;
+  pendingTeachers: number;
+  totalSubjects: number;
+  confirmedSubjects: number;
+  pendingSubjects: number;
+  completionPercent: number;
+  teachers: AdminGradeUploadTeacherStatus[];
 }
 
 @Injectable({
@@ -81,5 +147,16 @@ export class GradeService {
 
   async saveTeacherGradebook(data: TeacherGradebookSaveRequest): Promise<{ success: boolean; savedCount: number; message: string }> {
     return this.api.post<{ success: boolean; savedCount: number; message: string }>('/api/Grade/teacher/gradebook', data);
+  }
+
+  async confirmTeacherGradebook(data: TeacherGradebookConfirmRequest): Promise<TeacherGradebookConfirmResponse> {
+    return this.api.post<TeacherGradebookConfirmResponse>('/api/Grade/teacher/gradebook/confirm', data);
+  }
+
+  async getAdminGradeUploadStatus(gradeType: string, date: string): Promise<AdminGradeUploadStatusResponse> {
+    return this.api.get<AdminGradeUploadStatusResponse>('/api/Grade/upload-status', {
+      gradeType,
+      date
+    });
   }
 }

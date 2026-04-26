@@ -1,0 +1,109 @@
+<div class="upload-status-page" dir="rtl">
+  <section class="page-hero">
+    <div class="title-block">
+      <span class="hero-badge">متابعة الدرجات</span>
+      <h1>حالة رفع الدرجات</h1>
+      <p>الحالة العامة: <strong [class.done]="isCompleted">{{ status?.statusLabel || 'prog' }}</strong></p>
+    </div>
+
+    <button class="refresh-btn" type="button" (click)="loadStatus()" [disabled]="loading">
+      <i class="fas fa-rotate"></i>
+      {{ loading ? 'جاري التحديث...' : 'تحديث' }}
+    </button>
+  </section>
+
+  <section class="filters-card">
+    <label class="field">
+      <span>نوع الدرجة</span>
+      <select [(ngModel)]="selectedGradeType" (change)="onFilterChanged()" [disabled]="loading">
+        <option *ngFor="let type of gradeTypes" [value]="type">{{ type }}</option>
+      </select>
+    </label>
+
+    <label class="field">
+      <span>تاريخ الرصد</span>
+      <input type="date" [(ngModel)]="selectedDate" (change)="onFilterChanged()" [disabled]="loading">
+    </label>
+  </section>
+
+  <section class="summary-grid" *ngIf="status">
+    <article class="summary-card" [class.complete]="isCompleted">
+      <span>الحالة</span>
+      <strong>{{ status.statusLabel }}</strong>
+    </article>
+    <article class="summary-card">
+      <span>المدرسون</span>
+      <strong>{{ status.completeTeachers }} / {{ status.totalTeachers }}</strong>
+    </article>
+    <article class="summary-card">
+      <span>المواد المعتمدة</span>
+      <strong>{{ status.confirmedSubjects }} / {{ status.totalSubjects }}</strong>
+    </article>
+    <article class="summary-card">
+      <span>نسبة الاكتمال</span>
+      <strong>{{ status.completionPercent }}%</strong>
+    </article>
+  </section>
+
+  <section class="progress-card" *ngIf="status">
+    <div class="progress-head">
+      <span>{{ status.statusLabel }}</span>
+      <strong>{{ status.completionPercent }}%</strong>
+    </div>
+    <div class="progress-track">
+      <div class="progress-fill" [style.width.%]="status.completionPercent" [class.done]="isCompleted"></div>
+    </div>
+  </section>
+
+  <section class="state-card" *ngIf="loading">
+    <div class="spinner-border text-primary" role="status"></div>
+    <p>جاري تحميل حالة المدرسين...</p>
+  </section>
+
+  <section class="state-card error" *ngIf="!loading && errorMessage">
+    <i class="fas fa-triangle-exclamation"></i>
+    <p>{{ errorMessage }}</p>
+    <button class="refresh-btn ghost" type="button" (click)="loadStatus()">إعادة المحاولة</button>
+  </section>
+
+  <section class="state-card" *ngIf="!loading && !errorMessage && status && teachers.length === 0">
+    <i class="fas fa-inbox"></i>
+    <p>لا توجد مواد مرتبطة بمدرسين لهذا اليوم.</p>
+  </section>
+
+  <section class="teachers-list" *ngIf="!loading && !errorMessage && teachers.length > 0">
+    <article class="teacher-card" *ngFor="let teacher of teachers; trackBy: trackByTeacher" [class.complete]="teacher.isComplete">
+      <div class="teacher-head">
+        <div class="teacher-avatar">{{ teacher.teacherName.charAt(0) }}</div>
+        <div class="teacher-main">
+          <h2>{{ teacher.teacherName }}</h2>
+          <p *ngIf="teacher.teacherEmail">{{ teacher.teacherEmail }}</p>
+        </div>
+        <span class="status-chip" [class.done]="teacher.isComplete">
+          <i class="fas" [class.fa-circle-check]="teacher.isComplete" [class.fa-clock]="!teacher.isComplete"></i>
+          {{ teacher.statusLabel }}
+        </span>
+      </div>
+
+      <div class="teacher-stats">
+        <span>{{ teacher.confirmedSubjects }} معتمد</span>
+        <span>{{ teacher.pendingSubjects }} قيد الرصد</span>
+      </div>
+
+      <div class="subjects-grid">
+        <div class="subject-row" *ngFor="let subject of teacher.subjects; trackBy: trackBySubject" [class.done]="subject.isConfirmed">
+          <div>
+            <strong>{{ subject.subjectName }}</strong>
+            <span>{{ subject.classRoomName }}</span>
+          </div>
+          <div class="subject-numbers">
+            <span>{{ subject.gradedStudents }} / {{ subject.totalStudents }}</span>
+            <small *ngIf="subject.missingGradesCount > 0">متبقي {{ subject.missingGradesCount }}</small>
+            <small *ngIf="subject.confirmedAt">{{ subject.confirmedAt | date:'short' }}</small>
+          </div>
+          <span class="mini-chip" [class.done]="subject.isConfirmed">{{ subject.statusLabel }}</span>
+        </div>
+      </div>
+    </article>
+  </section>
+</div>

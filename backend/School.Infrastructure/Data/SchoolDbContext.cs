@@ -22,6 +22,7 @@ public class SchoolDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<Exam> Exams { get; set; }
     public DbSet<ExamResult> ExamResults { get; set; }
     public DbSet<GradeRecord> GradeRecords { get; set; }
+    public DbSet<GradeUploadConfirmation> GradeUploadConfirmations { get; set; }
     public DbSet<EmailOtp> EmailOtps { get; set; }
     public DbSet<Message> Messages { get; set; }
     public DbSet<Schedule> Schedules { get; set; }
@@ -111,5 +112,28 @@ public class SchoolDbContext : IdentityDbContext<ApplicationUser>
             .WithMany(e => e.ExamResults)
             .HasForeignKey(er => er.ExamId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<GradeUploadConfirmation>(entity =>
+        {
+            entity.Property(item => item.GradeType)
+                .HasMaxLength(100)
+                .IsRequired();
+
+            entity.Property(item => item.Date)
+                .HasColumnType("date");
+
+            entity.HasIndex(item => new { item.TeacherId, item.SubjectId, item.GradeType, item.Date })
+                .IsUnique();
+
+            entity.HasOne(item => item.Teacher)
+                .WithMany()
+                .HasForeignKey(item => item.TeacherId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(item => item.Subject)
+                .WithMany()
+                .HasForeignKey(item => item.SubjectId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
     }
 }
