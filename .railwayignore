@@ -3,11 +3,14 @@
 .vscode
 .vs
 .codex-build
+.codex-logs
 node_modules
 dist
 coverage
 out-tsc
 .angular
+CentralAuthNotificationPlatform
+backend/publish
 backend/**/bin
 backend/**/obj
 backend/School.API/wwwroot/uploads
@@ -18,4 +21,7 @@ backend/FaceRecognitionService/*.pyc
 Free-API
 script.sql
 .npmrc
+*.log
+logs.txt
+register-demo-app.ps1
 arcface02.onnx

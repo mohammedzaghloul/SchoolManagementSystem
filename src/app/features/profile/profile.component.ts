@@ -111,4 +111,22 @@ export class ProfileComponent implements OnInit {
       this.notification.error('حدث خطأ في تغيير كلمة المرور');
     }
   }
+
+  async linkUnifiedAccount(): Promise<void> {
+    this.notification.info('جاري التحويل إلى بوابة الدخول الموحد...');
+    // In a real scenario, this would be an OAuth-like flow.
+    // For now, we simulate the redirection.
+    setTimeout(() => {
+      window.location.href = 'http://localhost:4300/dashboard';
+    }, 1500);
+  }
+
+  async unlinkUnifiedAccount(): Promise<void> {
+    if (confirm('هل أنت متأكد من إلغاء ربط حسابك بالبوابة المركزية؟')) {
+      if (this.user) {
+        this.user.isLinkedToCentralAuth = false;
+        this.notification.success('تم إلغاء الربط بنجاح');
+      }
+    }
+  }
 }

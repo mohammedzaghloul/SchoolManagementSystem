@@ -5,7 +5,8 @@
       <h1 class="text-gradient fw-bold mb-1">إدارة الطلاب</h1>
       <p class="text-muted-dark small mb-0">متابعة بيانات الطلاب، الحضور، وتدريب بصمة الوجه.</p>
     </div>
-    <button class="btn btn-primary btn-add-student gradient-primary shadow-premium px-4 py-2-5 rounded-pill" (click)="onAddStudent()">
+    <button class="btn btn-primary btn-add-student gradient-primary shadow-premium px-4 py-2-5 rounded-pill"
+      (click)="onAddStudent()">
       <i class="fas fa-plus me-2"></i>
       إضافة طالب جديد
     </button>
@@ -114,20 +115,11 @@
 
   <!-- Students Table -->
   <div class="glass-card p-0 overflow-hidden">
-    <app-smart-table
-      [data]="students"
-      [columns]="columns"
-      [totalItems]="totalItems"
-      [pageSize]="pageSize"
-      [currentPage]="currentPage"
-      [loading]="loading"
-      (pageChange)="onPageChange($event)"
-      (search)="onSearch($event)"
-      (sort)="onSort($event)"
-      (edit)="onEditStudent($event)"
-      (delete)="onDeleteStudent($event)"
+    <app-smart-table [data]="students" [columns]="columns" [totalItems]="totalItems" [pageSize]="pageSize"
+      [currentPage]="currentPage" [loading]="loading" (pageChange)="onPageChange($event)" (search)="onSearch($event)"
+      (sort)="onSort($event)" (edit)="onEditStudent($event)" (delete)="onDeleteStudent($event)"
       (view)="onViewStudent($event)">
-      
+
       <!-- Custom Template for Attendance Rate -->
       <ng-template #attendanceRateTemplate let-student>
         <span class="badge rounded-pill px-3 py-2" [ngClass]="{
@@ -138,7 +130,7 @@
           {{ student.attendanceRate }}%
         </span>
       </ng-template>
-      
+
     </app-smart-table>
   </div>
 </div>

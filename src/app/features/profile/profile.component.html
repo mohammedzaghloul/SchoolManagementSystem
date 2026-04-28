@@ -119,6 +119,49 @@
             تحديث كلمة المرور
           </button>
         </form>
+        </form>
+      </div>
+    </div>
+
+    <!-- Central IDP Integration Section -->
+    <div class="profile-card integration-section">
+      <div class="card-header-premium">
+        <div class="header-title">
+          <i class="fas fa-link"></i>
+          <h3>بوابة الدخول الموحد</h3>
+        </div>
+        <span class="badge" [class.bg-success]="user?.isLinkedToCentralAuth" [class.bg-secondary]="!user?.isLinkedToCentralAuth">
+          {{ user?.isLinkedToCentralAuth ? 'مرتبط' : 'غير مرتبط' }}
+        </span>
+      </div>
+
+      <div class="card-body">
+        <div class="integration-info mb-4">
+          <p class="text-muted small">
+            عند ربط حسابك، ستتمكن من استلام إشعارات استعادة كلمة المرور والتنبيهات الأمنية مباشرة على هاتفك أو عبر بوابة الدخول الموحد المركزية.
+          </p>
+        </div>
+
+        <div class="d-grid">
+          <button *ngIf="!user?.isLinkedToCentralAuth" class="btn btn-premium" (click)="linkUnifiedAccount()">
+            <i class="fas fa-link me-2"></i> ربط حساب الدخول الموحد
+          </button>
+
+          <div *ngIf="user?.isLinkedToCentralAuth" class="linked-status p-3 bg-light rounded-3 border">
+            <div class="d-flex align-items-center gap-3">
+              <div class="status-icon text-success">
+                <i class="fas fa-check-circle fa-2x"></i>
+              </div>
+              <div>
+                <h6 class="mb-1 fw-bold">حسابك مرتبط بالبوابة المركزية</h6>
+                <p class="mb-0 text-muted small">يمكنك الآن استرجاع كلمة المرور عبر البوابة في حالة نسيانها.</p>
+              </div>
+              <button class="btn btn-outline-danger btn-sm ms-auto" (click)="unlinkUnifiedAccount()">
+                إلغاء الربط
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>

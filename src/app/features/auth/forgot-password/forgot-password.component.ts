@@ -6,7 +6,7 @@ import { RouterModule } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { NotificationService } from '../../../core/services/notification.service';
 
-type ForgotPasswordStep = 'email' | 'otp' | 'done';
+type ForgotPasswordStep = 'email' | 'otp' | 'linkSent' | 'done';
 
 @Component({
   selector: 'app-forgot-password',
@@ -38,7 +38,7 @@ export class ForgotPasswordComponent implements OnInit {
   }
 
   get isSubmitted(): boolean {
-    return this.step === 'done';
+    return this.step === 'done' || this.step === 'linkSent';
   }
 
   get passwordsMismatch(): boolean {
@@ -77,13 +77,20 @@ export class ForgotPasswordComponent implements OnInit {
     try {
       const email = emailControl?.value;
       const response = await this.authService.sendForgotPasswordOtp(email);
+      if (response?.emailDeliveryStatus === 'accepted_by_central_auth') {
+        this.step = 'linkSent';
+        this.infoMessage = 'تم إرسال طلب الاسترجاع. يرجى فتح منصة الدخول الموحد والتحقق من صندوق الإشعارات.';
+        this.notificationService.success(this.infoMessage);
+        return;
+      }
+
       this.step = 'otp';
       this.infoMessage = response?.devOtp
         ? `كود الاختبار: ${response.devOtp}`
         : (response?.message || 'تم إرسال كود التحقق إلى بريدك الإلكتروني.');
       this.notificationService.success(this.infoMessage);
     } catch (error: any) {
-      this.error = error?.message || 'تعذر إرسال كود التحقق الآن.';
+      this.error = error?.message || 'تعذر إرسال طلب الاسترجاع الآن.';
       this.notificationService.error(this.error);
     } finally {
       this.loading = false;

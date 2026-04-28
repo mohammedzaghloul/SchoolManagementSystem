@@ -1,50 +1,176 @@
 # Railway Deployment
 
-## Services
+This project is deployed as two Railway services in the same project:
 
-### 1. Frontend
-- Root Directory: `/`
-- Build Command: `npm ci && npm run build`
-- Start Command: `npm start`
-- Required variables:
-  - `API_URL=https://<your-backend-domain>`
-  - `SIGNALR_URL=https://<your-backend-domain>/chathub`
+- Backend API: ASP.NET Core Web API from `backend/`
+- Frontend: Angular static app served by `server.js` from the repository root
 
-### 2. Backend API
-- Root Directory: `/backend`
-- Dockerfile: `backend/Dockerfile`
-- Required variables:
-  - `ASPNETCORE_ENVIRONMENT=Production`
-  - `ASPNETCORE_URLS=http://0.0.0.0:8080`
-  - `ConnectionStrings__DefaultConnection=<your-sql-server-connection-string>`
-  - `ConnectionStrings__Redis=${{Redis.REDISHOST}}:${{Redis.REDISPORT}},user=${{Redis.REDISUSER}},password=${{Redis.REDISPASSWORD}}`
-  - `Jwt__Secret=<long-random-secret>`
-  - `Jwt__Key=<same-value-as-jwt-secret>`
-  - `Cors__AllowedOrigins=https://<your-frontend-domain>`
-- Optional variables:
-  - `FaceRecognition__BaseUrl=http://face-recognition.railway.internal`
-  - `Cloudinary__Enabled=true`
-  - `Cloudinary__CloudName=<cloud-name>`
-  - `Cloudinary__ApiKey=<api-key>`
-  - `Cloudinary__ApiSecret=<api-secret>`
+Railway project:
 
-Attach a volume to `/app/wwwroot/uploads` if you want uploaded chat/profile files to persist.
+```text
+https://railway.com/project/d126814d-2e01-423b-b707-e3ebf16c28d9
+```
 
-### 3. Redis
-- Add a managed Redis service from Railway.
+## Backend Service
 
-### 4. Face Recognition (optional)
-- Root Directory: `/backend/FaceRecognitionService`
-- Dockerfile: `backend/FaceRecognitionService/Dockerfile`
-- Recommended variable:
-  - `FACE_DB_PATH=/app/data/face_data.db`
+Deploy root:
 
-Attach a volume to `/app/data` if you want registered face data to persist.
+```text
+backend/
+```
 
-## Notes
-- The API uses SQL Server, so you need an external SQL Server database or your own SQL Server container. Railway managed databases currently cover PostgreSQL, MySQL, Redis, and MongoDB, not SQL Server.
-- A Railway-oriented SQL Server container Dockerfile is included at `deploy/sqlserver/Dockerfile`.
-- The backend also reads Railway's `PORT` variable in `Program.cs`, so it can bind correctly even if the platform injects a different runtime port later.
-- SQL Server on Linux needs at least 2 GB RAM according to Microsoft. If your Railway SQL Server service is below that, it may copy system files and then crash before the API can connect.
-- Generate public domains for the frontend and backend services from Railway Networking settings.
-- The frontend now reads runtime config from `/env.js`, so you can change `API_URL` and `SIGNALR_URL` from Railway variables without rebuilding the Angular app.
+Build:
+
+```text
+Dockerfile
+```
+
+Runtime:
+
+```text
+dotnet School.API.dll
+```
+
+Health check:
+
+```text
+/health
+```
+
+Required Railway variables:
+
+```text
+ASPNETCORE_ENVIRONMENT=Production
+DB_PASSWORD=<MonsterASP password>
+CONNECTION_STRING=Server=db49846.databaseasp.net;Database=db49846;User Id=db49846;Password=${DB_PASSWORD};Encrypt=False;MultipleActiveResultSets=True;
+JWT_SECRET=<long random secret>
+FRONTEND_URL=https://<frontend-service>.up.railway.app
+```
+
+Optional variables:
+
+```text
+SCHOOL_RUN_SEED=0
+FACE_RECOGNITION_API_KEY=<only if face service is deployed>
+CentralAuth__Enabled=false
+```
+
+The API reads Railway's `PORT` variable and binds to `http://0.0.0.0:{PORT}`.
+
+## Frontend Service
+
+Deploy root:
+
+```text
+/
+```
+
+Build:
+
+```text
+npm install --legacy-peer-deps
+npm run build
+```
+
+Start:
+
+```text
+npm start
+```
+
+Required Railway variables:
+
+```text
+API_URL=https://<backend-service>.up.railway.app
+SIGNALR_URL=https://<backend-service>.up.railway.app/chathub
+```
+
+The frontend serves `/env.js` dynamically from `server.js`, so API URLs can change from Railway variables without rebuilding the Angular bundle.
+
+## CLI Deployment
+
+Install or update the Railway CLI:
+
+```powershell
+npm i -g @railway/cli
+```
+
+Log in:
+
+```powershell
+railway login --browserless
+```
+
+Link the local checkout to the existing backend service:
+
+```powershell
+railway link --project d126814d-2e01-423b-b707-e3ebf16c28d9 --service ee8dda16-dcea-4401-aa6a-3ab41ae91273 --environment production
+```
+
+Deploy backend to the existing backend service:
+
+```powershell
+railway up backend --path-as-root --project d126814d-2e01-423b-b707-e3ebf16c28d9 --service ee8dda16-dcea-4401-aa6a-3ab41ae91273 --environment production --message "Deploy backend API"
+```
+
+Set backend variables from PowerShell. Keep the connection string in single quotes so `${DB_PASSWORD}` is not expanded by PowerShell:
+
+```powershell
+railway variable set --service ee8dda16-dcea-4401-aa6a-3ab41ae91273 --environment production ASPNETCORE_ENVIRONMENT=Production DB_PASSWORD=<MonsterASP password> 'CONNECTION_STRING=Server=db49846.databaseasp.net;Database=db49846;User Id=db49846;Password=${DB_PASSWORD};Encrypt=False;MultipleActiveResultSets=True;' JWT_SECRET=<long-random-secret> FRONTEND_URL=https://<frontend-service>.up.railway.app
+```
+
+Create a separate frontend service if one does not already exist:
+
+```powershell
+railway add --service school-frontend
+```
+
+Set frontend variables after the backend domain exists:
+
+```powershell
+railway variable set --service school-frontend --environment production API_URL=https://<backend-service>.up.railway.app SIGNALR_URL=https://<backend-service>.up.railway.app/chathub
+```
+
+Deploy frontend:
+
+```powershell
+railway up --project d126814d-2e01-423b-b707-e3ebf16c28d9 --service school-frontend --environment production --message "Deploy frontend"
+```
+
+Generate public domains:
+
+```powershell
+railway domain --service ee8dda16-dcea-4401-aa6a-3ab41ae91273
+railway domain --service school-frontend
+```
+
+After the frontend domain exists, update backend `FRONTEND_URL`. After the backend domain exists, update frontend `API_URL` and `SIGNALR_URL`.
+
+## Database
+
+The app uses the external MonsterASP SQL Server:
+
+```text
+Server=db49846.databaseasp.net
+Database=db49846
+User Id=db49846
+Port=1433
+```
+
+Do not commit the password. Set `DB_PASSWORD` in Railway only.
+
+## Verification
+
+After deployment:
+
+```powershell
+railway service status --service ee8dda16-dcea-4401-aa6a-3ab41ae91273 --environment production
+railway logs --service ee8dda16-dcea-4401-aa6a-3ab41ae91273 --environment production
+```
+
+Then check:
+
+```text
+https://<backend-service>.up.railway.app/health
+https://<frontend-service>.up.railway.app
+```

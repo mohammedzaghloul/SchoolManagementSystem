@@ -25,10 +25,27 @@ import { SubjectService } from '../../../core/services/subject.service';
 export class GradeUploadStatusComponent implements OnInit {
   readonly gradeTypes = ['Exam', 'Homework', 'Activity'];
   readonly scopes = [
-    { value: 'GradeLevel', label: 'مرحلة دراسية' },
+    { value: 'GradeLevel', label: 'مرحلة دراسية كاملة' },
     { value: 'Class', label: 'فصل محدد' },
     { value: 'All', label: 'كل الفصول' }
   ];
+
+  private readonly subjectDisplayNames: Record<string, string> = {
+    math: 'الرياضيات',
+    arabic: 'اللغة العربية',
+    english: 'اللغة الإنجليزية',
+    science: 'العلوم'
+  };
+  private readonly gradeLevelDisplayNames: Record<string, string> = {
+    'first grade': 'الصف الأول',
+    'second grade': 'الصف الثاني',
+    'third grade': 'الصف الثالث'
+  };
+  private readonly gradeTypeDisplayNames: Record<string, string> = {
+    Exam: 'اختبار',
+    Homework: 'واجب',
+    Activity: 'نشاط'
+  };
 
   classRooms: ClassRoom[] = [];
   gradeLevels: GradeLevel[] = [];
@@ -67,11 +84,20 @@ export class GradeUploadStatusComponent implements OnInit {
   }
 
   get sessions(): GradeSessionMonitor[] {
-    return this.dashboard?.sessions || [];
+    return [...(this.dashboard?.sessions || [])].sort((first, second) => {
+      const statusDifference = this.statusPriority(first.status) - this.statusPriority(second.status);
+      if (statusDifference !== 0) return statusDifference;
+      return first.teacherName.localeCompare(second.teacherName, 'ar');
+    });
   }
 
   get isCompleted(): boolean {
     return this.dashboard?.globalStatus === 'Completed';
+  }
+
+  get completionPercent(): number {
+    if (!this.dashboard?.totalSessions) return 0;
+    return Math.round((this.dashboard.approvedSessions / this.dashboard.totalSessions) * 100);
   }
 
   get availableSubjects(): Subject[] {
@@ -80,6 +106,10 @@ export class GradeUploadStatusComponent implements OnInit {
       : this.subjects;
 
     return this.getUniqueSubjects(scopedSubjects.length ? scopedSubjects : this.subjects);
+  }
+
+  get availableGradeLevels(): GradeLevel[] {
+    return this.getUniqueGradeLevels(this.gradeLevels);
   }
 
   async loadMeta(): Promise<void> {
@@ -94,7 +124,7 @@ export class GradeUploadStatusComponent implements OnInit {
       this.classRooms = classRooms || [];
       this.gradeLevels = gradeLevels || [];
       this.subjects = (subjects || []).filter(subject => subject.isActive !== false);
-      this.publishForm.gradeLevelId = this.gradeLevels[0]?.id || null;
+      this.publishForm.gradeLevelId = this.availableGradeLevels[0]?.id || null;
       this.publishForm.classId = this.classRooms[0]?.id || null;
       this.syncSelectedSubject();
     } catch (error: any) {
@@ -107,17 +137,17 @@ export class GradeUploadStatusComponent implements OnInit {
 
   async publishSessions(): Promise<void> {
     if (!this.publishForm.subjectId) {
-      this.notify.warning('اختر المادة أولًا.');
+      this.notify.warning('اختر المادة أولاً.');
       return;
     }
 
     if (this.publishForm.scope === 'Class' && !this.publishForm.classId) {
-      this.notify.warning('اختر الفصل أولًا.');
+      this.notify.warning('اختر الفصل أولاً.');
       return;
     }
 
     if (this.publishForm.scope === 'GradeLevel' && !this.publishForm.gradeLevelId) {
-      this.notify.warning('اختر المرحلة الدراسية أولًا.');
+      this.notify.warning('اختر المرحلة الدراسية أولاً.');
       return;
     }
 
@@ -170,9 +200,38 @@ export class GradeUploadStatusComponent implements OnInit {
   }
 
   statusLabel(status: string): string {
-    if (status === 'Approved') return 'Approved';
-    if (status === 'InProgress') return 'In Progress';
-    return 'Not Started';
+    if (status === 'Approved') return 'تم رفع الدرجات';
+    if (status === 'InProgress') return 'جاري رفع الدرجات';
+    return 'لم يبدأ';
+  }
+
+  globalStatusLabel(status?: string): string {
+    return status === 'Completed' ? 'تم رفع الدرجات' : 'جاري رفع الدرجات';
+  }
+
+  typeLabel(type: string): string {
+    return this.gradeTypeDisplayNames[type] || type;
+  }
+
+  subjectLabel(subjectName: string): string {
+    return this.subjectDisplayNames[this.normalizeKey(subjectName)] || subjectName;
+  }
+
+  gradeLevelLabel(gradeLevelName?: string | null): string {
+    if (!gradeLevelName) return 'مرحلة غير محددة';
+    return this.gradeLevelDisplayNames[this.normalizeKey(gradeLevelName)] || gradeLevelName;
+  }
+
+  statusIcon(status: string): string {
+    if (status === 'Approved') return 'fa-circle-check';
+    if (status === 'InProgress') return 'fa-clock';
+    return 'fa-circle-minus';
+  }
+
+  sessionHint(session: GradeSessionMonitor): string {
+    if (session.status === 'Approved') return 'كل الطلاب لهم درجات والمدرس اعتمد الرفع.';
+    if (session.missingGradesCount > 0) return `ناقص إدخال درجات ${session.missingGradesCount} طالب.`;
+    return 'الدرجات مكتملة وتحتاج اعتماد المدرس.';
   }
 
   private syncSelectedSubject(): void {
@@ -186,17 +245,51 @@ export class GradeUploadStatusComponent implements OnInit {
     const uniqueSubjects = new Map<string, Subject>();
 
     for (const subject of subjects) {
-      const key = this.normalizeSubjectName(subject.name);
-      if (!uniqueSubjects.has(key)) {
+      const key = this.normalizeSubjectName(this.subjectLabel(subject.name));
+      const existingSubject = uniqueSubjects.get(key);
+      if (!existingSubject || this.isCanonicalName(subject.name, this.subjectDisplayNames)) {
         uniqueSubjects.set(key, subject);
       }
     }
 
-    return Array.from(uniqueSubjects.values()).sort((first, second) => first.name.localeCompare(second.name, 'ar'));
+    return Array.from(uniqueSubjects.values()).sort((first, second) =>
+      this.subjectLabel(first.name).localeCompare(this.subjectLabel(second.name), 'ar')
+    );
+  }
+
+  private getUniqueGradeLevels(gradeLevels: GradeLevel[]): GradeLevel[] {
+    const uniqueGradeLevels = new Map<string, GradeLevel>();
+
+    for (const gradeLevel of gradeLevels) {
+      const key = this.normalizeSubjectName(this.gradeLevelLabel(gradeLevel.name));
+      const existingGradeLevel = uniqueGradeLevels.get(key);
+      if (!existingGradeLevel || this.isCanonicalName(gradeLevel.name, this.gradeLevelDisplayNames)) {
+        uniqueGradeLevels.set(key, gradeLevel);
+      }
+    }
+
+    return Array.from(uniqueGradeLevels.values()).sort((first, second) =>
+      this.gradeLevelLabel(first.name).localeCompare(this.gradeLevelLabel(second.name), 'ar')
+    );
   }
 
   private normalizeSubjectName(name: string): string {
     return name.trim().replace(/\s+/g, ' ').toLocaleLowerCase('ar');
+  }
+
+  private normalizeKey(name: string): string {
+    return name.trim().replace(/\s+/g, ' ').toLocaleLowerCase('en');
+  }
+
+  private statusPriority(status: string): number {
+    if (status === 'NotStarted') return 0;
+    if (status === 'InProgress') return 1;
+    if (status === 'Approved') return 2;
+    return 3;
+  }
+
+  private isCanonicalName(name: string, labels: Record<string, string>): boolean {
+    return Object.prototype.hasOwnProperty.call(labels, this.normalizeKey(name));
   }
 
   private getDateInputValue(date: Date): string {

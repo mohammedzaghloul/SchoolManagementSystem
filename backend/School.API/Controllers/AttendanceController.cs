@@ -685,10 +685,11 @@ public class AttendanceController : BaseApiController
             return windowError;
         }
 
-        var allowedStudentIds = await _context.Students
+        var allowedStudentIds = (await _context.Students
             .Where(student => student.ClassRoomId == session!.ClassRoomId)
             .Select(student => student.Id)
-            .ToHashSetAsync();
+            .ToListAsync())
+            .ToHashSet();
 
         var requestedStudentIds = dto.Records
             .Select(record => int.TryParse(record.Id, out var studentId) ? studentId : 0)

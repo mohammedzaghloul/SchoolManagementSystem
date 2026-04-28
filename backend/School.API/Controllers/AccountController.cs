@@ -12,6 +12,7 @@ using School.Infrastructure.Data;
 using School.Infrastructure.Identity;
 using System.Collections.Concurrent;
 using System.Net;
+using System.Net.Http.Json;
 using System.Net.Mail;
 using System.Security.Cryptography;
 using System.Text;
@@ -30,6 +31,8 @@ public class AccountController : ControllerBase
     private readonly IConfiguration _configuration;
     private readonly IEmailService _emailService;
     private readonly IEmailOtpService _emailOtpService;
+    private readonly ITokenService _tokenService;
+    private readonly IHttpClientFactory _httpClientFactory;
     private const string TrustedDeviceLoginProvider = "TrustedLoginDevice";
     private static readonly TimeSpan OtpLifetime = TimeSpan.FromMinutes(5);
     private static readonly ConcurrentDictionary<string, ForgotPasswordOtpState> ForgotPasswordOtps = new();
@@ -43,7 +46,9 @@ public class AccountController : ControllerBase
         IFileStorageService fileStorage,
         IConfiguration configuration,
         IEmailService emailService,
-        IEmailOtpService emailOtpService)
+        IEmailOtpService emailOtpService,
+        ITokenService tokenService,
+        IHttpClientFactory httpClientFactory)
     {
         _mediator = mediator;
         _roleManager = roleManager;
@@ -53,6 +58,8 @@ public class AccountController : ControllerBase
         _configuration = configuration;
         _emailService = emailService;
         _emailOtpService = emailOtpService;
+        _tokenService = tokenService;
+        _httpClientFactory = httpClientFactory;
     }
     [AllowAnonymous]
     [HttpPost("login")]
@@ -62,6 +69,18 @@ public class AccountController : ControllerBase
 
         try
         {
+            var centralLogin = await TryLoginWithCentralAuthAsync(command, HttpContext.RequestAborted);
+            if (centralLogin.Status == CentralLoginStatus.Success && !string.IsNullOrWhiteSpace(centralLogin.Token))
+            {
+                Console.WriteLine($"[CONTROLLER] CentralAuth login accepted for: {command.Email}");
+                return Ok(new { token = centralLogin.Token });
+            }
+
+            if (centralLogin.Status is CentralLoginStatus.InvalidCredentials or CentralLoginStatus.LocalUserMissing)
+            {
+                return Unauthorized(new { message = centralLogin.Message ?? "بيانات الدخول غير صحيحة." });
+            }
+
             var token = await _mediator.Send(command);
             if (string.IsNullOrWhiteSpace(token))
             {
@@ -236,6 +255,111 @@ public class AccountController : ControllerBase
 
         return Ok(await BuildProfileResponseAsync(user));
     }
+
+    private async Task<CentralLoginResult> TryLoginWithCentralAuthAsync(LoginCommand command, CancellationToken cancellationToken)
+    {
+        if (!_configuration.GetValue<bool>("CentralAuth:Enabled"))
+        {
+            return CentralLoginResult.Disabled;
+        }
+
+        var baseUrl = _configuration["CentralAuth:BaseUrl"]?.TrimEnd('/');
+        if (string.IsNullOrWhiteSpace(baseUrl))
+        {
+            return CentralLoginResult.Unavailable;
+        }
+
+        var apiKey = _configuration["CentralAuth:ForgotPasswordApiKey"];
+        if (string.IsNullOrWhiteSpace(apiKey))
+        {
+            // Without an API key we cannot safely resolve the linked Central account for this school email.
+            // Fall back to local login rather than blocking sign-in.
+            return CentralLoginResult.Disabled;
+        }
+
+        CentralUserLinkStatusResponse? linkStatus;
+        try
+        {
+            linkStatus = await TryGetCentralLinkStatusAsync(baseUrl, apiKey, command.Email, cancellationToken);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            Console.WriteLine($"[CONTROLLER] CentralAuth link status unavailable for {command.Email}: {ex.Message}");
+            return CentralLoginResult.Unavailable;
+        }
+
+        if (linkStatus is null || !linkStatus.IsLinked || string.IsNullOrWhiteSpace(linkStatus.PlatformEmail))
+        {
+            // User is not linked to Central Auth, so treat CentralAuth login as disabled and allow local auth.
+            return CentralLoginResult.Disabled;
+        }
+
+        var centralEmail = linkStatus.PlatformEmail.Trim();
+
+        try
+        {
+            var client = _httpClientFactory.CreateClient();
+            using var response = await client.PostAsJsonAsync(
+                $"{baseUrl}/api/auth/login",
+                new { email = centralEmail, password = command.Password },
+                cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                return response.StatusCode == HttpStatusCode.Unauthorized
+                    ? CentralLoginResult.InvalidCredentials
+                    : CentralLoginResult.Unavailable;
+            }
+
+            var localUser = await _userManager.FindByEmailAsync(command.Email);
+            if (localUser == null)
+            {
+                Console.WriteLine($"[CONTROLLER] CentralAuth accepted {command.Email}, but no local school user exists.");
+                return CentralLoginResult.LocalUserMissing;
+            }
+
+            var role = await GetPrimaryRoleAsync(localUser) ?? "User";
+            var token = _tokenService.CreateToken(
+                localUser.Id,
+                localUser.Email ?? command.Email,
+                role,
+                localUser.FullName);
+            return CentralLoginResult.Success(token);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            Console.WriteLine($"[CONTROLLER] CentralAuth login unavailable for {command.Email}: {ex.Message}");
+            return CentralLoginResult.Unavailable;
+        }
+    }
+
+    private async Task<CentralUserLinkStatusResponse?> TryGetCentralLinkStatusAsync(
+        string baseUrl,
+        string apiKey,
+        string externalUserId,
+        CancellationToken cancellationToken)
+    {
+        var requestUri = $"{baseUrl}/api/integrations/user-links/status?externalUserId={Uri.EscapeDataString(externalUserId)}";
+        var request = new HttpRequestMessage(HttpMethod.Get, requestUri);
+        request.Headers.Add("X-API-Key", apiKey);
+
+        var client = _httpClientFactory.CreateClient();
+        using var response = await client.SendAsync(request, cancellationToken);
+        if (!response.IsSuccessStatusCode)
+        {
+            return null;
+        }
+
+        return await response.Content.ReadFromJsonAsync<CentralUserLinkStatusResponse>(cancellationToken: cancellationToken);
+    }
+
+    private sealed record CentralUserLinkStatusResponse(
+        bool IsLinked,
+        string? ExternalAppName,
+        string? ExternalUserId,
+        string? PlatformEmail,
+        string? PlatformDisplayName,
+        DateTimeOffset? LinkedAt);
 
     [Authorize]
     [HttpPut("profile")]
@@ -545,6 +669,28 @@ public class AccountController : ControllerBase
         }
 
         return roles.FirstOrDefault();
+    }
+
+    private enum CentralLoginStatus
+    {
+        Disabled,
+        Success,
+        InvalidCredentials,
+        LocalUserMissing,
+        Unavailable
+    }
+
+    private sealed record CentralLoginResult(CentralLoginStatus Status, string? Token = null, string? Message = null)
+    {
+        public static CentralLoginResult Disabled { get; } = new(CentralLoginStatus.Disabled);
+        public static CentralLoginResult Unavailable { get; } = new(CentralLoginStatus.Unavailable);
+        public static CentralLoginResult InvalidCredentials { get; } = new(
+            CentralLoginStatus.InvalidCredentials,
+            Message: "البريد الإلكتروني أو كلمة المرور غير صحيحة.");
+        public static CentralLoginResult LocalUserMissing { get; } = new(
+            CentralLoginStatus.LocalUserMissing,
+            Message: "الحساب موجود في منصة الدخول الموحدة لكنه غير مربوط بحساب داخل المدرسة.");
+        public static CentralLoginResult Success(string token) => new(CentralLoginStatus.Success, token);
     }
 
     private async Task<Student?> FindStudentAsync(ApplicationUser user, bool track)

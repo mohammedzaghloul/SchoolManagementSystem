@@ -17,6 +17,8 @@ export class ResetPasswordComponent implements OnInit {
   loading = false;
   error = '';
   email = '';
+  token = '';
+  tokenMode = false;
   otpVerified = false;
 
   constructor(
@@ -34,11 +36,23 @@ export class ResetPasswordComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.route.queryParams.subscribe(params => {
+    this.route.queryParams.subscribe(async params => {
       this.email = params['email'] || '';
+      this.token = params['token'] || '';
+      this.tokenMode = !!this.token;
       if (!this.email) {
         this.notificationService.error('البريد الإلكتروني مفقود. يرجى طلب كود جديد.');
         this.router.navigate(['/auth/forgot-password']);
+        return;
+      }
+
+      if (this.tokenMode) {
+        this.resetForm.get('otp')?.clearValidators();
+        this.resetForm.get('otp')?.updateValueAndValidity();
+        await this.validateResetToken();
+      } else {
+        this.resetForm.get('otp')?.setValidators([Validators.required, Validators.pattern(/^[0-9]{6}$/)]);
+        this.resetForm.get('otp')?.updateValueAndValidity();
       }
     });
   }
@@ -81,15 +95,45 @@ export class ResetPasswordComponent implements OnInit {
     this.error = '';
 
     try {
-      await this.authService.verifyForgotPasswordOtp(
-        this.email,
-        this.normalizeOtp(this.resetForm.get('otp')?.value || ''),
-        this.resetForm.get('newPassword')?.value
-      );
+      if (this.tokenMode) {
+        await this.authService.resetPasswordWithToken(
+          this.email,
+          this.token,
+          this.resetForm.get('newPassword')?.value
+        );
+      } else {
+        await this.authService.verifyForgotPasswordOtp(
+          this.email,
+          this.normalizeOtp(this.resetForm.get('otp')?.value || ''),
+          this.resetForm.get('newPassword')?.value
+        );
+      }
       this.notificationService.success('تم تغيير كلمة المرور بنجاح. يمكنك الآن تسجيل الدخول.');
       this.router.navigate(['/auth/login']);
     } catch (err: any) {
       this.error = err?.message || 'حدث خطأ أثناء تغيير كلمة المرور.';
+      this.notificationService.error(this.error);
+    } finally {
+      this.loading = false;
+    }
+  }
+
+  private async validateResetToken(): Promise<void> {
+    this.loading = true;
+    this.error = '';
+
+    try {
+      const response = await this.authService.validateResetToken(this.email, this.token);
+      if (!response.isValid) {
+        this.error = 'رابط إعادة تعيين كلمة المرور غير صالح أو انتهت صلاحيته.';
+        this.notificationService.error(this.error);
+        return;
+      }
+
+      this.otpVerified = true;
+      this.notificationService.success('تم التحقق من رابط إعادة التعيين. يمكنك الآن اختيار كلمة مرور جديدة.');
+    } catch (err: any) {
+      this.error = err?.message || 'تعذر التحقق من رابط إعادة تعيين كلمة المرور.';
       this.notificationService.error(this.error);
     } finally {
       this.loading = false;

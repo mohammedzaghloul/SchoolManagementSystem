@@ -23,8 +23,8 @@ FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
 COPY --from=build /app/publish .
 
-# Railway dynamic port
+# Railway injects PORT at runtime. Program.cs binds to 0.0.0.0:${PORT}.
 ENV PORT=8080
 EXPOSE 8080
 
-ENTRYPOINT ["/bin/sh", "-c", "ASPNETCORE_URLS=http://+:${PORT} dotnet School.API.dll"]
+ENTRYPOINT ["dotnet", "School.API.dll"]

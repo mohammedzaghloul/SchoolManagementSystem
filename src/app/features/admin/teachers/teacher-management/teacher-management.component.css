@@ -158,6 +158,8 @@
     align-items: center;
     border-radius: 8px;
     transition: all 0.2s;
+    border: none;
+    background: transparent;
 }
 
 .btn-icon:hover {
@@ -397,7 +399,7 @@
 /* ─── Mobile Header & Buttons ─── */
 @media (max-width: 768px) {
     .page-container { padding: 1.25rem 0.75rem 100px; }
-    
+
     .page-title {
         font-size: 1.8rem !important;
         padding-right: 0.5rem;
@@ -436,4 +438,4 @@
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
-}
+}

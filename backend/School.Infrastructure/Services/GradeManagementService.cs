@@ -345,12 +345,13 @@ public sealed class GradeManagementService : IGradeManagementService
             throw new InvalidOperationException("The session deadline has passed.");
         }
 
-        var activeStudentIds = await _context.Students
+        var activeStudentIds = (await _context.Students
             .AsNoTracking()
             .Where(student => student.IsActive)
             .Where(student => student.ClassRoomId == access.Session.ClassId)
             .Select(student => student.Id)
-            .ToHashSetAsync(cancellationToken);
+            .ToListAsync(cancellationToken))
+            .ToHashSet();
 
         var items = request.Grades
             .Where(item => item.Score.HasValue)

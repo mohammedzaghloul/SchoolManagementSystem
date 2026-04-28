@@ -12,9 +12,8 @@
 
 .page-hero,
 .publish-card,
-.filters-card,
+.monitor-panel,
 .summary-card,
-.progress-card,
 .teacher-card,
 .state-card {
   background: #ffffff;
@@ -32,34 +31,6 @@
   border-radius: 16px;
 }
 
-.publish-card {
-  margin-bottom: 0.9rem;
-  padding: 1rem;
-  border-radius: 16px;
-}
-
-.publish-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 0.8rem;
-}
-
-.publish-head h2 {
-  margin: 0;
-  color: #0f172a;
-  font-size: 1.1rem;
-  font-weight: 900;
-}
-
-.publish-head p {
-  margin: 0.2rem 0 0;
-  color: #64748b;
-  font-size: 0.84rem;
-  font-weight: 800;
-}
-
 .hero-badge {
   display: inline-flex;
   width: fit-content;
@@ -72,19 +43,27 @@
   font-weight: 900;
 }
 
-.title-block h1 {
+.title-block h1,
+.section-head h2,
+.publish-head h2 {
   margin: 0;
   color: #0f172a;
-  font-size: 1.65rem;
   font-weight: 900;
   line-height: 1.25;
 }
 
-.title-block p {
+.title-block h1 {
+  font-size: 1.65rem;
+}
+
+.title-block p,
+.section-head p,
+.publish-head p {
   margin: 0.35rem 0 0;
   color: #64748b;
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   font-weight: 800;
+  line-height: 1.6;
 }
 
 .title-block strong {
@@ -95,7 +74,7 @@
   color: #15803d;
 }
 
-.refresh-btn {
+.primary-action {
   min-height: 42px;
   display: inline-flex;
   align-items: center;
@@ -110,17 +89,87 @@
   font-size: 0.84rem;
   font-weight: 900;
   cursor: pointer;
+  white-space: nowrap;
 }
 
-.refresh-btn.ghost {
+.primary-action.ghost {
   border: 1px solid #bfdbfe;
   background: #eff6ff;
   color: #1d4ed8;
 }
 
-.refresh-btn:disabled {
+.primary-action:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 0.9rem;
+}
+
+.summary-card {
+  min-height: 104px;
+  display: grid;
+  align-content: center;
+  gap: 0.25rem;
+  padding: 0.95rem;
+  border-radius: 14px;
+}
+
+.summary-card span {
+  color: #64748b;
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
+.summary-card strong {
+  color: #0f172a;
+  font-size: 1.32rem;
+  font-weight: 900;
+  line-height: 1.25;
+}
+
+.summary-card small {
+  color: #64748b;
+  font-size: 0.74rem;
+  font-weight: 800;
+  line-height: 1.5;
+}
+
+.summary-card.complete,
+.summary-card.status-card.complete {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+.summary-card.warning,
+.summary-card.status-card:not(.complete) {
+  background: #fffbeb;
+  border-color: #fde68a;
+}
+
+.monitor-panel,
+.publish-card {
+  margin-bottom: 0.9rem;
+  padding: 1rem;
+  border-radius: 16px;
+}
+
+.section-head,
+.publish-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.85rem;
+}
+
+.section-head h2,
+.publish-head h2 {
+  font-size: 1.1rem;
 }
 
 .filters-card {
@@ -129,7 +178,16 @@
   gap: 0.75rem;
   margin-bottom: 0.9rem;
   padding: 1rem;
-  border-radius: 16px;
+  border-radius: 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.filters-card.compact {
+  max-width: 40rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
 }
 
 .filters-card.publish-grid {
@@ -137,7 +195,7 @@
   margin-bottom: 0;
   padding: 0;
   border: 0;
-  box-shadow: none;
+  background: transparent;
 }
 
 .field {
@@ -170,75 +228,6 @@
   outline: none;
   border-color: #93c5fd;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
-}
-
-.summary-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.75rem;
-  margin-bottom: 0.9rem;
-}
-
-.summary-card {
-  min-height: 86px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 0.25rem;
-  padding: 0.9rem;
-  border-radius: 14px;
-}
-
-.summary-card span {
-  color: #64748b;
-  font-size: 0.76rem;
-  font-weight: 900;
-}
-
-.summary-card strong {
-  color: #0f172a;
-  font-size: 1.35rem;
-  font-weight: 900;
-  line-height: 1.25;
-}
-
-.summary-card.complete {
-  background: #f0fdf4;
-  border-color: #bbf7d0;
-}
-
-.progress-card {
-  margin-bottom: 0.9rem;
-  padding: 0.9rem;
-  border-radius: 14px;
-}
-
-.progress-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 0.6rem;
-  color: #475569;
-  font-size: 0.84rem;
-  font-weight: 900;
-}
-
-.progress-track {
-  height: 10px;
-  overflow: hidden;
-  border-radius: 999px;
-  background: #e2e8f0;
-}
-
-.progress-fill {
-  height: 100%;
-  border-radius: inherit;
-  background: #f59e0b;
-  transition: width 0.25s ease;
-}
-
-.progress-fill.done {
-  background: #16a34a;
 }
 
 .teachers-list {
@@ -278,7 +267,7 @@
   min-width: 0;
 }
 
-.teacher-main h2 {
+.teacher-main h3 {
   margin: 0;
   color: #0f172a;
   font-size: 1.02rem;
@@ -287,29 +276,23 @@
   overflow-wrap: anywhere;
 }
 
-.teacher-main h2 span {
-  color: #475569;
-  font-size: 0.86rem;
-  font-weight: 800;
-}
-
 .teacher-main p {
   margin: 0.12rem 0 0;
   color: #64748b;
   font-size: 0.8rem;
-  font-weight: 700;
-  direction: ltr;
-  text-align: right;
+  font-weight: 800;
+  line-height: 1.55;
   overflow-wrap: anywhere;
 }
 
-.status-chip,
-.mini-chip {
+.status-chip {
+  min-height: 32px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.35rem;
   border-radius: 999px;
+  padding: 0.28rem 0.65rem;
   background: #fffbeb;
   color: #92400e;
   font-size: 0.76rem;
@@ -317,27 +300,9 @@
   white-space: nowrap;
 }
 
-.status-chip {
-  min-height: 32px;
-  padding: 0.28rem 0.65rem;
-}
-
-.mini-chip {
-  min-height: 28px;
-  padding: 0.22rem 0.55rem;
-}
-
-.status-chip.done,
-.mini-chip.done {
+.status-chip.done {
   background: #f0fdf4;
   color: #166534;
-}
-
-.teacher-stats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 0.75rem;
 }
 
 .teacher-progress {
@@ -380,6 +345,13 @@
   background: #16a34a;
 }
 
+.teacher-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
 .teacher-stats span {
   display: inline-flex;
   min-height: 28px;
@@ -390,93 +362,12 @@
   color: #475569;
   font-size: 0.76rem;
   font-weight: 900;
-}
-
-.details-toggle {
-  min-height: 34px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.4rem;
-  margin-top: 0.75rem;
-  border: 1px solid #dbe4f0;
-  border-radius: 10px;
-  padding: 0.35rem 0.7rem;
-  background: #ffffff;
-  color: #1d4ed8;
-  font-family: inherit;
-  font-size: 0.78rem;
-  font-weight: 900;
-  cursor: pointer;
-}
-
-.details-toggle:hover {
-  background: #eff6ff;
-  border-color: #bfdbfe;
-}
-
-.subjects-grid {
-  display: grid;
-  gap: 0.55rem;
-  margin-top: 0.8rem;
-}
-
-.subject-row {
-  display: grid;
-  grid-template-columns: minmax(10rem, 1fr) auto auto;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  background: #f8fafc;
-}
-
-.subject-row.done {
-  border-color: #bbf7d0;
-  background: #f0fdf4;
-}
-
-.subject-row strong,
-.subject-row span,
-.subject-row small {
-  display: block;
-  overflow-wrap: anywhere;
-}
-
-.subject-row strong {
-  color: #0f172a;
-  font-size: 0.9rem;
-  font-weight: 900;
-}
-
-.subject-row span {
-  margin-top: 0.12rem;
-  color: #64748b;
-  font-size: 0.78rem;
-  font-weight: 800;
-}
-
-.subject-numbers {
-  min-width: 6.5rem;
-  text-align: center;
-}
-
-.subject-numbers span {
-  margin: 0;
-  color: #0f172a;
-  font-size: 0.85rem;
-}
-
-.subject-numbers small {
-  color: #64748b;
-  font-size: 0.72rem;
-  font-weight: 800;
+  line-height: 1.45;
 }
 
 .state-card {
   display: grid;
-  min-height: 210px;
+  min-height: 180px;
   place-items: center;
   gap: 0.7rem;
   border-radius: 16px;
@@ -501,7 +392,8 @@
 }
 
 @media (max-width: 1080px) {
-  .summary-grid {
+  .summary-grid,
+  .filters-card.publish-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -512,27 +404,22 @@
   }
 
   .page-hero,
-  .teacher-head {
+  .section-head,
+  .publish-head {
     align-items: stretch;
-    grid-template-columns: 1fr;
     flex-direction: column;
   }
 
-  .filters-card,
-  .filters-card.publish-grid,
   .summary-grid,
-  .subject-row {
+  .filters-card,
+  .filters-card.compact,
+  .filters-card.publish-grid,
+  .teacher-head {
     grid-template-columns: 1fr;
   }
 
-  .refresh-btn,
-  .status-chip,
-  .details-toggle {
+  .primary-action,
+  .status-chip {
     width: 100%;
-  }
-
-  .subject-numbers {
-    min-width: 0;
-    text-align: right;
   }
 }

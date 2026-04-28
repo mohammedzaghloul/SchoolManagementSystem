@@ -12,6 +12,7 @@ export interface User {
   sessionCount?: number;
   address?: string;
   permissions?: string[];
+  isLinkedToCentralAuth?: boolean;
 }
 
 

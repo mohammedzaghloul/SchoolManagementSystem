@@ -191,11 +191,12 @@ public class GradeController : BaseApiController
         var effectiveDate = NormalizeDate(request.Date);
         var normalizedGradeType = NormalizeGradeType(request.GradeType);
 
-        var classStudentIds = await _context.Students
+        var classStudentIds = (await _context.Students
             .AsNoTracking()
             .Where(student => student.ClassRoomId == subject!.ClassRoomId)
             .Select(student => student.Id)
-            .ToHashSetAsync();
+            .ToListAsync())
+            .ToHashSet();
 
         var payloadGrades = request.Grades
             .Where(item => item.Score.HasValue)

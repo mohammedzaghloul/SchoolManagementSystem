@@ -29,7 +29,7 @@ export class DashboardComponent implements OnInit {
   constructor(
     private dashboardService: DashboardService,
     private authService: AuthService
-  ) {}
+  ) { }
 
   async ngOnInit(): Promise<void> {
     const user = this.authService.getCurrentUser();

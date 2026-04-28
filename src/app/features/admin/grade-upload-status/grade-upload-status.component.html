@@ -1,24 +1,131 @@
 <div class="upload-status-page" dir="rtl">
   <section class="page-hero">
     <div class="title-block">
-      <span class="hero-badge">Grade Management</span>
-      <h1>إدارة نشر ومتابعة الدرجات</h1>
-      <p>الحالة العامة: <strong [class.done]="isCompleted">{{ dashboard?.globalStatus || 'In Progress' }}</strong></p>
+      <span class="hero-badge">إدارة الدرجات</span>
+      <h1>متابعة رفع الدرجات</h1>
+      <p>
+        الحالة العامة:
+        <strong [class.done]="isCompleted">{{ globalStatusLabel(dashboard?.globalStatus) }}</strong>
+      </p>
     </div>
 
-    <button class="refresh-btn" type="button" (click)="loadDashboard()" [disabled]="loadingDashboard">
+    <button class="primary-action" type="button" (click)="loadDashboard()" [disabled]="loadingDashboard">
       <i class="fas fa-rotate"></i>
       {{ loadingDashboard ? 'جاري التحديث...' : 'تحديث' }}
     </button>
   </section>
 
+  <section class="summary-grid" *ngIf="dashboard">
+    <article class="summary-card status-card" [class.complete]="isCompleted">
+      <span>الحالة العامة</span>
+      <strong>{{ globalStatusLabel(dashboard.globalStatus) }}</strong>
+      <small>{{ isCompleted ? 'كل المدرسين اعتمدوا الرفع' : 'يوجد مدرسون لم يعتمدوا بعد' }}</small>
+    </article>
+
+    <article class="summary-card">
+      <span>إجمالي الجلسات</span>
+      <strong>{{ dashboard.totalSessions }}</strong>
+      <small>اختبارات وواجبات وأنشطة منشورة</small>
+    </article>
+
+    <article class="summary-card complete">
+      <span>تم اعتمادها</span>
+      <strong>{{ dashboard.approvedSessions }}</strong>
+      <small>{{ completionPercent }}% من الجلسات</small>
+    </article>
+
+    <article class="summary-card warning">
+      <span>لم تكتمل</span>
+      <strong>{{ dashboard.inProgressSessions }}</strong>
+      <small>تحتاج إدخال أو اعتماد</small>
+    </article>
+  </section>
+
+  <section class="monitor-panel">
+    <div class="section-head">
+      <div>
+        <h2>متابعة المدرسين</h2>
+        <p>الجلسات غير المكتملة تظهر أولاً، وعند اعتماد كل المدرسين تتحول الحالة العامة إلى تم رفع الدرجات.</p>
+      </div>
+    </div>
+
+    <div class="filters-card compact">
+      <label class="field">
+        <span>نوع الجلسة</span>
+        <select [(ngModel)]="selectedMonitorType" (change)="onMonitorFilterChanged()" [disabled]="loadingDashboard">
+          <option value="">كل الأنواع</option>
+          <option *ngFor="let type of gradeTypes" [value]="type">{{ typeLabel(type) }}</option>
+        </select>
+      </label>
+
+      <label class="field">
+        <span>تاريخ الجلسة</span>
+        <input type="date" [(ngModel)]="selectedMonitorDate" (change)="onMonitorFilterChanged()" [disabled]="loadingDashboard">
+      </label>
+    </div>
+
+    <section class="state-card" *ngIf="loadingDashboard">
+      <div class="spinner-border text-primary" role="status"></div>
+      <p>جاري تحميل متابعة جلسات الدرجات...</p>
+    </section>
+
+    <section class="state-card error" *ngIf="!loadingDashboard && errorMessage">
+      <i class="fas fa-triangle-exclamation"></i>
+      <p>{{ errorMessage }}</p>
+      <button class="primary-action ghost" type="button" (click)="loadDashboard()">إعادة المحاولة</button>
+    </section>
+
+    <section class="state-card" *ngIf="!loadingDashboard && !errorMessage && sessions.length === 0">
+      <i class="fas fa-inbox"></i>
+      <p>لا توجد جلسات درجات منشورة حتى الآن.</p>
+    </section>
+
+    <section class="teachers-list" *ngIf="!loadingDashboard && !errorMessage && sessions.length > 0">
+      <article class="teacher-card" *ngFor="let session of sessions; trackBy: trackBySession" [class.complete]="session.status === 'Approved'">
+        <div class="teacher-head">
+          <div class="teacher-avatar">{{ subjectLabel(session.subjectName).charAt(0) }}</div>
+
+          <div class="teacher-main">
+            <h3>{{ session.teacherName }}</h3>
+            <p>
+              {{ subjectLabel(session.subjectName) }} · {{ session.className }} ·
+              {{ gradeLevelLabel(session.gradeLevelName) }} · {{ typeLabel(session.type) }} ·
+              {{ session.date | date:'d/M/yyyy' }}
+            </p>
+          </div>
+
+          <span class="status-chip" [class.done]="session.status === 'Approved'">
+            <i class="fas" [ngClass]="statusIcon(session.status)"></i>
+            {{ statusLabel(session.status) }}
+          </span>
+        </div>
+
+        <div class="teacher-progress">
+          <div>
+            <span>تم إدخال درجات {{ session.gradedStudents }} من {{ session.totalStudents }} طالب</span>
+            <strong>{{ session.progressPercent }}%</strong>
+          </div>
+          <div class="teacher-progress-track" aria-hidden="true">
+            <span [style.width.%]="session.progressPercent" [class.done]="session.status === 'Approved'"></span>
+          </div>
+        </div>
+
+        <div class="teacher-stats">
+          <span>{{ sessionHint(session) }}</span>
+          <span>{{ session.missingGradesCount }} طالب متبقي</span>
+          <span *ngIf="session.deadline">آخر موعد: {{ session.deadline | date:'d/M/yyyy, h:mm a' }}</span>
+        </div>
+      </article>
+    </section>
+  </section>
+
   <section class="publish-card">
     <div class="publish-head">
       <div>
-        <h2>نشر جلسة درجات</h2>
-        <p>النشر حسب كل الفصول أو فصل واحد أو مرحلة دراسية كاملة.</p>
+        <h2>نشر جلسة درجات جديدة</h2>
+        <p>استخدمها عند إنشاء واجب أو اختبار جديد لفصل واحد أو مرحلة كاملة أو كل الفصول.</p>
       </div>
-      <button class="refresh-btn" type="button" (click)="publishSessions()" [disabled]="publishing || loadingMeta">
+      <button class="primary-action" type="button" (click)="publishSessions()" [disabled]="publishing || loadingMeta">
         <i class="fas fa-paper-plane"></i>
         {{ publishing ? 'جاري النشر...' : 'نشر' }}
       </button>
@@ -35,7 +142,7 @@
       <label class="field" *ngIf="publishForm.scope === 'GradeLevel'">
         <span>المرحلة الدراسية</span>
         <select [(ngModel)]="publishForm.gradeLevelId" [disabled]="publishing || loadingMeta">
-          <option *ngFor="let grade of gradeLevels" [ngValue]="grade.id">{{ grade.name }}</option>
+          <option *ngFor="let grade of availableGradeLevels" [ngValue]="grade.id">{{ gradeLevelLabel(grade.name) }}</option>
         </select>
       </label>
 
@@ -49,14 +156,14 @@
       <label class="field">
         <span>المادة</span>
         <select [(ngModel)]="publishForm.subjectId" [disabled]="publishing || loadingMeta">
-          <option *ngFor="let subject of availableSubjects" [ngValue]="subject.id">{{ subject.name }}</option>
+          <option *ngFor="let subject of availableSubjects" [ngValue]="subject.id">{{ subjectLabel(subject.name) }}</option>
         </select>
       </label>
 
       <label class="field">
         <span>النوع</span>
         <select [(ngModel)]="publishForm.type" [disabled]="publishing">
-          <option *ngFor="let type of gradeTypes" [value]="type">{{ type }}</option>
+          <option *ngFor="let type of gradeTypes" [value]="type">{{ typeLabel(type) }}</option>
         </select>
       </label>
 
@@ -66,91 +173,9 @@
       </label>
 
       <label class="field">
-        <span>Deadline</span>
+        <span>آخر موعد</span>
         <input type="datetime-local" [(ngModel)]="publishForm.deadline" [disabled]="publishing">
       </label>
     </div>
-  </section>
-
-  <section class="filters-card">
-    <label class="field">
-      <span>فلترة النوع</span>
-      <select [(ngModel)]="selectedMonitorType" (change)="onMonitorFilterChanged()" [disabled]="loadingDashboard">
-        <option value="">كل الأنواع</option>
-        <option *ngFor="let type of gradeTypes" [value]="type">{{ type }}</option>
-      </select>
-    </label>
-
-    <label class="field">
-      <span>فلترة التاريخ</span>
-      <input type="date" [(ngModel)]="selectedMonitorDate" (change)="onMonitorFilterChanged()" [disabled]="loadingDashboard">
-    </label>
-  </section>
-
-  <section class="summary-grid" *ngIf="dashboard">
-    <article class="summary-card" [class.complete]="isCompleted">
-      <span>الحالة</span>
-      <strong>{{ dashboard.globalStatus }}</strong>
-    </article>
-    <article class="summary-card">
-      <span>الجلسات</span>
-      <strong>{{ dashboard.totalSessions }}</strong>
-    </article>
-    <article class="summary-card">
-      <span>Approved</span>
-      <strong>{{ dashboard.approvedSessions }}</strong>
-    </article>
-    <article class="summary-card">
-      <span>In Progress</span>
-      <strong>{{ dashboard.inProgressSessions }}</strong>
-    </article>
-  </section>
-
-  <section class="state-card" *ngIf="loadingDashboard">
-    <div class="spinner-border text-primary" role="status"></div>
-    <p>جاري تحميل متابعة جلسات الدرجات...</p>
-  </section>
-
-  <section class="state-card error" *ngIf="!loadingDashboard && errorMessage">
-    <i class="fas fa-triangle-exclamation"></i>
-    <p>{{ errorMessage }}</p>
-    <button class="refresh-btn ghost" type="button" (click)="loadDashboard()">إعادة المحاولة</button>
-  </section>
-
-  <section class="state-card" *ngIf="!loadingDashboard && !errorMessage && sessions.length === 0">
-    <i class="fas fa-inbox"></i>
-    <p>لا توجد جلسات درجات منشورة حتى الآن.</p>
-  </section>
-
-  <section class="teachers-list" *ngIf="!loadingDashboard && !errorMessage && sessions.length > 0">
-    <article class="teacher-card" *ngFor="let session of sessions; trackBy: trackBySession" [class.complete]="session.status === 'Approved'">
-      <div class="teacher-head">
-        <div class="teacher-avatar">{{ session.teacherName.charAt(0) }}</div>
-        <div class="teacher-main">
-          <h2>{{ session.teacherName }} <span>({{ session.subjectName }})</span></h2>
-          <p>{{ session.className }} · {{ session.gradeLevelName || 'مرحلة غير محددة' }} · {{ session.type }} · {{ session.date | date:'d/M/yyyy' }}</p>
-        </div>
-        <span class="status-chip" [class.done]="session.status === 'Approved'">
-          <i class="fas" [class.fa-circle-check]="session.status === 'Approved'" [class.fa-clock]="session.status !== 'Approved'"></i>
-          {{ statusLabel(session.status) }}
-        </span>
-      </div>
-
-      <div class="teacher-progress">
-        <div>
-          <span>{{ session.gradedStudents }} / {{ session.totalStudents }} طلاب</span>
-          <strong>{{ session.progressPercent }}%</strong>
-        </div>
-        <div class="teacher-progress-track">
-          <span [style.width.%]="session.progressPercent" [class.done]="session.status === 'Approved'"></span>
-        </div>
-      </div>
-
-      <div class="teacher-stats">
-        <span>{{ session.gradedStudents }} completed</span>
-        <span>{{ session.missingGradesCount }} missing</span>
-        <span *ngIf="session.deadline">Deadline: {{ session.deadline | date:'short' }}</span>
-      </div>
-    </article>
   </section>
 </div>

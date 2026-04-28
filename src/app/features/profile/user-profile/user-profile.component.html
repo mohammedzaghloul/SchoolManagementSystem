@@ -103,6 +103,52 @@
         </div>
       </form>
 
+      <div class="card dark-card border-0 rounded-4 p-4">
+        <div class="identity-link-card">
+          <div class="identity-icon" aria-hidden="true">
+            <i class="fas fa-link"></i>
+          </div>
+          <div class="flex-grow-1">
+            <h5 class="fw-bold text-white-premium mb-2">حساب الدخول الموحد</h5>
+            <p class="text-muted-dark mb-3">
+              سيتم ربط حسابك بمنصة الدخول الموحد. بعد الربط يمكنك استرجاع كلمة المرور من خلال صندوق الإشعارات.
+            </p>
+            <div *ngIf="identityLinkStatusLoading" class="identity-status muted">
+              <i class="fas fa-spinner fa-spin"></i>
+              <span>جاري قراءة حالة الربط...</span>
+            </div>
+            <div *ngIf="!identityLinkStatusLoading && identityLinkStatus?.isLinked" class="identity-status linked">
+              <div>
+                <strong>✔ الحساب مرتبط</strong>
+                <small>{{ identityLinkStatus?.platformEmail || identityLinkStatus?.externalEmail }}</small>
+              </div>
+            </div>
+            <div *ngIf="identityLinkSuccess" class="alert alert-success inline-alert mb-3">{{ identityLinkSuccess }}</div>
+            <div *ngIf="identityLinkError" class="alert alert-danger inline-alert mb-3">{{ identityLinkError }}</div>
+            <button
+              *ngIf="!identityLinkStatus?.isLinked"
+              type="button"
+              class="btn btn-primary fw-bold px-4 py-2 rounded-3"
+              (click)="connectCentralIdentity()"
+              [disabled]="identityLinkLoading">
+              <i *ngIf="identityLinkLoading" class="fas fa-spinner fa-spin me-2"></i>
+              <i *ngIf="!identityLinkLoading" class="fas fa-shield-alt me-2"></i>
+              🔗 ربط حساب الدخول الموحد
+            </button>
+            <button
+              *ngIf="identityLinkStatus?.isLinked"
+              type="button"
+              class="btn btn-outline-danger fw-bold px-4 py-2 rounded-3"
+              (click)="unlinkCentralIdentity()"
+              [disabled]="identityLinkLoading">
+              <i *ngIf="identityLinkLoading" class="fas fa-spinner fa-spin me-2"></i>
+              <i *ngIf="!identityLinkLoading" class="fas fa-unlink me-2"></i>
+              إلغاء الربط
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- Security Section -->
       <form [formGroup]="passwordForm" (ngSubmit)="changePassword()">
         <div class="card dark-card border-0 rounded-4 p-4">

@@ -10,7 +10,7 @@ import {
 } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 
-import { AuthService } from '../../../core/services/auth.service';
+import { AuthService, CentralIdentityLinkStatusResponse } from '../../../core/services/auth.service';
 import { UserService } from '../../../core/services/user.service';
 import { User } from '../../../core/models/user.model';
 
@@ -29,9 +29,14 @@ export class UserProfileComponent implements OnInit {
   profileLoading = false;
   passwordLoading = false;
   avatarLoading = false;
+  identityLinkLoading = false;
+  identityLinkStatusLoading = false;
 
   profileSuccess = false;
   passwordSuccess = false;
+  identityLinkError = '';
+  identityLinkSuccess = '';
+  identityLinkStatus: CentralIdentityLinkStatusResponse | null = null;
 
   profileError = '';
   passwordError = '';
@@ -67,6 +72,7 @@ export class UserProfileComponent implements OnInit {
 
   async ngOnInit(): Promise<void> {
     await this.loadProfile();
+    await this.loadIdentityLinkStatus();
   }
 
   get userInitial(): string {
@@ -197,6 +203,35 @@ export class UserProfileComponent implements OnInit {
     }
   }
 
+  async connectCentralIdentity(): Promise<void> {
+    this.identityLinkError = '';
+    this.identityLinkSuccess = '';
+    this.identityLinkLoading = true;
+
+    try {
+      const response = await this.authService.startCentralIdentityLink();
+      window.location.href = response.authorizationUrl;
+    } catch (error: any) {
+      this.identityLinkError = this.extractServerMessage(error, 'تعذر بدء ربط حساب الدخول الموحد.');
+      this.identityLinkLoading = false;
+    }
+  }
+
+  async unlinkCentralIdentity(): Promise<void> {
+    this.identityLinkError = '';
+    this.identityLinkSuccess = '';
+    this.identityLinkLoading = true;
+
+    try {
+      this.identityLinkStatus = await this.authService.unlinkCentralIdentity();
+      this.identityLinkSuccess = 'تم إلغاء ربط حساب الدخول الموحد.';
+    } catch (error: any) {
+      this.identityLinkError = this.extractServerMessage(error, 'تعذر إلغاء ربط حساب الدخول الموحد.');
+    } finally {
+      this.identityLinkLoading = false;
+    }
+  }
+
   clearProfileFeedback(): void {
     this.profileError = '';
     this.profileSuccess = false;
@@ -318,6 +353,19 @@ export class UserProfileComponent implements OnInit {
       || this.getConfirmPasswordErrorMessage()
       || 'يرجى مراجعة بيانات كلمة المرور.'
     );
+  }
+
+  private async loadIdentityLinkStatus(): Promise<void> {
+    this.identityLinkStatusLoading = true;
+    this.identityLinkError = '';
+
+    try {
+      this.identityLinkStatus = await this.authService.getCentralIdentityLinkStatus();
+    } catch {
+      this.identityLinkStatus = null;
+    } finally {
+      this.identityLinkStatusLoading = false;
+    }
   }
 
   private passwordsMatchValidator(): ValidatorFn {

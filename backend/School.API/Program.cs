@@ -17,23 +17,47 @@ using System.Threading.RateLimiting;
 var builder = WebApplication.CreateBuilder(args);
 var resetSeedRequested = args.Contains("--reset-seed", StringComparer.OrdinalIgnoreCase)
     || Environment.GetEnvironmentVariable("SCHOOL_RESET_SEED") == "1";
-var railwayPort = Environment.GetEnvironmentVariable("PORT");
+var port = Environment.GetEnvironmentVariable("PORT") ?? "5000";
 
-if (!string.IsNullOrWhiteSpace(railwayPort))
-{
-    builder.WebHost.UseUrls($"http://0.0.0.0:{railwayPort}");
-}
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
+builder.Logging.AddDebug();
 
-var allowedOrigins = builder.Configuration["Cors:AllowedOrigins"]?
+var allowedOriginsFromConfig = builder.Configuration["Cors:AllowedOrigins"]?
     .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
-if (allowedOrigins is not { Length: > 0 })
+var frontendUrl = Environment.GetEnvironmentVariable("FRONTEND_URL");
+var allowedOriginsList = new List<string> { "http://localhost:4200", "https://localhost:4200" };
+
+if (!string.IsNullOrEmpty(frontendUrl))
 {
-    allowedOrigins = new[] { "http://localhost:4200", "https://localhost:4200" };
+    allowedOriginsList.AddRange(frontendUrl.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+}
+
+if (allowedOriginsFromConfig != null)
+{
+    allowedOriginsList.AddRange(allowedOriginsFromConfig);
+}
+
+var allowedOrigins = allowedOriginsList.Distinct().ToArray();
+
+var connectionString = Environment.GetEnvironmentVariable("CONNECTION_STRING")
+    ?? builder.Configuration.GetConnectionString("DefaultConnection");
+
+var dbPassword = Environment.GetEnvironmentVariable("DB_PASSWORD");
+if (!string.IsNullOrEmpty(connectionString) && !string.IsNullOrEmpty(dbPassword))
+{
+    connectionString = connectionString.Replace("${DB_PASSWORD}", dbPassword);
+}
+
+if (string.IsNullOrWhiteSpace(connectionString))
+{
+    throw new InvalidOperationException(
+        "Database connection is not configured. Set CONNECTION_STRING and DB_PASSWORD in Railway.");
 }
 
 builder.Services.AddDbContext<SchoolDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(connectionString));
 
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
     .AddEntityFrameworkStores<SchoolDbContext>()
@@ -102,7 +126,10 @@ builder.Services.AddAuthentication(options =>
         ValidateIssuerSigningKey = true,
         ValidAudience = builder.Configuration["Jwt:ValidAudience"] ?? builder.Configuration["Jwt:Audience"] ?? "SchoolAppUsers",
         ValidIssuer = builder.Configuration["Jwt:ValidIssuer"] ?? builder.Configuration["Jwt:Issuer"] ?? "SchoolApp",
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Secret"] ?? "super_secret_secure_key_for_school_api_with_enough_length_to_be_valid"))
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(
+            Environment.GetEnvironmentVariable("JWT_SECRET")
+            ?? builder.Configuration["Jwt:Secret"]
+            ?? "super_secret_secure_key_for_school_api_with_enough_length_to_be_valid"))
     };
 
     options.Events = new JwtBearerEvents
@@ -166,6 +193,12 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddHealthChecks();
 
 var app = builder.Build();
+var startupLogger = app.Services.GetRequiredService<ILogger<Program>>();
+
+startupLogger.LogInformation(
+    "Starting School API on 0.0.0.0:{Port}. Allowed CORS origins: {AllowedOrigins}",
+    port,
+    string.Join(", ", allowedOrigins));
 
 app.UseCors();
 app.UseRateLimiter();
@@ -233,4 +266,4 @@ if (resetSeedRequested)
     return;
 }
 
-app.Run();
+app.Run($"http://0.0.0.0:{port}");

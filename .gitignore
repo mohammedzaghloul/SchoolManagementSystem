@@ -4,9 +4,13 @@ out-tsc/
 .angular/
 .codex-build/
 .codex-logs/
+.env
+.env.*
+!.env.example
 
 backend/**/bin/
 backend/**/obj/
+backend/publish/
 
 .vs/
 **/.vs/
@@ -27,3 +31,7 @@ backend/FaceRecognitionService/face_data.db
 backend/FaceRecognitionService/data/
 backend/FaceRecognitionService/__pycache__/
 backend/FaceRecognitionService/*.pyc
+CentralAuthNotificationPlatform/
+Free-API/
+logs.txt
+register-demo-app.ps1

@@ -74,11 +74,6 @@ export class TeacherManagementComponent implements OnInit, OnDestroy {
       }
       this.subjects = uniqueSubjects;
       
-      // Ensure there's a 'General/Unspecified' option if needed
-      if (!this.subjects.find(s => s.id === null)) {
-        // We don't add it to the list, we just handle it in the UI
-      }
-      
       this.classRooms = await this.classRoomService.getAll();
     } catch (err) {
       console.error('Meta load error', err);
@@ -163,7 +158,6 @@ export class TeacherManagementComponent implements OnInit, OnDestroy {
     try {
       const payload = { ...this.currentTeacher };
       
-      // Fix: API requires subjectId as a valid number, and it might come from template as a string
       if (payload.subjectId === 'null' || payload.subjectId === '') {
         delete payload.subjectId; 
       } else if (payload.subjectId !== null && payload.subjectId !== undefined) {
@@ -171,7 +165,6 @@ export class TeacherManagementComponent implements OnInit, OnDestroy {
       }
 
       if (this.isEditMode) {
-        // Prepare clean payload for update (strip nested objects)
         const updatePayload = {
           id: payload.id,
           fullName: payload.fullName,

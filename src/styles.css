@@ -1,5 +1,5 @@
 /* Global Styles - Premium Dark Theme (Image Matched) */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Tajawal:wght@400;500;700;800&family=Outfit:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Tajawal:wght@400;500;700;800&family=Outfit:wght@400;500;600;700;800&family=Cairo:wght@400;600;700;900&display=swap');
 @import 'bootstrap/dist/css/bootstrap.min.css';
 
 :root {
@@ -19,7 +19,7 @@
 
 body {
   margin: 0;
-  font-family: 'Tajawal', 'Outfit', sans-serif;
+  font-family: 'Cairo', 'Tajawal', 'Outfit', sans-serif;
   background-color: var(--dark-bg);
   color: var(--dark-text);
   overflow-x: hidden;
@@ -31,11 +31,25 @@ body {
     min-height: 100vh;
 }
 
-/* Scrollbar Styling */
-::-webkit-scrollbar { width: 8px; }
-::-webkit-scrollbar-track { background: var(--dark-bg); }
-::-webkit-scrollbar-thumb { background: #2e3453; border-radius: 10px; }
-::-webkit-scrollbar-thumb:hover { background: var(--primary); }
+/* Premium Neutral Scrollbar - Universal Match */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent !important; }
+::-webkit-scrollbar-thumb {
+    background: #94a3b8 !important;
+    border-radius: 10px !important;
+    border: none !important;
+}
+::-webkit-scrollbar-thumb:hover { background: #64748b !important; }
+
+/* Sidebar Nav Scrollbar - Exact Original Match */
+.sidebar-nav::-webkit-scrollbar { width: 4px; }
+.sidebar-nav::-webkit-scrollbar-track { background: transparent !important; }
+.sidebar-nav::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border-radius: 10px !important;
+    border: none !important;
+}
+.sidebar-nav::-webkit-scrollbar-thumb:hover { background: var(--primary) !important; }
 
 /* Global Card */
 .glass-card {
@@ -187,6 +201,7 @@ body.admin-theme .page-content label {
     transform: translateY(-2px);
     box-shadow: 0 10px 28px rgba(99, 102, 241, 0.35);
     color: #fff !important;
+    border-radius: 50px !important;
 }
 
 .plus-icon-circle {
