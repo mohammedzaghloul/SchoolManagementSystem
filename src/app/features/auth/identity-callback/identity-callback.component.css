@@ -1,0 +1,72 @@
+.identity-callback-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 2rem;
+  background: #f5f7fb;
+  color: #172033;
+}
+
+.status-card {
+  width: min(100%, 560px);
+  padding: 2rem;
+  border: 1px solid #d9e2ef;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 0.5rem 2rem rgba(15, 23, 42, 0.08);
+  text-align: center;
+}
+
+.status-card h1 {
+  margin: 0 0 0.75rem;
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+
+.status-card p {
+  color: #64748b;
+}
+
+.status-icon {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 1rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 1.5rem;
+  font-weight: 900;
+}
+
+.success-card .status-icon {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.error-card .status-icon {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+dl {
+  margin: 1.5rem 0;
+  text-align: start;
+}
+
+dl div {
+  padding: 0.75rem 0;
+  border-top: 1px solid #e2e8f0;
+}
+
+dt {
+  font-size: 0.78rem;
+  color: #64748b;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+dd {
+  margin: 0.2rem 0 0;
+  font-weight: 700;
+  word-break: break-word;
+}

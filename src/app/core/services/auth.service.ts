@@ -35,6 +35,31 @@ export interface ForgotPasswordOtpResponse {
   devOtp?: string;
 }
 
+export interface ResetTokenValidationResponse {
+  isValid: boolean;
+  expiresAt?: string;
+}
+
+export interface CentralIdentityConnectStartResponse {
+  authorizationUrl: string;
+}
+
+export interface CentralIdentityConnectCompleteResponse {
+  success: boolean;
+  message: string;
+  externalEmail: string;
+  platformEmail: string;
+  platformDisplayName?: string;
+}
+
+export interface CentralIdentityLinkStatusResponse {
+  isLinked: boolean;
+  externalAppName?: string | null;
+  externalEmail?: string | null;
+  platformEmail?: string | null;
+  platformDisplayName?: string | null;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -183,6 +208,45 @@ export class AuthService {
       otp,
       newPassword,
       confirmPassword: newPassword
+    });
+  }
+
+  async validateResetToken(email: string, token: string): Promise<ResetTokenValidationResponse> {
+    return this.api.post<ResetTokenValidationResponse>('/api/auth/forgot-password/validate-token', {
+      email,
+      token
+    });
+  }
+
+  async resetPasswordWithToken(email: string, token: string, newPassword: string): Promise<any> {
+    return this.api.post<any>('/api/auth/forgot-password/reset-token', {
+      email,
+      token,
+      newPassword
+    });
+  }
+
+  async startCentralIdentityLink(): Promise<CentralIdentityConnectStartResponse> {
+    return this.api.get<CentralIdentityConnectStartResponse>('/api/central-auth/connect/start');
+  }
+
+  async getCentralIdentityLinkStatus(): Promise<CentralIdentityLinkStatusResponse> {
+    return this.api.get<CentralIdentityLinkStatusResponse>('/api/central-auth/connect/status');
+  }
+
+  async unlinkCentralIdentity(): Promise<CentralIdentityLinkStatusResponse> {
+    return this.api.delete<CentralIdentityLinkStatusResponse>('/api/central-auth/connect/link');
+  }
+
+  async completeCentralIdentityLink(
+    code: string | null,
+    state: string | null,
+    error: string | null
+  ): Promise<CentralIdentityConnectCompleteResponse> {
+    return this.api.post<CentralIdentityConnectCompleteResponse>('/api/central-auth/connect/callback', {
+      code,
+      state,
+      error
     });
   }
 

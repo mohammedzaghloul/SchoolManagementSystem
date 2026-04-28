@@ -21,6 +21,11 @@ const routes: Routes = [
         loadComponent: () => import('./features/auth/reset-password/reset-password.component').then(m => m.ResetPasswordComponent)
     },
     {
+        path: 'auth/connect/callback',
+        canActivate: [AuthGuard],
+        loadComponent: () => import('./features/auth/identity-callback/identity-callback.component').then(m => m.IdentityCallbackComponent)
+    },
+    {
         path: 'auth',
         canActivate: [NoAuthGuard],
         children: [
