@@ -3,6 +3,7 @@ export const environment = {
   production: false,
   apiUrl: (window as any).__env?.apiUrl || 'http://localhost:5033',
   signalRUrl: (window as any).__env?.signalRUrl || 'http://localhost:5033/chathub',
+  centralAuthPortalUrl: (window as any).__env?.centralAuthPortalUrl || 'http://localhost:4300/dashboard/',
   qrRefreshInterval: 5000, // 5 seconds
   defaultLanguage: 'ar',
   supportedLanguages: ['ar', 'en'],

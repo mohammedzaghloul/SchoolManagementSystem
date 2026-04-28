@@ -7,6 +7,9 @@
   // SignalR url
   window.__env.signalRUrl = 'http://localhost:5033/chathub';
 
+  // Central Auth dashboard URL
+  window.__env.centralAuthPortalUrl = 'http://localhost:4300/dashboard/';
+
   // Demo payment contacts
   window.__env.vodafoneCashNumber = '0100';
   window.__env.supportPhone = '0100';

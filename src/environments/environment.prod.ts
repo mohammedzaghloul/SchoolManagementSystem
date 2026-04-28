@@ -1,6 +1,7 @@
 type RuntimeEnvironment = {
   apiUrl?: string;
   signalRUrl?: string;
+  centralAuthPortalUrl?: string;
   qrRefreshInterval?: number;
   defaultLanguage?: string;
   supportedLanguages?: string[];
@@ -25,11 +26,14 @@ const normalizeUrl = (value?: string): string => {
 const apiUrl = normalizeUrl(runtimeEnvironment.apiUrl) || '';
 const signalRUrl = normalizeUrl(runtimeEnvironment.signalRUrl)
   || (apiUrl ? `${apiUrl}/chathub` : '/chathub');
+const centralAuthPortalUrl = normalizeUrl(runtimeEnvironment.centralAuthPortalUrl)
+  || 'https://resplendent-cooperation-production-eeb8.up.railway.app/dashboard';
 
 export const environment = {
   production: true,
   apiUrl,
   signalRUrl,
+  centralAuthPortalUrl,
   qrRefreshInterval: runtimeEnvironment.qrRefreshInterval ?? 30000,
   defaultLanguage: runtimeEnvironment.defaultLanguage ?? 'ar',
   supportedLanguages: runtimeEnvironment.supportedLanguages ?? ['ar', 'en'],

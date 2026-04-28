@@ -39,6 +39,11 @@ const getRuntimeConfig = () => {
   return {
     apiUrl,
     signalRUrl,
+    centralAuthPortalUrl: normalizeUrl(
+      process.env.CENTRAL_AUTH_PORTAL_URL
+      || process.env.CENTRAL_AUTH_FRONTEND_URL
+      || 'https://resplendent-cooperation-production-eeb8.up.railway.app/dashboard/'
+    ),
     qrRefreshInterval: Number(process.env.QR_REFRESH_INTERVAL || 30000),
     defaultLanguage: process.env.DEFAULT_LANGUAGE || 'ar',
     supportedLanguages: supportedLanguages.length > 0 ? supportedLanguages : ['ar', 'en']

@@ -3,6 +3,7 @@ import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 
+import { environment } from '../../../../environments/environment';
 import { AuthService } from '../../../core/services/auth.service';
 import { NotificationService } from '../../../core/services/notification.service';
 
@@ -21,6 +22,7 @@ export class ForgotPasswordComponent implements OnInit {
   step: ForgotPasswordStep = 'email';
   error = '';
   infoMessage = '';
+  readonly centralAuthPortalUrl = environment.centralAuthPortalUrl;
 
   constructor(
     private fb: FormBuilder,
