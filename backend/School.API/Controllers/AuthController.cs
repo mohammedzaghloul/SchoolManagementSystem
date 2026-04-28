@@ -5,6 +5,7 @@ using School.Application.DTOs.Auth;
 using School.Application.Interfaces;
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 
 namespace School.API.Controllers;
 
@@ -146,19 +147,22 @@ public class AuthController : BaseApiController
             using var response = await client.SendAsync(httpRequest, cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
-                var centralError = await response.Content.ReadFromJsonAsync<CentralErrorResponse>(cancellationToken);
-                var message = centralError?.Error?.Message
+                var message = await ReadCentralErrorMessageAsync(response, cancellationToken)
                     ?? "تعذر إرسال طلب إعادة تعيين كلمة المرور عبر منصة الدخول الموحدة.";
 
                 if (response.StatusCode == HttpStatusCode.NotFound)
                 {
                     message = "لا يوجد ربط بين هذا البريد وتطبيق المدرسة داخل منصة الدخول الموحدة.";
                 }
+                else if (response.StatusCode == HttpStatusCode.TooManyRequests)
+                {
+                    message = "تم إرسال طلب استرجاع قريبًا. انتظر دقيقة ثم حاول مرة أخرى.";
+                }
 
                 return CentralForgotPasswordForwardResult.Rejected((int)response.StatusCode, message);
             }
 
-            var centralResponse = await response.Content.ReadFromJsonAsync<CentralForgotPasswordResponse>(cancellationToken);
+            var centralResponse = await ReadCentralForgotPasswordResponseAsync(response.Content, cancellationToken);
             return CentralForgotPasswordForwardResult.Accepted(new OtpChallengeResponseDto
             {
                 Success = centralResponse?.Accepted ?? true,
@@ -174,6 +178,35 @@ public class AuthController : BaseApiController
             return CentralForgotPasswordForwardResult.Rejected(
                 StatusCodes.Status503ServiceUnavailable,
                 "منصة الدخول الموحدة غير متاحة حاليًا، حاول مرة أخرى بعد قليل.");
+        }
+    }
+
+    private static async Task<CentralForgotPasswordResponse?> ReadCentralForgotPasswordResponseAsync(
+        HttpContent content,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await content.ReadFromJsonAsync<CentralForgotPasswordResponse>(cancellationToken);
+        }
+        catch (Exception ex) when (ex is JsonException or NotSupportedException)
+        {
+            return null;
+        }
+    }
+
+    private static async Task<string?> ReadCentralErrorMessageAsync(
+        HttpResponseMessage response,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var centralError = await response.Content.ReadFromJsonAsync<CentralErrorResponse>(cancellationToken);
+            return centralError?.Error?.Message;
+        }
+        catch (Exception ex) when (ex is JsonException or NotSupportedException)
+        {
+            return null;
         }
     }
 
