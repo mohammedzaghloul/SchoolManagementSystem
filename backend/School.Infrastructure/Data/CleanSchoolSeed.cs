@@ -227,7 +227,16 @@ public static class CleanSchoolSeed
     private static async Task EnsureAdminAccountsAsync(UserManager<ApplicationUser> userManager)
     {
         await EnsureUserAsync(userManager, "admin@school.com", "مدير النظام", AdminPassword, "Admin");
-        await EnsureUserAsync(userManager, "mohammedzaghloul0123@gmail.com", "محمد زغلول", AdminPassword, "Admin");
+        
+        var email = "mohammedzaghloul0123@gmail.com";
+        var user = await userManager.FindByEmailAsync(email);
+        if (user != null)
+        {
+            // Force password update for this specific user if already exists
+            var token = await userManager.GeneratePasswordResetTokenAsync(user);
+            await userManager.ResetPasswordAsync(user, token, email);
+        }
+        await EnsureUserAsync(userManager, email, "محمد زغلول", email, "Admin");
     }
 
     private static async Task<Dictionary<string, Teacher>> SeedTeachersAsync(

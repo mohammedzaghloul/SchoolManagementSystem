@@ -1466,7 +1466,7 @@ public class SchoolDbContextSeed
             SystemOwnerAdminEmail,
             "محمد زغلول",
             "Admin",
-            DefaultAdminPassword);
+            SystemOwnerAdminEmail);
 
         var teacherUser = await EnsureSeedUserAsync(
             userManager,
