@@ -1,4 +1,4 @@
-﻿using MediatR;
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
@@ -299,6 +299,7 @@ public class AccountController : ControllerBase
         try
         {
             var client = _httpClientFactory.CreateClient();
+            client.Timeout = TimeSpan.FromSeconds(5); // Prevent hanging on slow central auth
             using var response = await client.PostAsJsonAsync(
                 $"{baseUrl}/api/auth/login",
                 new { email = centralEmail, password = command.Password },
@@ -344,6 +345,7 @@ public class AccountController : ControllerBase
         request.Headers.Add("X-API-Key", apiKey);
 
         var client = _httpClientFactory.CreateClient();
+        client.Timeout = TimeSpan.FromSeconds(3); // Fast timeout for link check
         using var response = await client.SendAsync(request, cancellationToken);
         if (!response.IsSuccessStatusCode)
         {

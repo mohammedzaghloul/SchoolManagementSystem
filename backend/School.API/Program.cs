@@ -8,6 +8,7 @@ using School.API.Hubs;
 using School.Application.Interfaces;
 using School.Infrastructure.BackgroundJobs;
 using School.Infrastructure.Data;
+using School.Infrastructure.Data.Repository;
 using School.Infrastructure.Identity;
 using School.Infrastructure.Services;
 using StackExchange.Redis;
@@ -48,6 +49,11 @@ var dbPassword = Environment.GetEnvironmentVariable("DB_PASSWORD");
 if (!string.IsNullOrEmpty(connectionString) && !string.IsNullOrEmpty(dbPassword))
 {
     connectionString = connectionString.Replace("${DB_PASSWORD}", dbPassword);
+}
+
+if (!string.IsNullOrEmpty(connectionString) && (connectionString.Contains("db49846") || connectionString.Contains("db47037")))
+{
+    connectionString = connectionString.Replace("Encrypt=True", "Encrypt=False");
 }
 
 if (string.IsNullOrWhiteSpace(connectionString))

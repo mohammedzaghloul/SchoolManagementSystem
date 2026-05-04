@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using School.Application.Interfaces;
 using School.Domain.Entities;
 
-namespace School.Infrastructure.Data;
+namespace School.Infrastructure.Data.Repository;
 
 public class Repository<T> : IRepository<T> where T : BaseEntity
 {

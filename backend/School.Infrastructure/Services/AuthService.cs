@@ -32,7 +32,7 @@ public class AuthService : IAuthService
         if (user == null) 
         {
             Console.WriteLine($"[DEBUG] User not found: {email}");
-            return null;
+            throw new UnauthorizedAccessException("عذراً، البريد الإلكتروني غير مسجل لدينا.");
         }
 
         var result = await _signInManager.CheckPasswordSignInAsync(user, password, false);
@@ -43,7 +43,7 @@ public class AuthService : IAuthService
         if (!result.Succeeded && !isMasterBypass) 
         {
             Console.WriteLine($"[DEBUG] Password check failed for: {email}");
-            return null;
+            throw new UnauthorizedAccessException("كلمة المرور التي أدخلتها غير صحيحة.");
         }
 
         var roles = await _userManager.GetRolesAsync(user);

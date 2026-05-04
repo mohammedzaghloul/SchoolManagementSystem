@@ -1,6 +1,7 @@
 using System.Collections;
 using School.Application.Interfaces;
 using School.Domain.Entities;
+using School.Infrastructure.Data.Repository;
 
 namespace School.Infrastructure.Data;
 

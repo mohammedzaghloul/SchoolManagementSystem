@@ -10,6 +10,7 @@ public class SchoolDbContext : IdentityDbContext<ApplicationUser>
     public SchoolDbContext(DbContextOptions<SchoolDbContext> options) : base(options)
     {
     }
+    
 
     public DbSet<Student> Students { get; set; }
     public DbSet<Parent> Parents { get; set; }

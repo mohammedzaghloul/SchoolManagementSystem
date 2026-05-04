@@ -82,6 +82,10 @@ export class ApiService {
       return errorBody.message.trim();
     }
 
+    if (typeof errorBody?.error?.message === 'string' && errorBody.error.message.trim()) {
+      return errorBody.error.message.trim();
+    }
+
     const validationErrors = errorBody?.errors;
     if (validationErrors && typeof validationErrors === 'object') {
       const firstValidationMessage = Object.values(validationErrors)
